@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { FilterBar } from "./components/FilterBar";
+import { HelpModal } from "./components/HelpModal";
 import { SearchInput } from "./components/SearchInput";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useReadState } from "./hooks/useReadState";
 import { useStats } from "./hooks/useStats";
 import { useTheme } from "./hooks/useTheme";
@@ -74,11 +76,14 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState<string>(() => readFromUrl().dateFrom);
   const [dateTo, setDateTo] = useState<string>(() => readFromUrl().dateTo);
   const [unreadOnly, setUnreadOnly] = useState<boolean>(() => readFromUrl().unreadOnly);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const { theme, toggleTheme } = useTheme();
   const { feeds } = useFeeds();
   const { stats } = useStats();
-  const { isRead } = useReadState();
+  const { isRead, markRead, markUnread } = useReadState();
 
   // popstate でブラウザ戻る/進むに追従する
   useEffect(() => {
@@ -207,8 +212,42 @@ export default function App() {
     [allArticles, unreadOnly, isRead],
   );
 
+  const handleActivate = useCallback(
+    (id: number, url: string) => {
+      markRead(id);
+      window.open(url, "_blank", "noopener,noreferrer");
+    },
+    [markRead],
+  );
+
+  const handleToggleRead = useCallback(
+    (id: number) => {
+      if (isRead(id)) markUnread(id);
+      else markRead(id);
+    },
+    [isRead, markRead, markUnread],
+  );
+
+  const handleSearchFocus = useCallback(() => {
+    searchRef.current?.focus();
+  }, []);
+
+  const handleClearAll = useCallback(() => pushFilter("", "", "", "", "", "", false), [pushFilter]);
+
+  const handleToggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
+
+  const { focusedId } = useKeyboardShortcuts({
+    items: articles,
+    onActivate: handleActivate,
+    onToggleRead: handleToggleRead,
+    onSearchFocus: handleSearchFocus,
+    onClearAll: handleClearAll,
+    onShowHelp: handleToggleHelp,
+  });
+
   return (
     <div className="app">
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
       <header className="header">
         <h1>Tech News Bot</h1>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -235,7 +274,7 @@ export default function App() {
       </header>
 
       <div className="toolbar">
-        <SearchInput value={q} onChange={handleQChange} />
+        <SearchInput ref={searchRef} value={q} onChange={handleQChange} />
         <FilterBar
           category={category}
           lang={lang}
@@ -263,6 +302,7 @@ export default function App() {
       {articles.length > 0 && (
         <ArticleList
           articles={articles}
+          focusedId={focusedId}
           onFilterByCategory={handleFilterByCategory}
           onFilterByFeedId={handleFilterByFeedId}
         />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 
 interface Props {
   value: string;
@@ -6,7 +6,10 @@ interface Props {
   delayMs?: number;
 }
 
-export function SearchInput({ value, onChange, delayMs = 300 }: Props) {
+export const SearchInput = forwardRef<HTMLInputElement, Props>(function SearchInput(
+  { value, onChange, delayMs = 300 },
+  ref,
+) {
   const [local, setLocal] = useState(value);
 
   useEffect(() => {
@@ -23,6 +26,7 @@ export function SearchInput({ value, onChange, delayMs = 300 }: Props) {
 
   return (
     <input
+      ref={ref}
       type="search"
       className="search-input"
       placeholder="記事を検索 (タイトル / 概要)"
@@ -30,4 +34,4 @@ export function SearchInput({ value, onChange, delayMs = 300 }: Props) {
       onChange={(e) => setLocal(e.target.value)}
     />
   );
-}
+});

@@ -4,6 +4,7 @@ import type { Article, FeedCategory } from "../types/api";
 
 interface Props {
   article: Article;
+  focused?: boolean;
   onFilterByCategory: (c: FeedCategory) => void;
   onFilterByFeedId: (id: string) => void;
 }
@@ -36,14 +37,16 @@ function safeHref(url: string): string {
   }
 }
 
-export function ArticleCard({ article, onFilterByCategory, onFilterByFeedId }: Props) {
+export function ArticleCard({ article, focused, onFilterByCategory, onFilterByFeedId }: Props) {
   const { isRead, markRead, markUnread } = useReadState();
   const [hovered, setHovered] = useState(false);
   const read = isRead(article.id);
 
   return (
     <article
-      className={`article-card${read ? " read" : ""}`}
+      className={`article-card${read ? " read" : ""}${focused ? " focused" : ""}`}
+      data-article-id={article.id}
+      tabIndex={-1}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
