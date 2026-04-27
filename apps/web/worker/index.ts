@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "./types";
 import api from "./api/router";
+import sitemap from "./api/sitemap";
 import syndication from "./api/syndication";
 import { collectAll } from "./collector";
 import { pruneOldArticles } from "./db/retention";
@@ -29,6 +30,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/api", api);
+app.route("/", sitemap);
 app.route("/", syndication);
 
 // 静的アセットへのフォールバック (Cloudflare Static Assets binding)
