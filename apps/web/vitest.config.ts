@@ -24,6 +24,8 @@ export default defineConfig(async () => {
     ],
     test: {
       setupFiles: ["./tests/setup.ts"],
+      // tests/client/ は vitest.client.config.ts で別プールとして実行するため除外
+      include: ["tests/worker/**/*.test.ts"],
     },
   };
 });

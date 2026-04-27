@@ -29,3 +29,5 @@ jobs:
       - name: vp test
         working-directory: apps/web
         run: vp test run
+      - name: vp test:client
+        run: pnpm test:client
