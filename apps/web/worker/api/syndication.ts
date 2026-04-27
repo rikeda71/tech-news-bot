@@ -11,8 +11,16 @@ const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
 const VALID_LANGS: FeedLang[] = ["ja", "en"];
 const FEED_LIMIT = 50;
-const SITE_TITLE = "tech-news-bot";
+const SITE_TITLE = "Tech News Bot";
 const SITE_DESCRIPTION = "Big tech / AI / 日本企業の technical blog を集約した RSS / JSON Feed";
+
+// カテゴリごとの表示名 mapping
+const CATEGORY_DISPLAY_NAMES: Record<FeedCategory, string> = {
+  bigtech: "Big Tech",
+  ai: "AI Labs",
+  jp: "国内エンジニアリング",
+  zenn: "Zenn",
+};
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -58,13 +66,15 @@ interface BuildFeedOpts {
   lang?: FeedLang;
   /** feeds.yaml の name (per-feed 時に channel.title へ使用) */
   feedName?: string;
+  /** カテゴリフィード用タイトル上書き (feedName が指定される場合は無視) */
+  titleOverride?: string;
 }
 
 async function buildJsonFeed(
   c: Context<{ Bindings: Env }>,
   opts: BuildFeedOpts,
 ): Promise<Response> {
-  const { feedId, category, lang, feedName } = opts;
+  const { feedId, category, lang, feedName, titleOverride } = opts;
   const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang, feedId });
   if (c.req.header("If-None-Match") === etag) {
     c.header("ETag", etag);
@@ -81,7 +91,7 @@ async function buildJsonFeed(
   });
   const origin = siteOrigin(c.req.url);
   const feedUrl = new URL(c.req.url).toString();
-  const title = feedName ?? SITE_TITLE;
+  const title = feedName ?? titleOverride ?? SITE_TITLE;
   const description = feedName ? `${feedName} の最新記事` : SITE_DESCRIPTION;
 
   const json = {
@@ -111,7 +121,7 @@ async function buildJsonFeed(
 }
 
 async function buildRssFeed(c: Context<{ Bindings: Env }>, opts: BuildFeedOpts): Promise<Response> {
-  const { feedId, category, lang, feedName } = opts;
+  const { feedId, category, lang, feedName, titleOverride } = opts;
   const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang, feedId });
   if (c.req.header("If-None-Match") === etag) {
     c.header("ETag", etag);
@@ -129,7 +139,7 @@ async function buildRssFeed(c: Context<{ Bindings: Env }>, opts: BuildFeedOpts):
   const origin = siteOrigin(c.req.url);
   const feedUrl = new URL(c.req.url).toString();
   const lastBuild = result.articles[0]?.published_at ?? new Date().toISOString();
-  const title = feedName ?? SITE_TITLE;
+  const title = feedName ?? titleOverride ?? SITE_TITLE;
   const description = feedName ? `${feedName} の最新記事` : SITE_DESCRIPTION;
 
   const items = result.articles
@@ -177,6 +187,39 @@ app.get("/feed.json", async (c) => {
 app.get("/feed.xml", async (c) => {
   const { category, lang } = parseFilters(c);
   return buildRssFeed(c, { category, lang });
+});
+
+// カテゴリ別 syndication エンドポイント
+// Hono の :param は非スラッシュ文字をすべて取り込むため、ワイルドカードで受け取り
+// 拡張子とカテゴリ名を手動で分離する。
+// /feeds/category/* を /feeds/:filename より先に登録することで優先マッチさせる。
+app.get("/feeds/category/*", async (c) => {
+  const pathname = new URL(c.req.url).pathname;
+  const basename = pathname.replace(/^.*\/feeds\/category\//, "");
+
+  let cat: FeedCategory;
+  let format: "json" | "xml";
+
+  if (basename.endsWith(".json")) {
+    cat = basename.slice(0, -5) as FeedCategory;
+    format = "json";
+  } else if (basename.endsWith(".xml")) {
+    cat = basename.slice(0, -4) as FeedCategory;
+    format = "xml";
+  } else {
+    return c.json({ error: "Not Found" }, 404);
+  }
+
+  if (!(VALID_CATEGORIES as string[]).includes(cat)) {
+    return c.json({ error: "Not Found" }, 404);
+  }
+
+  const titleOverride = `${SITE_TITLE} — ${CATEGORY_DISPLAY_NAMES[cat]}`;
+
+  if (format === "json") {
+    return buildJsonFeed(c, { category: cat, titleOverride });
+  }
+  return buildRssFeed(c, { category: cat, titleOverride });
 });
 
 // per-feed エンドポイント: feeds.yaml に定義された id のみ受け付ける
