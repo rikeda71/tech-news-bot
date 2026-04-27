@@ -78,4 +78,15 @@ describe("Header", () => {
     await user.click(screen.getByRole("button", { name: "OS設定に追従" }));
     expect(mockSetTheme).toHaveBeenCalledWith("system");
   });
+
+  it("renders nav tabs including トレンド when onViewChange is provided", () => {
+    render(<Header view="articles" onViewChange={() => {}} />);
+    expect(screen.getByRole("button", { name: "トレンド" })).toBeTruthy();
+  });
+
+  it("トレンド tab is aria-current=page when view is trending", () => {
+    render(<Header view="trending" onViewChange={() => {}} />);
+    const btn = screen.getByRole("button", { name: "トレンド" });
+    expect(btn.getAttribute("aria-current")).toBe("page");
+  });
 });
