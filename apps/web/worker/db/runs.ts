@@ -1,22 +1,19 @@
-export interface RunRow {
-  id: number;
-  started_at: string;
-  completed_at: string | null;
-  feeds_total: number | null;
-  feeds_ok: number | null;
-  feeds_failed: number | null;
-  articles_inserted: number | null;
-  error: string | null;
-}
+import type {
+  CollectorRunDbRow,
+  CollectorRunFeedDbRow,
+  CronHealthDbRow,
+  FeedFailureDbRow,
+  FeedHealthRunDbRow,
+} from "./types";
 
-export interface RunFeedRow {
-  run_id: number;
-  feed_id: string;
-  status: "ok" | "failed" | "skipped";
-  articles_inserted: number;
-  duration_ms: number;
-  error: string | null;
-}
+/** collector_runs の公開型エイリアス */
+export type RunRow = CollectorRunDbRow;
+
+/** collector_run_feeds の公開型エイリアス */
+export type RunFeedRow = CollectorRunFeedDbRow;
+
+/** getFeedHealth (runs) の公開型エイリアス */
+export type FeedHealthRow = FeedHealthRunDbRow;
 
 export async function startRun(
   db: D1Database,
@@ -109,22 +106,6 @@ export async function listRuns(db: D1Database, limit = 20): Promise<RunRow[]> {
   return result.results ?? [];
 }
 
-interface CronHealthRow {
-  runs_total: number;
-  runs_succeeded: number;
-  runs_failed: number;
-  avg_run_ms: number | null;
-  articles_collected: number;
-}
-
-interface FeedFailureRow {
-  feed_id: string;
-  failures: number;
-  successes: number;
-  last_error: string | null;
-  last_attempted_at: string | null;
-}
-
 // collector_runs を集計して運用メトリクスを返す。1 クエリで完結させ D1 CPU を節約する。
 export async function getCronHealth(
   db: D1Database,
@@ -155,7 +136,7 @@ export async function getCronHealth(
        WHERE started_at >= ?1`,
     )
     .bind(since)
-    .first<CronHealthRow>();
+    .first<CronHealthDbRow>();
 
   return {
     window_days: days,
@@ -172,7 +153,7 @@ export async function getFeedFailures(
   db: D1Database,
   days: 7 | 30,
   limit: number,
-): Promise<FeedFailureRow[]> {
+): Promise<FeedFailureDbRow[]> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   const safeLimit = Math.min(Math.max(limit, 1), 100);
   const result = await db
@@ -192,20 +173,8 @@ export async function getFeedFailures(
        LIMIT ?2`,
     )
     .bind(since, safeLimit)
-    .all<FeedFailureRow>();
+    .all<FeedFailureDbRow>();
   return result.results ?? [];
-}
-
-export interface FeedHealthRow {
-  total_runs: number;
-  successful_runs: number;
-  failed_runs: number;
-  last_run_at: string | null;
-  last_run_status: string | null;
-  last_error_at: string | null;
-  last_error_message: string | null;
-  avg_duration_ms: number | null;
-  articles_inserted_total: number;
 }
 
 /**
