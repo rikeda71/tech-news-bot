@@ -602,3 +602,162 @@ describe("/feeds/author/:author.atom (author Atom)", () => {
     expect(res2.status).toBe(304);
   });
 });
+
+describe("/feeds/lang/:lang.xml (lang RSS)", () => {
+  it("returns 200 with application/rss+xml for ja", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    const text = await res.text();
+    expect(text.startsWith("<?xml")).toBe(true);
+    expect(text).toContain('<rss version="2.0"');
+    // title に「日本語」を含む
+    expect(text).toContain("日本語");
+    // ja 記事のみ
+    expect(text).toContain("g-jp");
+    expect(text).not.toContain("g-ai");
+    expect(text).not.toContain("g-bigtech");
+  });
+
+  it("returns 200 with application/rss+xml for en", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/en.xml");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    const text = await res.text();
+    // en 記事のみ
+    expect(text).toContain("g-ai");
+    expect(text).toContain("g-bigtech");
+    expect(text).not.toContain("g-jp");
+  });
+
+  it("returns 404 for invalid lang (fr)", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/fr.xml");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for uppercase lang (JA)", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/JA.xml");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns Cache-Control: public, max-age=600", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+  });
+
+  it("returns ETag header and supports 304 round-trip", async () => {
+    const res1 = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
+    expect(res1.status).toBe(200);
+    const etag = res1.headers.get("ETag")!;
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+
+    const res2 = await SELF.fetch("https://example.com/feeds/lang/ja.xml", {
+      headers: { "If-None-Match": etag },
+    });
+    expect(res2.status).toBe(304);
+    expect(res2.headers.get("ETag")).toBe(etag);
+  });
+
+  it("returns articles in published_at DESC order", async () => {
+    // ja 記事を追加して並び順を確認
+    await insertArticles(env.DB, [
+      {
+        guid: "g-jp-newer",
+        feed_id: "cyberagent-developers",
+        title: "新しい日本語記事",
+        url: "https://x.test/m/newer",
+        summary: null,
+        author: null,
+        published_at: "2024-04-10T00:00:00.000Z",
+        category: "jp",
+        lang: "ja",
+      },
+    ]);
+    const res = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
+    const text = await res.text();
+    const pos1 = text.indexOf("g-jp-newer");
+    const pos2 = text.indexOf("g-jp");
+    expect(pos1).toBeLessThan(pos2);
+  });
+});
+
+describe("/feeds/lang/:lang.json (lang JSON Feed)", () => {
+  it("returns 200 with application/feed+json for ja with correct item count", async () => {
+    // beforeEach: ja=1 (g-jp), en=2 (g-ai, g-bigtech)
+    const res = await SELF.fetch("https://example.com/feeds/lang/ja.json");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
+    const body = (await res.json()) as {
+      version: string;
+      title: string;
+      items: { id: string }[];
+    };
+    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect(body.items.length).toBe(1);
+    expect(body.items.map((i) => i.id)).toContain("g-jp");
+  });
+
+  it("returns correct item count for en (2 articles)", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/en.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: { id: string }[] };
+    expect(body.items.length).toBe(2);
+    expect(body.items.map((i) => i.id)).toContain("g-ai");
+    expect(body.items.map((i) => i.id)).toContain("g-bigtech");
+  });
+
+  it("returns 404 for invalid lang", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/fr.json");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns Cache-Control: public, max-age=600", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/en.json");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+  });
+
+  it("ETag differs between ja and en", async () => {
+    const resJa = await SELF.fetch("https://example.com/feeds/lang/ja.json");
+    const resEn = await SELF.fetch("https://example.com/feeds/lang/en.json");
+    const etagJa = resJa.headers.get("ETag");
+    const etagEn = resEn.headers.get("ETag");
+    expect(etagJa).not.toBeNull();
+    expect(etagEn).not.toBeNull();
+    expect(etagJa).not.toBe(etagEn);
+  });
+});
+
+describe("/feeds/lang/:lang.atom (lang Atom)", () => {
+  it("returns 200 with application/atom+xml for ja", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/ja.atom");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    const text = await res.text();
+    expect(text.startsWith("<?xml")).toBe(true);
+    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(text).toContain("g-jp");
+    expect(text).not.toContain("g-ai");
+  });
+
+  it("returns 404 for invalid lang", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/fr.atom");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns Cache-Control: public, max-age=600", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/lang/ja.atom");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+  });
+
+  it("returns ETag header and supports 304 round-trip", async () => {
+    const res1 = await SELF.fetch("https://example.com/feeds/lang/en.atom");
+    expect(res1.status).toBe(200);
+    const etag = res1.headers.get("ETag")!;
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+
+    const res2 = await SELF.fetch("https://example.com/feeds/lang/en.atom", {
+      headers: { "If-None-Match": etag },
+    });
+    expect(res2.status).toBe(304);
+  });
+});
