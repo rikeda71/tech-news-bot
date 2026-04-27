@@ -8,40 +8,31 @@ app.get("/openapi.json", (c) => {
   return c.json(openApiSchema);
 });
 
-// Scalar API Reference UI — loaded via CDN, no npm dep needed.
-// CSP on /api/docs is loosened so the CDN script can execute.
-app.get("/docs", (c) => {
-  const html = `<!DOCTYPE html>
-<html lang="en">
+const SWAGGER_UI_HTML = `<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>tech-news-bot API Reference</title>
+  <meta charset="UTF-8">
+  <title>tech-news-bot API Docs</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
 </head>
 <body>
-  <script
-    id="api-reference"
-    data-url="/api/openapi.json"
-    src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.ui = SwaggerUIBundle({
+      url: '/api/openapi.json',
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [SwaggerUIBundle.presets.apis]
+    });
+  </script>
 </body>
 </html>`;
 
-  // Override CSP so Scalar's CDN script can load and run.
-  c.header(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: https:",
-      "connect-src 'self' https://cdn.jsdelivr.net",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-    ].join("; "),
-  );
-  c.header("Content-Type", "text/html; charset=utf-8");
-  return c.body(html);
-});
+app.get("/docs", (c) =>
+  c.html(SWAGGER_UI_HTML, 200, {
+    "Cache-Control": "public, max-age=86400, immutable",
+  }),
+);
 
 export default app;

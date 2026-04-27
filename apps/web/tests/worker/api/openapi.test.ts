@@ -28,4 +28,17 @@ describe("/api/docs", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("text/html");
   });
+
+  it("HTML contains swagger-ui div and bundle script", async () => {
+    const res = await SELF.fetch("https://example.com/api/docs");
+    const body = await res.text();
+    expect(body).toContain('id="swagger-ui"');
+    expect(body).toContain("swagger-ui-bundle.js");
+  });
+
+  it("spec URL points to /api/openapi.json", async () => {
+    const res = await SELF.fetch("https://example.com/api/docs");
+    const body = await res.text();
+    expect(body).toContain("/api/openapi.json");
+  });
 });
