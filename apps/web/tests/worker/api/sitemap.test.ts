@@ -1,6 +1,33 @@
 import { describe, expect, it } from "vite-plus/test";
 import { SELF } from "cloudflare:test";
 
+describe("/robots.txt", () => {
+  it("returns 200 with Content-Type text/plain", async () => {
+    const res = await SELF.fetch("https://example.com/robots.txt");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("text/plain");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+  });
+
+  it("contains User-agent: *", async () => {
+    const res = await SELF.fetch("https://example.com/robots.txt");
+    const text = await res.text();
+    expect(text).toContain("User-agent: *");
+  });
+
+  it("contains Disallow: /api/admin/", async () => {
+    const res = await SELF.fetch("https://example.com/robots.txt");
+    const text = await res.text();
+    expect(text).toContain("Disallow: /api/admin/");
+  });
+
+  it("contains Sitemap directive pointing to sitemap.xml", async () => {
+    const res = await SELF.fetch("https://example.com/robots.txt");
+    const text = await res.text();
+    expect(text).toContain("Sitemap: https://example.com/sitemap.xml");
+  });
+});
+
 describe("/sitemap.xml", () => {
   it("returns 200 with Content-Type application/xml", async () => {
     const res = await SELF.fetch("https://example.com/sitemap.xml");
