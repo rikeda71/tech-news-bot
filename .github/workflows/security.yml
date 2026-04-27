@@ -1,0 +1,25 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # 毎週月曜 00:00 UTC に実行
+    - cron: "0 0 * * 1"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      # devDependencies を除外して本番依存のみ監査。
+      # 脆弱性があっても merge を止めない (warning として記録するだけ)。
+      - name: pnpm audit (prod only)
+        run: pnpm audit --prod
+        continue-on-error: true
