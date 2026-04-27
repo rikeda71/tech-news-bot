@@ -23,6 +23,17 @@ export interface FeedActivity {
   last_published_at: string | null;
 }
 
+export interface AuthorCount {
+  author: string;
+  count: number;
+}
+
+export interface PublisherCount {
+  feed_id: string;
+  name: string;
+  count: number;
+}
+
 export interface Stats {
   total: number;
   last_published_at: string | null;
@@ -33,6 +44,13 @@ export interface Stats {
   stale_feeds: StaleFeed[];
   category_trend_30d: TrendPoint[];
   feed_activity: FeedActivity[];
+  // PR #148 で追加されたフィールド
+  articles_24h?: number;
+  articles_7d?: number;
+  articles_30d?: number;
+  top_authors_30d?: AuthorCount[];
+  top_publishers_30d?: PublisherCount[];
+  by_lang_30d?: Record<string, number>;
 }
 
 export function useStats(refreshSignal: number = 0) {

@@ -1,5 +1,12 @@
 import { useTheme } from "../hooks/useTheme";
 
+export type AppView = "articles" | "stats";
+
+interface HeaderProps {
+  view?: AppView;
+  onViewChange?: (view: AppView) => void;
+}
+
 function SunIcon() {
   return (
     <svg
@@ -46,13 +53,33 @@ function MoonIcon() {
   );
 }
 
-export function Header() {
+export function Header({ view, onViewChange }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const label = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
 
   return (
     <header className="app-header">
       <h1>Tech News Bot</h1>
+      {onViewChange && (
+        <nav className="app-nav" aria-label="ページ切替">
+          <button
+            type="button"
+            className={`app-nav-tab${view === "articles" || !view ? " active" : ""}`}
+            onClick={() => onViewChange("articles")}
+            aria-current={view === "articles" || !view ? "page" : undefined}
+          >
+            Articles
+          </button>
+          <button
+            type="button"
+            className={`app-nav-tab${view === "stats" ? " active" : ""}`}
+            onClick={() => onViewChange("stats")}
+            aria-current={view === "stats" ? "page" : undefined}
+          >
+            Stats
+          </button>
+        </nav>
+      )}
       <button
         type="button"
         className="theme-toggle"
