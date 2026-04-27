@@ -1,6 +1,5 @@
 import { Hono } from "hono";
-import type { Env } from "../types";
-import type { FeedCategory, FeedLang } from "@tnb/shared-types";
+import type { Env, FeedCategory, FeedLang } from "../types";
 import { listArticles } from "../db/articles";
 
 const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp"];

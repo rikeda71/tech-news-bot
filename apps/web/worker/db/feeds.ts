@@ -1,4 +1,4 @@
-import type { FeedConfig } from "@tnb/shared-types";
+import type { FeedConfig } from "../types";
 
 export async function syncFeeds(db: D1Database, feeds: FeedConfig[]): Promise<void> {
   if (feeds.length === 0) return;

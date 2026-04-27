@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env, SELF } from "cloudflare:test";
 import { insertArticles } from "../../../worker/db/articles";
 import { syncFeeds } from "../../../worker/db/feeds";
-import type { FeedConfig } from "@tnb/shared-types";
+import type { FeedConfig } from "../../../worker/types";
 
 const FEEDS: FeedConfig[] = [
   {
