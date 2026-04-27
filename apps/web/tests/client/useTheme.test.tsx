@@ -90,9 +90,7 @@ describe("useTheme", () => {
     expect(result.current.theme).toBe("system");
     act(() => {
       localStorage.setItem(STORAGE_KEY, "light");
-      window.dispatchEvent(
-        new StorageEvent("storage", { key: STORAGE_KEY, newValue: "light" }),
-      );
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: "light" }));
     });
     expect(result.current.theme).toBe("light");
   });

@@ -14,16 +14,6 @@ function getSystemTheme(): ResolvedTheme {
   }
 }
 
-function readStored(): Theme {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "light" || v === "dark" || v === "system") return v;
-  } catch {
-    // localStorage が無い環境
-  }
-  return "system";
-}
-
 function applyTheme(resolved: ResolvedTheme): void {
   try {
     document.documentElement.setAttribute("data-theme", resolved);
