@@ -12,9 +12,10 @@ interface Props {
 /** 著者名の頭文字を取得する (日本語/英語両対応) */
 function getInitial(name: string): string {
   if (!name) return "?";
-  // 英語: 最初の文字を大文字に
-  const first = [...name][0];
-  return first ? first.toUpperCase() : "?";
+  // Intl.Segmenter でグラフェムクラスタ単位に分割して最初の 1 文字を取得する
+  const seg = new Intl.Segmenter();
+  const first = seg.segment(name)[Symbol.iterator]().next().value?.segment ?? "?";
+  return first.toUpperCase();
 }
 
 export function AuthorDetail({ author, onBack, onFilterByCategory, onFilterByFeedId }: Props) {

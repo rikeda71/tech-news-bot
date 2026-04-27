@@ -14,10 +14,7 @@ function formatRelative(iso: string): string {
   return `${d} 日前`;
 }
 
-const CATEGORY_META: Record<
-  string,
-  { icon: string; description: string }
-> = {
+const CATEGORY_META: Record<string, { icon: string; description: string }> = {
   bigtech: { icon: "🏢", description: "Big Tech 企業の技術ブログ" },
   ai: { icon: "🤖", description: "AI・機械学習関連の最新情報" },
   jp: { icon: "🇯🇵", description: "国内企業のエンジニアブログ" },
