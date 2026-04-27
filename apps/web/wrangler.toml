@@ -25,3 +25,29 @@ COLLECTOR_CONCURRENCY = "4"
 COLLECTOR_TIMEOUT_MS = "10000"
 SUMMARY_MAX_LENGTH = "500"
 RETENTION_DAYS = "90"
+
+# preview 環境: PR ごとに動的な Worker 名は wrangler CLI の --name で指定する。
+# D1 は本番と同じ DB を使い、READONLY=1 で admin/collector を無効化する。
+[env.preview]
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.preview.observability]
+enabled = true
+
+[env.preview.assets]
+directory = "./dist/client"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "tech-news-bot-db"
+database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
+
+[env.preview.vars]
+COLLECTOR_CONCURRENCY = "4"
+COLLECTOR_TIMEOUT_MS = "10000"
+SUMMARY_MAX_LENGTH = "500"
+RETENTION_DAYS = "90"
+READONLY = "1"

@@ -6,6 +6,8 @@ export interface Env {
   SUMMARY_MAX_LENGTH: string;
   RETENTION_DAYS: string;
   ADMIN_TOKEN?: string;
+  // preview 環境では "1" をセット。admin/collector を no-op にする。
+  READONLY?: string;
 }
 
 export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";

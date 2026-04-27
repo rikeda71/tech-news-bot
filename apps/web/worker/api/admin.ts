@@ -14,6 +14,10 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 app.post("/collect", async (c) => {
+  // READONLY=1 の preview 環境では書き込みを行わない
+  if (c.env.READONLY === "1") {
+    return c.json({ error: "read-only mode" }, 403);
+  }
   const expected = (c.env as unknown as { ADMIN_TOKEN?: string }).ADMIN_TOKEN;
   if (!expected) {
     return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
