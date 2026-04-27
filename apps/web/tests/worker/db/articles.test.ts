@@ -177,4 +177,84 @@ describe("articles db", () => {
     expect(onlyZenn.articles[0].category).toBe("zenn");
     expect(onlyZenn.articles[0].lang).toBe("ja");
   });
+
+  describe("FTS5 trigram Japanese full-text search", () => {
+    beforeEach(async () => {
+      // trigram は 3 文字以上の部分文字列に一致するため、日本語キーワードで検索できる
+      await insertArticles(env.DB, [
+        {
+          guid: "fts-jp-1",
+          feed_id: "feed-z",
+          title: "東京で開催されるAIカンファレンス",
+          url: "https://example.com/1",
+          summary: "最新の機械学習と型安全なTypeScriptの活用事例を紹介",
+          author: null,
+          published_at: "2024-05-01T00:00:00.000Z",
+          category: "ai",
+          lang: "ja",
+        },
+        {
+          guid: "fts-jp-2",
+          feed_id: "feed-z",
+          title: "メルカリのマイクロサービス設計",
+          url: "https://example.com/2",
+          summary: "Go言語とKubernetesを活用したスケーラブルなアーキテクチャ",
+          author: null,
+          published_at: "2024-05-02T00:00:00.000Z",
+          category: "jp",
+          lang: "ja",
+        },
+        {
+          guid: "fts-en-1",
+          feed_id: "feed-a",
+          title: "TypeScript 5.5 release notes",
+          url: "https://example.com/3",
+          summary: "New features in TypeScript",
+          author: null,
+          published_at: "2024-05-03T00:00:00.000Z",
+          category: "bigtech",
+          lang: "en",
+        },
+      ]);
+    });
+
+    it("matches Japanese title with trigram query (東京で)", async () => {
+      // trigram は 3 文字 N-gram なので、3 文字以上の部分文字列にのみ一致する
+      // 「東京で」はタイトル「東京で開催されるAIカンファレンス」に含まれる
+      const result = await listArticles(env.DB, { limit: 10, q: "東京で" });
+      expect(result.articles.map((a) => a.guid)).toContain("fts-jp-1");
+      expect(result.articles.map((a) => a.guid)).not.toContain("fts-jp-2");
+    });
+
+    it("matches Japanese title with trigram query (メルカリ)", async () => {
+      const result = await listArticles(env.DB, { limit: 10, q: "メルカリ" });
+      expect(result.articles.map((a) => a.guid)).toContain("fts-jp-2");
+      expect(result.articles.map((a) => a.guid)).not.toContain("fts-jp-1");
+    });
+
+    it("matches Japanese summary with trigram query (型安全)", async () => {
+      // summary に含まれる日本語の部分文字列でも検索できる
+      const result = await listArticles(env.DB, { limit: 10, q: "型安全" });
+      expect(result.articles.map((a) => a.guid)).toContain("fts-jp-1");
+    });
+
+    it("matches katakana keyword in Japanese title (AIカン)", async () => {
+      // "AI" は 2 文字なので trigram では検索不可。3 文字以上の "AIカン" で検索する
+      const result = await listArticles(env.DB, { limit: 10, q: "AIカン" });
+      expect(result.articles.map((a) => a.guid)).toContain("fts-jp-1");
+    });
+
+    it("matches English keyword with trigram (TypeScript)", async () => {
+      const result = await listArticles(env.DB, { limit: 10, q: "TypeScript" });
+      // 英語記事と日本語 summary 両方にマッチする
+      const guids = result.articles.map((a) => a.guid);
+      expect(guids).toContain("fts-en-1");
+      expect(guids).toContain("fts-jp-1");
+    });
+
+    it("returns empty when no article matches the query", async () => {
+      const result = await listArticles(env.DB, { limit: 10, q: "該当なしのキーワード" });
+      expect(result.articles).toHaveLength(0);
+    });
+  });
 });
