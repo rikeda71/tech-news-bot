@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Sample Engineering Blog</title>
+    <link>https://example.com/blog</link>
+    <description>Sample RSS</description>
+    <item>
+      <title>Hello World</title>
+      <link>https://example.com/posts/hello</link>
+      <guid isPermaLink="false">post-001</guid>
+      <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
+      <dc:creator>Alice</dc:creator>
+      <description><![CDATA[<p>This is a <strong>summary</strong> of the post.</p>]]></description>
+      <content:encoded><![CDATA[<p>Full body content here.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>Second post without guid</title>
+      <link>https://example.com/posts/second</link>
+      <pubDate>Tue, 02 Jan 2024 08:30:00 GMT</pubDate>
+      <description>Plain summary text.</description>
+    </item>
+    <item>
+      <title>Item with no link</title>
+      <description>Should be skipped due to missing link.</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,309 @@
+{
+  "version": 1,
+  "feeds": [
+    {
+      "id": "google-research",
+      "name": "Google Research Blog",
+      "url": "https://blog.research.google/feeds/posts/default",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "google-developers",
+      "name": "Google Developers Blog",
+      "url": "https://developers.googleblog.com/feeds/posts/default",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "google-cloud",
+      "name": "Google Cloud Blog",
+      "url": "https://cloudblog.withgoogle.com/rss/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "google-cloudplatform",
+      "name": "Google Cloud Platform Blog",
+      "url": "https://cloudplatform.googleblog.com/feeds/posts/default",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "meta-engineering",
+      "name": "Meta Engineering Blog",
+      "url": "https://engineering.fb.com/feed/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "aws-blog",
+      "name": "AWS Blog",
+      "url": "https://aws.amazon.com/blogs/aws/feed/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "aws-ml",
+      "name": "AWS Machine Learning Blog",
+      "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "microsoft-engineering",
+      "name": "Microsoft Engineering at Microsoft Blog",
+      "url": "https://devblogs.microsoft.com/engineering-at-microsoft/feed/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "azure-blog",
+      "name": "Azure Blog",
+      "url": "https://azure.microsoft.com/en-us/blog/feed/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "netflix-techblog",
+      "name": "Netflix Tech Blog",
+      "url": "https://netflixtechblog.com/feed",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "airbnb-engineering",
+      "name": "Airbnb Engineering & Data Science",
+      "url": "https://medium.com/feed/airbnb-engineering",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "stripe-engineering",
+      "name": "Stripe Engineering Blog",
+      "url": "https://stripe.com/blog/feed.rss",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "cloudflare-blog",
+      "name": "Cloudflare Blog",
+      "url": "https://blog.cloudflare.com/rss/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "github-engineering",
+      "name": "GitHub Engineering Blog",
+      "url": "https://github.blog/engineering.atom",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "apple-ml",
+      "name": "Apple Machine Learning Research",
+      "url": "https://machinelearning.apple.com/rss.xml",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "spotify-engineering",
+      "name": "Spotify Engineering",
+      "url": "https://engineering.atspotify.com/feed/",
+      "category": "bigtech",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "openai-blog",
+      "name": "OpenAI Blog",
+      "url": "https://openai.com/blog/rss.xml",
+      "category": "ai",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "anthropic-news",
+      "name": "Anthropic News",
+      "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
+      "category": "ai",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "anthropic-engineering",
+      "name": "Anthropic Engineering Blog",
+      "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml",
+      "category": "ai",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "deepmind-blog",
+      "name": "Google DeepMind Blog",
+      "url": "https://deepmind.google/blog/rss.xml",
+      "category": "ai",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "huggingface-blog",
+      "name": "Hugging Face Blog",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "category": "ai",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "cohere-blog",
+      "name": "Cohere Blog (Medium)",
+      "url": "https://medium.com/feed/cohere-ai",
+      "category": "ai",
+      "lang": "en",
+      "enabled": true
+    },
+    {
+      "id": "mercari-engineering",
+      "name": "Mercari Engineering Blog",
+      "url": "https://engineering.mercari.com/blog/feed.xml",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "cyberagent-developers",
+      "name": "CyberAgent Developers Blog",
+      "url": "https://developers.cyberagent.co.jp/blog/feed/",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "dena-engineering",
+      "name": "DeNA Engineering Blog",
+      "url": "https://engineering.dena.com/blog/index.xml",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "lycorp-techblog",
+      "name": "LINEヤフー Tech Blog",
+      "url": "https://techblog.lycorp.co.jp/ja/feed/index.xml",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "yahoo-japan-techblog",
+      "name": "Yahoo! JAPAN Tech Blog",
+      "url": "https://techblog.yahoo.co.jp/index.xml",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "zozo-techblog",
+      "name": "ZOZO Tech Blog",
+      "url": "https://techblog.zozo.com/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "cookpad-techlife",
+      "name": "Cookpad Tech Life",
+      "url": "https://techlife.cookpad.com/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "smarthr-tech",
+      "name": "SmartHR Tech Blog",
+      "url": "https://tech.smarthr.jp/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "sansan-buildersbox",
+      "name": "Sansan Tech Blog",
+      "url": "https://buildersbox.corp-sansan.com/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "moneyforward-dev",
+      "name": "Money Forward Developers Blog",
+      "url": "https://moneyforward-dev.jp/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "freee-developers",
+      "name": "freee Developers Hub",
+      "url": "https://developers.freee.co.jp/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "pixiv-inside",
+      "name": "pixiv inside",
+      "url": "https://inside.pixiv.blog/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "dmm-developers",
+      "name": "DMM Developers Blog",
+      "url": "https://developersblog.dmm.com/feed",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "sakura-knowledge",
+      "name": "さくらのナレッジ (Sakura Internet)",
+      "url": "https://knowledge.sakura.ad.jp/feed/",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "pepabo-tech",
+      "name": "GMO Pepabo Tech Blog",
+      "url": "https://tech.pepabo.com/feed.xml",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    },
+    {
+      "id": "wantedly-engineering",
+      "name": "Wantedly Engineering (Medium)",
+      "url": "https://medium.com/feed/wantedly-engineering",
+      "category": "jp",
+      "lang": "ja",
+      "enabled": true
+    }
+  ]
+}
