@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { AuthorDetail } from "./components/AuthorDetail";
+import { CategoriesOverview } from "./components/CategoriesOverview";
 import { FeedDetail } from "./components/FeedDetail";
 import { FilterBar } from "./components/FilterBar";
 import { type AppView, Header } from "./components/Header";
@@ -94,6 +95,7 @@ function readAuthorFromPath(): string | null {
 
 function readViewFromUrl(): AppView {
   if (window.location.pathname === "/stats") return "stats";
+  if (window.location.pathname === "/categories") return "categories";
   if (readFeedDetailFromPath() !== null) return "feed";
   if (readAuthorFromPath() !== null) return "author";
   return "articles";
@@ -129,7 +131,7 @@ function AppInner() {
     setView(next);
     setFeedDetailId("");
     setAuthorName("");
-    const path = next === "stats" ? "/stats" : "/";
+    const path = next === "stats" ? "/stats" : next === "categories" ? "/categories" : "/";
     if (window.location.pathname !== path) {
       window.history.pushState(null, "", path);
     }
@@ -149,6 +151,11 @@ function AppInner() {
       if (nextView === "author") {
         setAuthorName(readAuthorFromPath() ?? "");
         setFeedDetailId("");
+        return;
+      }
+      if (nextView === "categories") {
+        setFeedDetailId("");
+        setAuthorName("");
         return;
       }
       setFeedDetailId("");
@@ -334,6 +341,17 @@ function AppInner() {
     [pushFilter, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
+  // Categories overview からカテゴリカードをクリックした際に articles ページへ遷移してフィルタを適用する
+  const handleSelectCategory = useCallback(
+    (id: FeedCategory) => {
+      window.history.pushState(null, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      setView("articles");
+      pushFilter(id, lang, "", q, dateFrom, dateTo, unreadOnly, starredOnly);
+    },
+    [pushFilter, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
+  );
+
   // 記事カードの取得元クリックでフィード詳細へ drill-down する
   const handleGoToFeedDetail = useCallback((id: string) => {
     window.history.pushState(null, "", `/feed/${encodeURIComponent(id)}`);
@@ -451,6 +469,8 @@ function AppInner() {
 
       {view === "stats" ? (
         <StatsDashboard onNavigateToAuthor={handleGoToAuthorDetail} />
+      ) : view === "categories" ? (
+        <CategoriesOverview onSelectCategory={handleSelectCategory} />
       ) : view === "feed" && feedDetailId ? (
         <FeedDetail
           feedId={feedDetailId}

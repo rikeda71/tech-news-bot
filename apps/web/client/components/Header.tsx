@@ -3,7 +3,7 @@ import { useTheme } from "../hooks/useTheme";
 
 // "feed" は /feed/:id のフィード詳細ページで使用。nav タブには載せない
 // "author" は /author/:name の著者詳細ページで使用。nav タブには載せない
-export type AppView = "articles" | "stats" | "feed" | "author";
+export type AppView = "articles" | "stats" | "feed" | "author" | "categories";
 
 interface HeaderProps {
   view?: AppView;
@@ -33,6 +33,14 @@ export function Header({ view, onViewChange }: HeaderProps) {
             aria-current={view === "stats" ? "page" : undefined}
           >
             Stats
+          </button>
+          <button
+            type="button"
+            className={`app-nav-tab${view === "categories" ? " active" : ""}`}
+            onClick={() => onViewChange("categories")}
+            aria-current={view === "categories" ? "page" : undefined}
+          >
+            カテゴリ
           </button>
         </nav>
       )}
