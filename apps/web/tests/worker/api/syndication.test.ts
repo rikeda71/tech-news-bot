@@ -17,7 +17,7 @@ const FEEDS: FeedConfig[] = [
   },
   {
     id: "cyberagent-developers",
-    name: "Mercari Engineering Blog",
+    name: "CyberAgent Developers Blog",
     url: "https://x.test/m",
     category: "jp",
     lang: "ja",
@@ -183,7 +183,7 @@ describe("/feeds/:id.json (per-feed JSON Feed)", () => {
     };
     expect(body.version).toBe("https://jsonfeed.org/version/1.1");
     // title には feeds.yaml の name が入る
-    expect(body.title).toBe("Mercari Engineering Blog");
+    expect(body.title).toBe("CyberAgent Developers Blog");
     expect(body.items.map((i) => i.id)).toEqual(["g-jp"]);
   });
 
