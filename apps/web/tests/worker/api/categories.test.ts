@@ -67,8 +67,8 @@ describe("GET /api/categories - DB 空の場合", () => {
     expect(Array.isArray(body.categories)).toBe(true);
     expect(body.categories).toHaveLength(4);
 
-    const cats = body.categories.map((c) => c.id).sort();
-    expect(cats).toEqual([...ALL_CATEGORIES].sort());
+    const cats = body.categories.map((c) => c.id).toSorted();
+    expect(cats).toEqual(ALL_CATEGORIES.toSorted());
   });
 
   it("DB 空の場合は全カテゴリで feeds_count=0, articles_30d=0, last_published_at=null", async () => {
@@ -145,8 +145,8 @@ describe("GET /api/categories - テストデータあり", () => {
     const body = await res.json<CategoriesResponse>();
     expect(body.categories).toHaveLength(4);
 
-    const cats = body.categories.map((c) => c.id).sort();
-    expect(cats).toEqual([...ALL_CATEGORIES].sort());
+    const cats = body.categories.map((c) => c.id).toSorted();
+    expect(cats).toEqual(ALL_CATEGORIES.toSorted());
   });
 
   it("feeds_count が正しい (ai=2, bigtech=1, zenn=1, jp=0)", async () => {
