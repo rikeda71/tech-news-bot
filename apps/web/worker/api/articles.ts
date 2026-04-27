@@ -1,7 +1,12 @@
 import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { loadAllFeeds } from "../feed-config";
-import { getArticleById, getRandomArticles, listArticles } from "../db/articles";
+import {
+  getArticleById,
+  getRandomArticles,
+  getRelatedArticles,
+  listArticles,
+} from "../db/articles";
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
 import type { FeedsFile } from "../types";
@@ -122,6 +127,17 @@ app.get("/random", async (c) => {
 
   const articles = await getRandomArticles(c.env.DB, { n, category, lang, feedId });
   return c.json({ articles }, 200, { "Cache-Control": "no-store" });
+});
+
+app.get("/:guid/related", async (c) => {
+  const guid = c.req.param("guid");
+  const nRaw = c.req.query("n") ?? "5";
+  const n = Number(nRaw);
+  if (!Number.isInteger(n) || n < 1 || n > 20) return c.json({ error: "n must be 1-20" }, 400);
+
+  const items = await getRelatedArticles(c.env.DB, guid, n);
+  if (items === null) return c.json({ error: "not found" }, 404);
+  return c.json({ items }, 200, { "Cache-Control": "public, max-age=300" });
 });
 
 app.get("/:id", async (c) => {

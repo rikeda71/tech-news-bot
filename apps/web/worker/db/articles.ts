@@ -203,6 +203,73 @@ export async function getArticleById(db: D1Database, id: number): Promise<Articl
   return result ?? null;
 }
 
+export async function findArticleByGuid(db: D1Database, guid: string): Promise<Article | null> {
+  const result = await db
+    .prepare(
+      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+              a.author, a.published_at, a.fetched_at, a.category, a.lang
+       FROM articles a
+       LEFT JOIN feeds f ON f.id = a.feed_id
+       WHERE a.guid = ?1
+       LIMIT 1`,
+    )
+    .bind(guid)
+    .first<Article>();
+  return result ?? null;
+}
+
+/**
+ * guid に対する関連記事を返す。
+ * 同 feed_id を優先し、不足分を同 category の記事で補う。
+ * guid が存在しない場合は null を返す (呼び出し側で 404 ハンドル)。
+ */
+export async function getRelatedArticles(
+  db: D1Database,
+  guid: string,
+  n: number,
+): Promise<Article[] | null> {
+  const target = await findArticleByGuid(db, guid);
+  if (!target) return null;
+
+  // 同じ feed_id の記事を published_at 降順で n 件取得 (対象自身除外)
+  const sameFeedRows = await db
+    .prepare(
+      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+              a.author, a.published_at, a.fetched_at, a.category, a.lang
+       FROM articles a
+       LEFT JOIN feeds f ON f.id = a.feed_id
+       WHERE a.feed_id = ?1 AND a.guid != ?2
+       ORDER BY a.published_at DESC
+       LIMIT ?3`,
+    )
+    .bind(target.feed_id, guid, n)
+    .all<Article>();
+
+  const sameFeedArticles = sameFeedRows.results ?? [];
+  const remaining = n - sameFeedArticles.length;
+
+  if (remaining <= 0) return sameFeedArticles;
+
+  // 不足分を同 category で補う (対象自身 + 同 feed 記事の guid を除外)
+  // feed が異なる記事のみ対象とすることで同 feed 重複を避ける
+  const excludeGuids = [guid, ...sameFeedArticles.map((a) => a.guid)];
+  const placeholders = excludeGuids.map((_, i) => `?${i + 3}`).join(",");
+  const sameCategoryRows = await db
+    .prepare(
+      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+              a.author, a.published_at, a.fetched_at, a.category, a.lang
+       FROM articles a
+       LEFT JOIN feeds f ON f.id = a.feed_id
+       WHERE a.category = ?1 AND a.feed_id != ?2 AND a.guid NOT IN (${placeholders})
+       ORDER BY a.published_at DESC
+       LIMIT ?${excludeGuids.length + 3}`,
+    )
+    .bind(target.category, target.feed_id, ...excludeGuids, remaining)
+    .all<Article>();
+
+  return [...sameFeedArticles, ...(sameCategoryRows.results ?? [])];
+}
+
 export async function countAllArticles(db: D1Database): Promise<number> {
   const row = await db.prepare(`SELECT COUNT(*) AS c FROM articles`).first<{ c: number }>();
   return row?.c ?? 0;
