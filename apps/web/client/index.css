@@ -451,6 +451,71 @@ a:hover {
   cursor: progress;
 }
 
+.preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.preset-add {
+  padding: 4px 10px;
+  background: var(--bg-elev);
+  color: var(--fg-muted);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.preset-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.preset-pill-name {
+  padding: 4px 10px;
+  background: none;
+  color: var(--accent);
+  border: none;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.preset-pill-name:hover {
+  text-decoration: underline;
+}
+
+.preset-pill-remove {
+  padding: 4px 8px 4px 2px;
+  background: none;
+  color: var(--accent);
+  border: none;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.preset-pill-remove:hover {
+  opacity: 1;
+}
+
 /* キーボードショートカット ヘルプモーダル */
 .help-overlay {
   position: fixed;
