@@ -1315,3 +1315,63 @@ kbd {
 .category-card-stat-value {
   font-weight: 600;
 }
+
+/* Trending ページ */
+.trending-page {
+  display: grid;
+  gap: 16px;
+}
+
+.trending-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.trending-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.trending-days-toggle {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.trending-days-btn {
+  padding: 6px 14px;
+  background: var(--bg-elev);
+  color: var(--fg-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.trending-days-btn:last-child {
+  border-right: none;
+}
+
+.trending-days-btn:hover {
+  color: var(--fg);
+  background: var(--bg-elev-2);
+}
+
+.trending-days-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.trending-meta {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
