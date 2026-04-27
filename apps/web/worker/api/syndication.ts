@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { Env, FeedCategory, FeedLang, FeedsFile } from "../types";
+import type { Article, Env, FeedCategory, FeedLang, FeedsFile } from "../types";
 import { listArticles } from "../db/articles";
 import { computeSyndicationEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
@@ -9,8 +9,16 @@ const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
 const VALID_LANGS: FeedLang[] = ["ja", "en"];
 const FEED_LIMIT = 50;
-const SITE_TITLE = "tech-news-bot";
+const SITE_TITLE = "Tech News Bot";
 const SITE_DESCRIPTION = "Big tech / AI / 日本企業の technical blog を集約した RSS / JSON Feed";
+
+// カテゴリごとの表示名 mapping
+const CATEGORY_DISPLAY_NAMES: Record<FeedCategory, string> = {
+  bigtech: "Big Tech",
+  ai: "AI Labs",
+  jp: "国内エンジニアリング",
+  zenn: "Zenn",
+};
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -50,6 +58,78 @@ function siteOrigin(reqUrl: string): string {
   }
 }
 
+function buildRssXml(
+  title: string,
+  description: string,
+  origin: string,
+  feedUrl: string,
+  lang: FeedLang | undefined,
+  articles: Article[],
+): string {
+  const lastBuild = articles[0]?.published_at ?? new Date().toISOString();
+
+  const items = articles
+    .map((a) => {
+      const parts = [
+        `<item>`,
+        `<title>${escapeXml(a.title)}</title>`,
+        `<link>${escapeXml(a.url)}</link>`,
+        `<guid isPermaLink="false">${escapeXml(a.guid)}</guid>`,
+        `<pubDate>${toRfc822(a.published_at)}</pubDate>`,
+        `<category>${escapeXml(a.category)}</category>`,
+      ];
+      if (a.feed_name) parts.push(`<source>${escapeXml(a.feed_name)}</source>`);
+      if (a.author) parts.push(`<author>${escapeXml(a.author)}</author>`);
+      if (a.summary) parts.push(`<description>${escapeXml(a.summary)}</description>`);
+      parts.push(`</item>`);
+      return parts.join("");
+    })
+    .join("");
+
+  return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">` +
+    `<channel>` +
+    `<title>${escapeXml(title)}</title>` +
+    `<link>${escapeXml(origin)}</link>` +
+    `<description>${escapeXml(description)}</description>` +
+    `<language>${escapeXml(lang ?? "und")}</language>` +
+    `<lastBuildDate>${toRfc822(lastBuild)}</lastBuildDate>` +
+    `<atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml"/>` +
+    items +
+    `</channel></rss>`
+  );
+}
+
+function buildJsonFeed(
+  title: string,
+  description: string,
+  origin: string,
+  feedUrl: string,
+  lang: FeedLang | undefined,
+  articles: Article[],
+): object {
+  return {
+    version: "https://jsonfeed.org/version/1.1",
+    title,
+    description,
+    home_page_url: origin || undefined,
+    feed_url: feedUrl,
+    language: lang ?? "und",
+    items: articles.map((a) => ({
+      id: a.guid,
+      url: a.url,
+      title: a.title,
+      content_text: a.summary ?? "",
+      summary: a.summary ?? undefined,
+      date_published: a.published_at,
+      authors: a.author ? [{ name: a.author }] : undefined,
+      tags: [a.category, a.lang, ...(a.feed_name ? [a.feed_name] : [])],
+      _feed_id: a.feed_id,
+    })),
+  };
+}
+
 app.get("/feed.json", async (c) => {
   const { category, lang } = parseFilters(c);
 
@@ -69,25 +149,7 @@ app.get("/feed.json", async (c) => {
   const origin = siteOrigin(c.req.url);
   const feedUrl = new URL(c.req.url).toString();
 
-  const json = {
-    version: "https://jsonfeed.org/version/1.1",
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    home_page_url: origin || undefined,
-    feed_url: feedUrl,
-    language: lang ?? "und",
-    items: result.articles.map((a) => ({
-      id: a.guid,
-      url: a.url,
-      title: a.title,
-      content_text: a.summary ?? "",
-      summary: a.summary ?? undefined,
-      date_published: a.published_at,
-      authors: a.author ? [{ name: a.author }] : undefined,
-      tags: [a.category, a.lang, ...(a.feed_name ? [a.feed_name] : [])],
-      _feed_id: a.feed_id,
-    })),
-  };
+  const json = buildJsonFeed(SITE_TITLE, SITE_DESCRIPTION, origin, feedUrl, lang, result.articles);
 
   c.header("Content-Type", "application/feed+json; charset=utf-8");
   c.header("ETag", etag);
@@ -113,39 +175,71 @@ app.get("/feed.xml", async (c) => {
   });
   const origin = siteOrigin(c.req.url);
   const feedUrl = new URL(c.req.url).toString();
-  const lastBuild = result.articles[0]?.published_at ?? new Date().toISOString();
 
-  const items = result.articles
-    .map((a) => {
-      const parts = [
-        `<item>`,
-        `<title>${escapeXml(a.title)}</title>`,
-        `<link>${escapeXml(a.url)}</link>`,
-        `<guid isPermaLink="false">${escapeXml(a.guid)}</guid>`,
-        `<pubDate>${toRfc822(a.published_at)}</pubDate>`,
-        `<category>${escapeXml(a.category)}</category>`,
-      ];
-      if (a.feed_name) parts.push(`<source>${escapeXml(a.feed_name)}</source>`);
-      if (a.author) parts.push(`<author>${escapeXml(a.author)}</author>`);
-      if (a.summary) parts.push(`<description>${escapeXml(a.summary)}</description>`);
-      parts.push(`</item>`);
-      return parts.join("");
-    })
-    .join("");
+  const xml = buildRssXml(SITE_TITLE, SITE_DESCRIPTION, origin, feedUrl, lang, result.articles);
 
-  const xml =
-    `<?xml version="1.0" encoding="UTF-8"?>` +
-    `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">` +
-    `<channel>` +
-    `<title>${escapeXml(SITE_TITLE)}</title>` +
-    `<link>${escapeXml(origin)}</link>` +
-    `<description>${escapeXml(SITE_DESCRIPTION)}</description>` +
-    `<language>${escapeXml(lang ?? "und")}</language>` +
-    `<lastBuildDate>${toRfc822(lastBuild)}</lastBuildDate>` +
-    `<atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml"/>` +
-    items +
-    `</channel></rss>`;
+  c.header("Content-Type", "application/rss+xml; charset=utf-8");
+  c.header("ETag", etag);
+  c.header("Cache-Control", "public, max-age=60");
+  return c.body(xml);
+});
 
+// Hono の :param は非スラッシュ文字をすべて取り込むため、
+// /feeds/category/:cat.json では ":cat" が "ai.json" 全体にマッチしてしまう。
+// そのためワイルドカードでパスを受け取り、拡張子とカテゴリ名を手動で分離する。
+app.get("/feeds/category/*", async (c) => {
+  const pathname = new URL(c.req.url).pathname;
+  const basename = pathname.replace(/^.*\/feeds\/category\//, "");
+
+  let cat: FeedCategory;
+  let format: "json" | "xml";
+
+  if (basename.endsWith(".json")) {
+    cat = basename.slice(0, -5) as FeedCategory;
+    format = "json";
+  } else if (basename.endsWith(".xml")) {
+    cat = basename.slice(0, -4) as FeedCategory;
+    format = "xml";
+  } else {
+    return c.json({ error: "Not Found" }, 404);
+  }
+
+  if (!(VALID_CATEGORIES as string[]).includes(cat)) {
+    return c.json({ error: "Not Found" }, 404);
+  }
+
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category: cat });
+  if (c.req.header("If-None-Match") === etag) {
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=60");
+    return c.body(null, 304);
+  }
+
+  const result = await listArticles(c.env.DB, {
+    category: cat,
+    limit: FEED_LIMIT,
+    cursor: null,
+  });
+  const origin = siteOrigin(c.req.url);
+  const feedUrl = new URL(c.req.url).toString();
+  const title = `${SITE_TITLE} — ${CATEGORY_DISPLAY_NAMES[cat]}`;
+
+  if (format === "json") {
+    const json = buildJsonFeed(
+      title,
+      SITE_DESCRIPTION,
+      origin,
+      feedUrl,
+      undefined,
+      result.articles,
+    );
+    c.header("Content-Type", "application/feed+json; charset=utf-8");
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=60");
+    return c.body(JSON.stringify(json));
+  }
+
+  const xml = buildRssXml(title, SITE_DESCRIPTION, origin, feedUrl, undefined, result.articles);
   c.header("Content-Type", "application/rss+xml; charset=utf-8");
   c.header("ETag", etag);
   c.header("Cache-Control", "public, max-age=60");

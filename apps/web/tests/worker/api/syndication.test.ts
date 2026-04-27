@@ -21,6 +21,14 @@ const FEEDS: FeedConfig[] = [
     lang: "ja",
     enabled: true,
   },
+  {
+    id: "google-blog",
+    name: "Google",
+    url: "https://x.test/g",
+    category: "bigtech",
+    lang: "en",
+    enabled: true,
+  },
 ];
 
 beforeEach(async () => {
@@ -48,6 +56,17 @@ beforeEach(async () => {
       category: "jp",
       lang: "ja",
     },
+    {
+      guid: "g-bigtech",
+      feed_id: "google-blog",
+      title: "Google Blog Post",
+      url: "https://x.test/g/1",
+      summary: null,
+      author: null,
+      published_at: "2024-04-04T00:00:00.000Z",
+      category: "bigtech",
+      lang: "en",
+    },
   ]);
 });
 
@@ -62,8 +81,8 @@ describe("/feed.json", () => {
       items: { id: string; title: string; url: string }[];
     };
     expect(body.version).toBe("https://jsonfeed.org/version/1.1");
-    expect(body.items.map((i) => i.id)).toEqual(["g-jp", "g-ai"]);
-    expect(body.items[1].title).toBe("AI <Article> & friends");
+    expect(body.items.map((i) => i.id)).toEqual(["g-bigtech", "g-jp", "g-ai"]);
+    expect(body.items[2].title).toBe("AI <Article> & friends");
   });
 
   it("filters by category", async () => {
@@ -75,7 +94,7 @@ describe("/feed.json", () => {
   it("filters by lang", async () => {
     const res = await SELF.fetch("https://example.com/feed.json?lang=en");
     const body = (await res.json()) as { items: { id: string }[] };
-    expect(body.items.map((i) => i.id)).toEqual(["g-ai"]);
+    expect(body.items.map((i) => i.id)).toEqual(["g-bigtech", "g-ai"]);
   });
 });
 
@@ -100,5 +119,88 @@ describe("/feed.xml", () => {
     const text = await res.text();
     expect(text).toContain("g-ai");
     expect(text).not.toContain("g-jp");
+  });
+});
+
+describe("/feeds/category/:cat.json", () => {
+  it("returns 200 with correct Content-Type for ai category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/ai.json");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
+    const body = (await res.json()) as {
+      version: string;
+      title: string;
+      items: { id: string }[];
+    };
+    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect(body.title).toBe("Tech News Bot — AI Labs");
+    expect(body.items.map((i) => i.id)).toEqual(["g-ai"]);
+  });
+
+  it("returns 200 and only jp articles for jp category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/jp.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { title: string; items: { id: string }[] };
+    expect(body.title).toBe("Tech News Bot — 国内エンジニアリング");
+    expect(body.items.map((i) => i.id)).toEqual(["g-jp"]);
+    // 別カテゴリの記事が混入しないこと
+    expect(body.items.find((i) => i.id === "g-ai")).toBeUndefined();
+    expect(body.items.find((i) => i.id === "g-bigtech")).toBeUndefined();
+  });
+
+  it("returns 404 for invalid category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/invalid.json");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 304 on ETag round-trip", async () => {
+    const first = await SELF.fetch("https://example.com/feeds/category/ai.json");
+    const etag = first.headers.get("ETag");
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+
+    const second = await SELF.fetch("https://example.com/feeds/category/ai.json", {
+      headers: { "If-None-Match": etag! },
+    });
+    expect(second.status).toBe(304);
+  });
+});
+
+describe("/feeds/category/:cat.xml", () => {
+  it("returns 200 with correct Content-Type for bigtech category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/bigtech.xml");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    const text = await res.text();
+    expect(text.startsWith("<?xml")).toBe(true);
+    expect(text).toContain('<rss version="2.0"');
+    expect(text).toContain("Tech News Bot — Big Tech");
+    expect(text).toContain("g-bigtech");
+  });
+
+  it("returns 200 and only ai articles for ai category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/ai.xml");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Tech News Bot — AI Labs");
+    expect(text).toContain("g-ai");
+    // 別カテゴリの記事が混入しないこと
+    expect(text).not.toContain("g-jp");
+    expect(text).not.toContain("g-bigtech");
+  });
+
+  it("returns 404 for invalid category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/unknown.xml");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 304 on ETag round-trip", async () => {
+    const first = await SELF.fetch("https://example.com/feeds/category/jp.xml");
+    const etag = first.headers.get("ETag");
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+
+    const second = await SELF.fetch("https://example.com/feeds/category/jp.xml", {
+      headers: { "If-None-Match": etag! },
+    });
+    expect(second.status).toBe(304);
   });
 });
