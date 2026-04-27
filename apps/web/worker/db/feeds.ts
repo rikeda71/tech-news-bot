@@ -295,7 +295,8 @@ export async function findFeedWithStats(db: D1Database, id: string): Promise<Fee
 }
 
 export interface CategorySummary {
-  category: "bigtech" | "ai" | "jp" | "zenn";
+  id: "bigtech" | "ai" | "jp" | "zenn";
+  label: string;
   feeds_count: number;
   articles_30d: number;
   last_published_at: string | null;
@@ -303,10 +304,19 @@ export interface CategorySummary {
 
 const ALL_CATEGORIES: Array<"bigtech" | "ai" | "jp" | "zenn"> = ["bigtech", "ai", "jp", "zenn"];
 
+// client 側の CategorySummary.label に対応するマッピング
+const CATEGORY_LABELS: Record<"bigtech" | "ai" | "jp" | "zenn", string> = {
+  bigtech: "ビッグテック",
+  ai: "AI",
+  jp: "日本企業",
+  zenn: "Zenn",
+};
+
 /**
  * カテゴリ別のサマリを 1 クエリで取得する。
  * feeds テーブルに articles を LEFT JOIN して GROUP BY category。
  * D1 の結果に含まれないカテゴリ (フィード 0 件) は TS 側で 0 埋めして必ず 4 件返す。
+ * client 側の CategorySummary 型に合わせて id / label を返す。
  */
 export async function getCategoriesSummary(db: D1Database): Promise<CategorySummary[]> {
   const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -330,22 +340,27 @@ export async function getCategoriesSummary(db: D1Database): Promise<CategorySumm
     }>();
 
   const dbMap = new Map(
-    (rows.results ?? []).map((r) => [
-      r.category,
-      {
-        category: r.category as CategorySummary["category"],
-        feeds_count: r.feeds_count,
-        articles_30d: r.articles_30d,
-        last_published_at: r.last_published_at,
-      },
-    ]),
+    (rows.results ?? []).map((r) => {
+      const id = r.category as CategorySummary["id"];
+      return [
+        id,
+        {
+          id,
+          label: CATEGORY_LABELS[id],
+          feeds_count: r.feeds_count,
+          articles_30d: r.articles_30d,
+          last_published_at: r.last_published_at,
+        },
+      ];
+    }),
   );
 
   // DB に存在しないカテゴリも 0 埋めして全 4 カテゴリを返す
   return ALL_CATEGORIES.map(
     (cat) =>
       dbMap.get(cat) ?? {
-        category: cat,
+        id: cat,
+        label: CATEGORY_LABELS[cat],
         feeds_count: 0,
         articles_30d: 0,
         last_published_at: null,
