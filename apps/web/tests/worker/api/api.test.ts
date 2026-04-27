@@ -92,7 +92,7 @@ describe("/api/articles", () => {
 
   it("rejects unknown feed_id silently (returns all)", async () => {
     const res = await SELF.fetch("https://example.com/api/articles?feed_id=does-not-exist");
-    const body = (await res.json()) as { articles: { guid: string }[] };
+    const body = (await res.json()) as { articles: unknown[] };
     expect(body.articles.length).toBe(3);
   });
 
@@ -145,7 +145,7 @@ describe("/api/articles", () => {
     const res = await SELF.fetch(
       "https://example.com/api/articles?category=bigtech&feed_id=openai-blog",
     );
-    const body = (await res.json()) as { articles: { guid: string }[] };
+    const body = (await res.json()) as { articles: unknown[] };
     expect(body.articles.length).toBe(0);
   });
 
@@ -163,7 +163,7 @@ describe("/api/articles", () => {
     const res = await SELF.fetch(
       "https://example.com/api/articles?feed_id=mercari-engineering&q=transformer",
     );
-    const body = (await res.json()) as { articles: { guid: string }[] };
+    const body = (await res.json()) as { articles: unknown[] };
     expect(body.articles.length).toBe(0);
   });
 
@@ -271,7 +271,7 @@ describe("/api/stats", () => {
       total: number;
       by_category: Record<string, number>;
       by_lang: Record<string, number>;
-      stale_feeds: unknown[];
+      stale_feeds: { id: string }[];
     };
     expect(body.total).toBe(3);
     expect(body.by_category).toEqual({ bigtech: 1, ai: 1, jp: 1 });
@@ -301,9 +301,7 @@ describe("/api/stats", () => {
       .run();
 
     const res = await SELF.fetch("https://example.com/api/stats");
-    const body = (await res.json()) as {
-      stale_feeds: { id: string; last_status: string | null }[];
-    };
+    const body = (await res.json()) as { stale_feeds: { id: string }[] };
     const ids = body.stale_feeds.map((f) => f.id).toSorted();
     expect(ids).toEqual(["mercari-engineering", "openai-blog"]);
   });
