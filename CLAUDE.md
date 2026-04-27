@@ -13,19 +13,21 @@ tech-news-bot/                         pnpm workspace root
 ├── apps/
 │   └── web/                           デプロイ単位 (Cloudflare Worker + SPA)
 │       ├── client/                    React 18 + Vite SPA
+│       │   └── types/api.ts           SPA 内で閉じた型 (worker と独立)
 │       ├── worker/                    Hono ベース API + cron collector
 │       │   ├── api/                   /api/* (articles, stats, feeds, health, admin, syndication)
 │       │   ├── collector/             RSS/Atom 取得・パース・de-dup
 │       │   ├── db/                    D1 アクセス層
+│       │   ├── feeds.yaml             収集対象フィードの定義 (build 時 inline)
+│       │   ├── feed-config.ts         feeds.yaml ローダー
+│       │   ├── types.ts               Env / FeedConfig / Article などの worker 内型
 │       │   └── index.ts               Worker entry (fetch + scheduled)
 │       ├── tests/                     vitest + @cloudflare/vitest-pool-workers
 │       ├── vite.config.ts             @cloudflare/vite-plugin + react + yaml
 │       ├── vitest.config.ts           cloudflareTest plugin
 │       └── wrangler.toml              D1 / cron / assets binding
-├── packages/
-│   ├── shared-types/                  全パッケージ共通の TS 型
-│   └── feed-config/                   feeds.yaml + ローダー (YAML を build 時に inline)
-├── migrations/                        D1 マイグレーション (リポジトリルートで保持し全アプリで共有)
+├── migrations/                        D1 マイグレーション (リポジトリルートで保持)
+├── tools/d1-client/                   D1 から記事を抽出する CLI (Skill 用)
 ├── .claude/                           Claude Code 用 rules / skills
 ├── .github/workflows/                 CI (vp check/build/test) / Deploy
 ├── pnpm-workspace.yaml                catalog: で vite/vitest を vp に alias
@@ -34,14 +36,10 @@ tech-news-bot/                         pnpm workspace root
 └── package.json                       root: ワークスペース横断スクリプト
 ```
 
-### パッケージ依存関係
+### 構造の方針
 
-```
-@tnb/web ─┬─> @tnb/feed-config ─> @tnb/shared-types
-          └─> @tnb/shared-types
-```
-
-すべての internal パッケージは `workspace:*` 参照。型のみ提供する純 TS パッケージなので build ステップは不要 (main/exports は src/index.ts を直接指している)。
+PoC 規模 (Worker 1 個) なので `packages/` は廃止し、すべての worker コード (型 / loader / yaml) を `apps/web/worker/` 配下に inline している。
+将来 2 つ目の deploy unit や型を共有する CLI が増えた場合は再度 `packages/` を切り出す。
 
 ## 主要コマンド (root から)
 
@@ -74,9 +72,7 @@ tech-news-bot/                         pnpm workspace root
 - **言語**: TypeScript strict、`target: ES2023`、`module: ESNext`、`moduleResolution: bundler`。
 - **Lint/Format**: oxlint + oxfmt (`vp lint` / `vp fmt`)。ESLint/Prettier は使用しない。
 - **テスト**: `vite-plus/test` (= vp 同梱の vitest 4 系) + `@cloudflare/vitest-pool-workers` v0.15。テストごとに `reset()` + `applyD1Migrations` (`apps/web/tests/setup.ts`)。
-- **import スタイル**:
-  - 同一パッケージ内: 相対 import (`../db/articles`)
-  - 別パッケージ: workspace alias (`@tnb/shared-types`, `@tnb/feed-config`)
+- **import スタイル**: すべて相対 path (`../db/articles`, `../types`)。workspace alias は使わない (packages 廃止済み)
 - **commit / push**: ユーザーから明示指示がない限り行わない。
 - **新機能のテスト**: 既存 vitest スイート (`apps/web/tests/`) に追加。
 
@@ -89,7 +85,7 @@ tech-news-bot/                         pnpm workspace root
 
 ## フィード設定 (feeds.yaml) の追加・更新
 
-1. `packages/feed-config/feeds.yaml` を編集
+1. `apps/web/worker/feeds.yaml` を編集
 2. `id` は kebab-case でユニーク、`category` は `bigtech | ai | jp`、`lang` は `ja | en`
 3. 追加前に `curl -sSL <url>` で 200 + 妥当な RSS/Atom を返すこと確認
 4. PR を作る (CI が build/test を実行)

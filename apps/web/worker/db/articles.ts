@@ -1,4 +1,4 @@
-import type { Article, FeedCategory, FeedLang } from "@tnb/shared-types";
+import type { Article, FeedCategory, FeedLang } from "../types";
 
 export interface InsertableArticle {
   guid: string;

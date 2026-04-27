@@ -6,13 +6,13 @@
 
 完全に Cloudflare 無料枠で動作します。
 
-| レイヤ       | サービス                                               |
-| ------------ | ------------------------------------------------------ |
-| RSS 収集     | Cloudflare Workers + Cron Triggers (3 時間ごと)        |
-| データベース | Cloudflare D1 (SQLite) + FTS5 全文検索                 |
-| API          | 同 Worker 内で Hono が `/api/*` をハンドリング         |
-| 静的フロント | Worker Static Assets (Vite で React SPA をビルド)      |
-| 設定         | `packages/feed-config/feeds.yaml` を Worker にバンドル |
+| レイヤ       | サービス                                          |
+| ------------ | ------------------------------------------------- |
+| RSS 収集     | Cloudflare Workers + Cron Triggers (3 時間ごと)   |
+| データベース | Cloudflare D1 (SQLite) + FTS5 全文検索            |
+| API          | 同 Worker 内で Hono が `/api/*` をハンドリング    |
+| 静的フロント | Worker Static Assets (Vite で React SPA をビルド) |
+| 設定         | `apps/web/worker/feeds.yaml` を Worker にバンドル |
 
 ```
 ┌────────────────────────────────────────────────┐
@@ -31,24 +31,22 @@
 
 ## ディレクトリ
 
-pnpm workspaces による monorepo 構成:
-
 ```
 apps/
   └─ web/                          # デプロイ単位 (Cloudflare Worker + SPA)
-       ├─ client/                   # React + Vite SPA
+       ├─ client/                   # React + Vite SPA (内部に types/api.ts)
        ├─ worker/                   # Cron + API (Hono)
        │    ├─ index.ts             # entrypoint (fetch + scheduled)
        │    ├─ api/                 # /api/*, /feed.{json,xml}
        │    ├─ collector/           # RSS 収集ロジック
-       │    └─ db/                  # D1 アクセス層
+       │    ├─ db/                  # D1 アクセス層
+       │    ├─ types.ts             # Env / FeedConfig / Article などの型
+       │    ├─ feed-config.ts       # feeds.yaml ローダー
+       │    └─ feeds.yaml           # 収集対象フィードの定義 (build 時 inline)
        ├─ tests/                    # vitest (workers pool)
        ├─ vite.config.ts
        ├─ vitest.config.ts
        └─ wrangler.toml
-packages/
-  ├─ shared-types/                  # Worker / SPA 共有型
-  └─ feed-config/                   # feeds.yaml + ローダー (build 時 inline)
 migrations/                         # D1 用 SQL マイグレーション
 tools/d1-client/                    # D1 から記事を抽出する CLI (Skill 用)
 .claude/                            # Claude Code 用 rules / skills
@@ -98,7 +96,7 @@ pnpm deploy
 # vite build → wrangler deploy
 ```
 
-## 設定ファイル: `packages/feed-config/feeds.yaml`
+## 設定ファイル: `apps/web/worker/feeds.yaml`
 
 ```yaml
 version: 1

@@ -1,5 +1,5 @@
-import type { FeedConfig, FeedsFile } from "@tnb/shared-types";
-import feedsYaml from "../feeds.yaml";
+import type { FeedConfig, FeedsFile } from "./types";
+import feedsYaml from "./feeds.yaml";
 
 const file = feedsYaml as FeedsFile;
 

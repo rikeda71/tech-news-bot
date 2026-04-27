@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { loadAllFeeds } from "@tnb/feed-config";
+import { loadAllFeeds } from "../feed-config";
 
 const app = new Hono<{ Bindings: Env }>();
 

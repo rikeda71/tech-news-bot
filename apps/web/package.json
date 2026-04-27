@@ -16,8 +16,6 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@tnb/feed-config": "workspace:*",
-    "@tnb/shared-types": "workspace:*",
     "fast-xml-parser": "^4.5.0",
     "hono": "^4.6.14",
     "react": "^18.3.1",

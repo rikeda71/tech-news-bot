@@ -50,8 +50,8 @@ export function pickText(value: unknown): string | null {
   }
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    if (typeof obj["#text"] === "string") return obj["#text"] as string;
-    if (typeof obj["#cdata"] === "string") return obj["#cdata"] as string;
+    if (typeof obj["#text"] === "string") return obj["#text"];
+    if (typeof obj["#cdata"] === "string") return obj["#cdata"];
   }
   return null;
 }

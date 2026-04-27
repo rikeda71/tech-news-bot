@@ -1,6 +1,5 @@
-import type { Env } from "../types";
-import type { FeedConfig } from "@tnb/shared-types";
-import { loadEnabledFeeds } from "@tnb/feed-config";
+import type { Env, FeedConfig } from "../types";
+import { loadEnabledFeeds } from "../feed-config";
 import { parseFeed } from "./rssParser";
 import { buildGuids } from "./deduplicator";
 import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
