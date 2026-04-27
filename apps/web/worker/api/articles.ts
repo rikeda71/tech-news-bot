@@ -2,7 +2,9 @@ import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { loadAllFeeds } from "../feed-config";
 import {
+  countArticlesByMonth,
   getArticleById,
+  getArticlesByMonth,
   getRandomArticles,
   getRelatedArticles,
   listArticles,
@@ -138,6 +140,48 @@ app.get("/:guid/related", async (c) => {
   const items = await getRelatedArticles(c.env.DB, guid, n);
   if (items === null) return c.json({ error: "not found" }, 404);
   return c.json({ items }, 200, { "Cache-Control": "public, max-age=300" });
+});
+
+app.get("/archive", async (c) => {
+  const yearRaw = c.req.query("year") ?? "";
+  const monthRaw = c.req.query("month") ?? "";
+
+  const year = parseInt(yearRaw, 10);
+  if (isNaN(year) || year < 2000 || year > 2100) {
+    return c.json({ error: "year must be an integer between 2000 and 2100" }, 400);
+  }
+
+  const month = parseInt(monthRaw, 10);
+  if (isNaN(month) || month < 1 || month > 12) {
+    return c.json({ error: "month must be an integer between 1 and 12" }, 400);
+  }
+
+  const categoryRaw = c.req.query("category");
+  if (categoryRaw !== undefined && !(VALID_CATEGORIES as string[]).includes(categoryRaw)) {
+    return c.json({ error: "invalid category" }, 400);
+  }
+  const category = categoryRaw as FeedCategory | undefined;
+
+  const langRaw = c.req.query("lang");
+  if (langRaw !== undefined && !(VALID_LANGS as string[]).includes(langRaw)) {
+    return c.json({ error: "invalid lang" }, 400);
+  }
+  const lang = langRaw as FeedLang | undefined;
+
+  const limitRaw = c.req.query("limit") ?? "200";
+  const limit = parseInt(limitRaw, 10);
+  if (isNaN(limit) || limit < 1 || limit > 500) {
+    return c.json({ error: "limit must be an integer between 1 and 500" }, 400);
+  }
+
+  const [items, total] = await Promise.all([
+    getArticlesByMonth(c.env.DB, year, month, { category, lang, limit }),
+    countArticlesByMonth(c.env.DB, year, month, { category, lang }),
+  ]);
+
+  return c.json({ year, month, items, total }, 200, {
+    "Cache-Control": "public, max-age=600",
+  });
 });
 
 app.get("/:id", async (c) => {
