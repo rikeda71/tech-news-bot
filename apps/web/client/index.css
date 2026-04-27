@@ -78,6 +78,20 @@ a:hover {
   padding: 24px 16px 64px;
 }
 
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -85,11 +99,6 @@ a:hover {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
-}
-
-.header h1 {
-  font-size: 1.4rem;
-  margin: 0;
 }
 
 .theme-toggle {
