@@ -141,6 +141,53 @@ export async function listArticles(
   return { articles, nextCursor };
 }
 
+export interface GetRandomArticlesParams {
+  n: number;
+  category?: FeedCategory;
+  lang?: FeedLang;
+  feedId?: string;
+}
+
+export async function getRandomArticles(
+  db: D1Database,
+  params: GetRandomArticlesParams,
+): Promise<Article[]> {
+  const conds: string[] = [];
+  const binds: unknown[] = [];
+
+  if (params.category) {
+    conds.push(`a.category = ?${binds.length + 1}`);
+    binds.push(params.category);
+  }
+  if (params.lang) {
+    conds.push(`a.lang = ?${binds.length + 1}`);
+    binds.push(params.lang);
+  }
+  if (params.feedId) {
+    conds.push(`a.feed_id = ?${binds.length + 1}`);
+    binds.push(params.feedId);
+  }
+
+  const where = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
+  const sql = `
+    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+           a.author, a.published_at, a.fetched_at, a.category, a.lang
+    FROM articles a
+    LEFT JOIN feeds f ON f.id = a.feed_id
+    ${where}
+    ORDER BY RANDOM()
+    LIMIT ?${binds.length + 1}
+  `;
+  binds.push(params.n);
+
+  const result = await db
+    .prepare(sql)
+    .bind(...binds)
+    .all<Article>();
+
+  return result.results ?? [];
+}
+
 export async function getArticleById(db: D1Database, id: number): Promise<Article | null> {
   const result = await db
     .prepare(
