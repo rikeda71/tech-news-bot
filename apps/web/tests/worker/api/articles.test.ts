@@ -1451,3 +1451,208 @@ describe("GET /api/articles/by-category/:cat", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
   });
 });
+
+describe("GET /api/articles/popular", () => {
+  it("returns 200 with default days=7 and articles/window_days/total fields", async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    await insertArticles(env.DB, [
+      {
+        guid: "pop-today-1",
+        feed_id: "google-research",
+        title: "Popular Today 1",
+        url: "https://x.test/g/pop-today-1",
+        summary: null,
+        author: "Author Pop",
+        published_at: `${todayStr}T10:00:00.000Z`,
+        category: "bigtech",
+        lang: "en",
+      },
+    ]);
+
+    const res = await SELF.fetch("https://example.com/api/articles/popular");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ articles: unknown[]; window_days: number; total: number }>();
+    expect(Array.isArray(body.articles)).toBe(true);
+    expect(body.window_days).toBe(7);
+    expect(typeof body.total).toBe("number");
+    expect(body.total).toBe(body.articles.length);
+  });
+
+  it("returns only articles within the specified days window", async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    // 今日の記事 (days=1 の範囲内)
+    await insertArticles(env.DB, [
+      {
+        guid: "pop-in-range",
+        feed_id: "google-research",
+        title: "In Range",
+        url: "https://x.test/g/in-range",
+        summary: null,
+        author: "Author In",
+        published_at: `${todayStr}T10:00:00.000Z`,
+        category: "bigtech",
+        lang: "en",
+      },
+    ]);
+    // beforeEach の記事は 2024-04 のため days=1 の範囲外
+
+    const res = await SELF.fetch("https://example.com/api/articles/popular?days=1");
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      articles: { guid: string }[];
+      window_days: number;
+      total: number;
+    }>();
+    expect(body.window_days).toBe(1);
+    // 2024-04 の古い記事は含まれない
+    for (const a of body.articles) {
+      expect(a.guid).toBe("pop-in-range");
+    }
+  });
+
+  it("de-duplicates same feed_id + author, keeping only the newest", async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(today.getUTCDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await insertArticles(env.DB, [
+      {
+        guid: "dup-newer",
+        feed_id: "openai-blog",
+        title: "Dup Newer",
+        url: "https://x.test/o/dup-newer",
+        summary: null,
+        author: "Dup Author",
+        published_at: `${todayStr}T12:00:00.000Z`,
+        category: "ai",
+        lang: "en",
+      },
+      {
+        guid: "dup-older",
+        feed_id: "openai-blog",
+        title: "Dup Older",
+        url: "https://x.test/o/dup-older",
+        summary: null,
+        author: "Dup Author",
+        published_at: `${yesterdayStr}T12:00:00.000Z`,
+        category: "ai",
+        lang: "en",
+      },
+    ]);
+
+    const res = await SELF.fetch("https://example.com/api/articles/popular?days=7");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ articles: { guid: string }[] }>();
+    const guids = body.articles.map((a) => a.guid);
+    // 同一 feed_id + author で 1 件のみ残る
+    expect(guids).toContain("dup-newer");
+    expect(guids).not.toContain("dup-older");
+  });
+
+  it("returns articles in published_at DESC order", async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(today.getUTCDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await insertArticles(env.DB, [
+      {
+        guid: "ord-a",
+        feed_id: "google-research",
+        title: "Order A",
+        url: "https://x.test/g/ord-a",
+        summary: null,
+        author: "Author Ord A",
+        published_at: `${yesterdayStr}T10:00:00.000Z`,
+        category: "bigtech",
+        lang: "en",
+      },
+      {
+        guid: "ord-b",
+        feed_id: "openai-blog",
+        title: "Order B",
+        url: "https://x.test/o/ord-b",
+        summary: null,
+        author: "Author Ord B",
+        published_at: `${todayStr}T10:00:00.000Z`,
+        category: "ai",
+        lang: "en",
+      },
+    ]);
+
+    const res = await SELF.fetch("https://example.com/api/articles/popular?days=7");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ articles: { published_at: string }[] }>();
+    const dates = body.articles.map((a) => a.published_at);
+    const sorted = dates.toSorted((a, b) => b.localeCompare(a));
+    expect(dates).toEqual(sorted);
+  });
+
+  it("respects limit parameter", async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const extra = Array.from({ length: 5 }, (_, i) => ({
+      guid: `pop-limit-${i}`,
+      feed_id: "google-research",
+      title: `Pop Limit ${i}`,
+      url: `https://x.test/g/pop-limit-${i}`,
+      summary: null,
+      author: `Pop Author ${i}`,
+      published_at: `${todayStr}T${String(i).padStart(2, "0")}:00:00.000Z`,
+      category: "bigtech" as const,
+      lang: "en" as const,
+    }));
+    await insertArticles(env.DB, extra);
+
+    const res = await SELF.fetch("https://example.com/api/articles/popular?days=7&limit=2");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ articles: unknown[]; total: number }>();
+    expect(body.articles.length).toBe(2);
+    expect(body.total).toBe(2);
+  });
+
+  it("returns 400 when days=0", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles/popular?days=0");
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("invalid days");
+  });
+
+  it("returns 400 when days=31", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles/popular?days=31");
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("invalid days");
+  });
+
+  it("returns 400 when limit=0", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles/popular?limit=0");
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("invalid limit");
+  });
+
+  it("returns 400 when limit=101", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles/popular?limit=101");
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("invalid limit");
+  });
+
+  it("returns Cache-Control: public, max-age=600", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles/popular");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+  });
+
+  it("returns Content-Type: application/json", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles/popular");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toMatch(/application\/json/);
+  });
+});
