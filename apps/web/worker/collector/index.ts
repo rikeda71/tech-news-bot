@@ -23,13 +23,11 @@ const ALLOWED_URL_PREFIXES = ["http://", "https://"];
 // backoff: 500ms, 1000ms の 2 回まで。並列度 4 × max 1.5s = 6s < 30s cron 制限
 const BACKOFF_BASE_MS = 500;
 
-export interface CollectResult {
-  feedId: string;
-  status: "ok" | "error" | "not_modified";
-  inserted: number;
-  parsed: number;
-  error?: string;
-}
+/** discriminated union: status に応じて error フィールドの有無が変わる */
+export type CollectResult =
+  | { feedId: string; status: "ok"; inserted: number; parsed: number }
+  | { feedId: string; status: "not_modified"; inserted: number; parsed: number }
+  | { feedId: string; status: "error"; inserted: number; parsed: number; error: string };
 
 export interface CollectAllResult {
   total: number;
@@ -477,7 +475,7 @@ export async function collectAll(
           status,
           result.inserted,
           durationMs,
-          result.error,
+          result.status === "error" ? result.error : undefined,
         );
         d1Acc.add(meta);
       } catch (err) {

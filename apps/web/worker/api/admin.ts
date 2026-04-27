@@ -233,7 +233,7 @@ app.post("/collector/run", async (c) => {
     feed_id: r.feedId,
     status: r.status,
     new_articles: r.inserted,
-    ...(r.error !== undefined ? { error: r.error } : {}),
+    ...(r.status === "error" ? { error: r.error } : {}),
   }));
 
   return c.json<AdminCollectorRunResponse>({
