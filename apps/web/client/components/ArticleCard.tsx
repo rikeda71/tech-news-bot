@@ -3,6 +3,7 @@ import { useReadState } from "../hooks/useReadState";
 import { useStarredState } from "../hooks/useStarredState";
 import type { Article, FeedCategory } from "../types/api";
 import { highlight } from "../utils/highlight";
+import { BookmarkButton } from "./BookmarkButton";
 import { ShareButtons } from "./ShareButtons";
 
 interface Props {
@@ -81,6 +82,7 @@ export function ArticleCard({
         >
           {starred ? "★" : "☆"}
         </button>
+        <BookmarkButton guid={article.guid} />
         {/* hover 時に既読 / 未読切り替えボタンを薄く表示 */}
         {hovered && (
           <button

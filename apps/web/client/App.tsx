@@ -8,6 +8,7 @@ import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { StatsPanel } from "./components/Stats";
 import { ToastContainer } from "./components/ToastContainer";
 import { useArticles } from "./hooks/useArticles";
+import { useBookmarks } from "./hooks/useBookmarks";
 import { useFeeds } from "./hooks/useFeeds";
 import { useKeyboardNav } from "./hooks/useKeyboardNav";
 import { usePresets } from "./hooks/usePresets";
@@ -86,6 +87,7 @@ function AppInner() {
   const [dateTo, setDateTo] = useState<string>(() => readFromUrl().dateTo);
   const [unreadOnly, setUnreadOnly] = useState<boolean>(() => readFromUrl().unreadOnly);
   const [starredOnly, setStarredOnly] = useState<boolean>(() => readFromUrl().starredOnly);
+  const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -93,6 +95,7 @@ function AppInner() {
   const { stats } = useStats();
   const { isRead, markRead, markUnread } = useReadState();
   const { isStarred, toggleStar } = useStarredState();
+  const { bookmarks } = useBookmarks();
   const { presets, addPreset, removePreset } = usePresets();
 
   // popstate でブラウザ戻る/進むに追従する
@@ -264,13 +267,14 @@ function AppInner() {
     loadMore,
   } = useArticles(query);
 
-  // 未読・スターフィルタはクライアントサイドで適用 (サーバー API は既読/スターを知らないため)
+  // 未読・スター・ブックマークフィルタはクライアントサイドで適用 (サーバー API はこれらを知らないため)
   const articles = useMemo(() => {
     let filtered = allArticles;
     if (unreadOnly) filtered = filtered.filter((a) => !isRead(a.id));
     if (starredOnly) filtered = filtered.filter((a) => isStarred(a.id));
+    if (bookmarkedOnly) filtered = filtered.filter((a) => bookmarks.has(a.guid));
     return filtered;
-  }, [allArticles, unreadOnly, starredOnly, isRead, isStarred]);
+  }, [allArticles, unreadOnly, starredOnly, bookmarkedOnly, isRead, isStarred, bookmarks]);
 
   const handleToggleRead = useCallback(
     (id: number) => {
@@ -296,6 +300,14 @@ function AppInner() {
           {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
           {stats?.last_fetched_at ? ` · 最終更新 ${formatRelative(stats.last_fetched_at)}` : ""}
         </span>
+        <button
+          type="button"
+          className={`bookmarks-only-toggle${bookmarkedOnly ? " active" : ""}`}
+          onClick={() => setBookmarkedOnly((prev) => !prev)}
+          aria-pressed={bookmarkedOnly}
+        >
+          ★ {bookmarks.size} 件{bookmarkedOnly ? " (表示中)" : ""}
+        </button>
         {stats && stats.stale_feeds.length > 0 && (
           <details className="stale-warning">
             <summary>⚠ {stats.stale_feeds.length} 件の収集に問題があります</summary>
@@ -347,7 +359,10 @@ function AppInner() {
 
       {loading && <div className="loader">読み込み中…</div>}
       {error && !loading && <div className="error">取得エラー: {error}</div>}
-      {!loading && !error && articles.length === 0 && (
+      {!loading && !error && articles.length === 0 && bookmarkedOnly && (
+        <div className="empty">ブックマークがありません</div>
+      )}
+      {!loading && !error && articles.length === 0 && !bookmarkedOnly && (
         <div className="empty">記事はまだありません。Cron 実行をお待ちください。</div>
       )}
 
