@@ -1,15 +1,16 @@
+import type { Theme } from "../hooks/useTheme";
+
 interface Props {
-  theme: "light" | "dark";
-  onToggle: () => void;
+  theme: Theme;
+  onSetTheme: (t: Theme) => void;
 }
 
-// SVG アイコンをインラインで定義し、フォントへの依存を排除する
 function SunIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -35,8 +36,8 @@ function MoonIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -50,18 +51,60 @@ function MoonIcon() {
   );
 }
 
-export function ThemeToggle({ theme, onToggle }: Props) {
-  const label = theme === "dark" ? "ライトモードに切り替え" : "ダークモードに切り替え";
-
+function SystemIcon() {
   return (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={onToggle}
-      aria-label={label}
-      title={label}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-    </button>
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  );
+}
+
+export function ThemeToggle({ theme, onSetTheme }: Props) {
+  return (
+    <div className="theme-toggle-group" role="group" aria-label="テーマ切替">
+      <button
+        type="button"
+        className={`theme-toggle-btn${theme === "light" ? " active" : ""}`}
+        aria-pressed={theme === "light"}
+        aria-label="ライトモード"
+        title="ライトモード"
+        onClick={() => onSetTheme("light")}
+      >
+        <SunIcon />
+      </button>
+      <button
+        type="button"
+        className={`theme-toggle-btn${theme === "system" ? " active" : ""}`}
+        aria-pressed={theme === "system"}
+        aria-label="OS設定に追従"
+        title="OS設定に追従"
+        onClick={() => onSetTheme("system")}
+      >
+        <SystemIcon />
+      </button>
+      <button
+        type="button"
+        className={`theme-toggle-btn${theme === "dark" ? " active" : ""}`}
+        aria-pressed={theme === "dark"}
+        aria-label="ダークモード"
+        title="ダークモード"
+        onClick={() => onSetTheme("dark")}
+      >
+        <MoonIcon />
+      </button>
+    </div>
   );
 }
