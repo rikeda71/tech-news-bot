@@ -48,7 +48,8 @@ function daysAgo(n: number): string {
 }
 
 interface CategorySummary {
-  category: FeedCategory;
+  id: FeedCategory;
+  label: string;
   feeds_count: number;
   articles_30d: number;
   last_published_at: string | null;
@@ -66,7 +67,7 @@ describe("GET /api/categories - DB 空の場合", () => {
     expect(Array.isArray(body.categories)).toBe(true);
     expect(body.categories).toHaveLength(4);
 
-    const cats = body.categories.map((c) => c.category).sort();
+    const cats = body.categories.map((c) => c.id).sort();
     expect(cats).toEqual([...ALL_CATEGORIES].sort());
   });
 
@@ -144,7 +145,7 @@ describe("GET /api/categories - テストデータあり", () => {
     const body = await res.json<CategoriesResponse>();
     expect(body.categories).toHaveLength(4);
 
-    const cats = body.categories.map((c) => c.category).sort();
+    const cats = body.categories.map((c) => c.id).sort();
     expect(cats).toEqual([...ALL_CATEGORIES].sort());
   });
 
@@ -152,7 +153,7 @@ describe("GET /api/categories - テストデータあり", () => {
     const res = await SELF.fetch("https://example.com/api/categories");
     const body = await res.json<CategoriesResponse>();
 
-    const byCategory = Object.fromEntries(body.categories.map((c) => [c.category, c]));
+    const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
     expect(byCategory["ai"]!.feeds_count).toBe(2);
     expect(byCategory["bigtech"]!.feeds_count).toBe(1);
     expect(byCategory["zenn"]!.feeds_count).toBe(1);
@@ -164,7 +165,7 @@ describe("GET /api/categories - テストデータあり", () => {
     const res = await SELF.fetch("https://example.com/api/categories");
     const body = await res.json<CategoriesResponse>();
 
-    const byCategory = Object.fromEntries(body.categories.map((c) => [c.category, c]));
+    const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
     // ai: daysAgo(5) + daysAgo(20) = 2件。daysAgo(31) は除外
     expect(byCategory["ai"]!.articles_30d).toBe(2);
     expect(byCategory["bigtech"]!.articles_30d).toBe(1);
@@ -174,7 +175,7 @@ describe("GET /api/categories - テストデータあり", () => {
     const res = await SELF.fetch("https://example.com/api/categories");
     const body = await res.json<CategoriesResponse>();
 
-    const byCategory = Object.fromEntries(body.categories.map((c) => [c.category, c]));
+    const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
     expect(byCategory["jp"]!.articles_30d).toBe(0);
     expect(byCategory["zenn"]!.articles_30d).toBe(0);
   });
@@ -183,7 +184,7 @@ describe("GET /api/categories - テストデータあり", () => {
     const res = await SELF.fetch("https://example.com/api/categories");
     const body = await res.json<CategoriesResponse>();
 
-    const byCategory = Object.fromEntries(body.categories.map((c) => [c.category, c]));
+    const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
 
     // ai: ai-1 (5d前) が最新
     expect(byCategory["ai"]!.last_published_at).not.toBeNull();
