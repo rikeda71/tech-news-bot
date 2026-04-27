@@ -4,7 +4,7 @@
 //
 // Usage:
 //   node tools/d1-client/recent.mjs --since=today [--target=local|remote]
-//                                   [--category=ai|bigtech|jp] [--lang=ja|en]
+//                                   [--category=ai|bigtech|jp|zenn] [--lang=ja|en]
 //                                   [--limit=200]
 //
 // Output (stdout): JSON object as documented in SKILL.md

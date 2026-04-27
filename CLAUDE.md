@@ -86,7 +86,7 @@ PoC 規模 (Worker 1 個) なので `packages/` は廃止し、すべての work
 ## フィード設定 (feeds.yaml) の追加・更新
 
 1. `apps/web/worker/feeds.yaml` を編集
-2. `id` は kebab-case でユニーク、`category` は `bigtech | ai | jp`、`lang` は `ja | en`
+2. `id` は kebab-case でユニーク、`category` は `bigtech | ai | jp | zenn`、`lang` は `ja | en`
 3. 追加前に `curl -sSL <url>` で 200 + 妥当な RSS/Atom を返すこと確認
 4. PR を作る (CI が build/test を実行)
 
