@@ -16,21 +16,21 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.5.0",
-    "hono": "^4.6.14",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "fast-xml-parser": "^5.7.2",
+    "hono": "^4.12.15",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.33.2",
     "@cloudflare/vitest-pool-workers": "^0.15.0",
-    "@cloudflare/workers-types": "^4.20250101.0",
-    "@modyfi/vite-plugin-yaml": "^1.1.0",
-    "@types/node": "^22.10.5",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^5.2.0",
-    "typescript": "^5.7.2",
+    "@cloudflare/workers-types": "^4.20260426.1",
+    "@modyfi/vite-plugin-yaml": "^1.1.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.3",
     "vite": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:",
