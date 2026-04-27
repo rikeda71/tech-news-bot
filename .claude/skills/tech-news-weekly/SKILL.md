@@ -5,10 +5,11 @@ description: 週次・月次でテック業界の動きをストーリー形式�
 
 # tech-news-weekly
 
-## tech-news-digest との使い分け
+## 他の skill との使い分け
 
 - **tech-news-digest**: 今日・今週・任意期間の記事を素早くリスト形式でまとめる。デイリーチェックや「何があった？」程度の確認に最適。
 - **tech-news-weekly (本 skill)**: 週次・月次を「読み物」として仕上げる。テーマ別ストーリー・前週との比較・カテゴリ間の温度差分析が必要な場合に使う。
+- **tech-news-search**: 特定キーワードで深掘り検索。「MCP の最近の話題は？」のようなキーワード絞り込みにはこちら。
 
 ## やること
 
@@ -217,4 +218,5 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 - 実装: `tools/d1-client/recent.mjs`
 - スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds` テーブル)
 - 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
-- 参考: `.claude/skills/tech-news-digest/SKILL.md` (デイリーダイジェスト skill)
+- 関連 skill: `.claude/skills/tech-news-digest/SKILL.md` (デイリーダイジェスト skill)
+- 関連 skill: `.claude/skills/tech-news-search/SKILL.md` (キーワード深掘り検索)

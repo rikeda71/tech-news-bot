@@ -5,10 +5,11 @@ description: D1 に蓄積された tech blog の記事を「今日 / 今週 / �
 
 # tech-news-digest
 
-## tech-news-weekly との使い分け
+## 他の skill との使い分け
 
 - **tech-news-digest (本 skill)**: 今日・今週・任意期間の記事を素早くリスト形式でまとめる。デイリーチェックや「何があった？」程度の確認に最適。
 - **tech-news-weekly**: 週次・月次を「読み物」として仕上げる。テーマ別ストーリー・前週との比較・カテゴリ間の温度差分析が必要な場合はそちらを使う。
+- **tech-news-search**: 特定キーワードで深掘り検索。「MCP の最近の話題は？」のようなキーワード絞り込みにはこちら。
 
 ## やること
 
@@ -244,3 +245,5 @@ skill を実行したら `runs.md` に結果を追記し、指標が退行して
 - 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
 - 評価指標: `.claude/skills/tech-news-digest/EVALUATION.md`
 - 実行ログ: `.claude/skills/tech-news-digest/runs.md`
+- 関連 skill: `.claude/skills/tech-news-weekly/SKILL.md` (週次・月次レポート)
+- 関連 skill: `.claude/skills/tech-news-search/SKILL.md` (キーワード深掘り検索)
