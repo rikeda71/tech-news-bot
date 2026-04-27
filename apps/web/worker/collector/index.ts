@@ -6,6 +6,7 @@ import { writeCollectorEvent } from "./metrics";
 import { maybeAlert } from "./alert";
 import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
 import {
+  getEnabledFeedIds,
   getFeedStreaks,
   loadFeedHeaders,
   recordFetchError,
@@ -283,12 +284,16 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
   const feeds = loadEnabledFeeds();
   await syncFeeds(env.DB, feeds);
 
+  // yaml の enabled=true を前提に、D1 で runtime disabled にされた feed を除外する
+  const d1EnabledIds = await getEnabledFeedIds(env.DB);
+  const activeFeeds = feeds.filter((f) => d1EnabledIds.has(f.id));
+
   const concurrency = Number(env.COLLECTOR_CONCURRENCY ?? "4") || 4;
   const timeoutMs = Number(env.COLLECTOR_TIMEOUT_MS ?? "10000") || 10000;
   const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
   const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
 
-  const results = await runWithConcurrency(feeds, concurrency, (feed) =>
+  const results = await runWithConcurrency(activeFeeds, concurrency, (feed) =>
     collectFeed(env, feed, summaryMax, timeoutMs, maxRetries),
   );
 
@@ -307,7 +312,7 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
 
   const durationMs = Date.now() - start;
   console.log(
-    `[collector] feeds=${feeds.length} skipped304=${skipped304} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
+    `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
   );
   for (const r of results) {
     if (r.status === "error") {
@@ -329,5 +334,5 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
     }
   }
 
-  return { total: feeds.length, inserted, pruned, results, durationMs };
+  return { total: activeFeeds.length, inserted, pruned, results, durationMs };
 }

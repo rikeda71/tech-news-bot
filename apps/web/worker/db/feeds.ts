@@ -82,6 +82,30 @@ export async function recordFetchSuccess(
     .run();
 }
 
+/** D1 の feeds.enabled を更新する。id が存在しない場合は found=false を返す。 */
+export async function setFeedEnabled(
+  db: D1Database,
+  id: string,
+  enabled: boolean,
+): Promise<{ found: boolean }> {
+  const result = await db
+    .prepare(
+      `UPDATE feeds
+       SET enabled = ?1,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE id = ?2`,
+    )
+    .bind(enabled ? 1 : 0, id)
+    .run();
+  return { found: (result.meta.changes ?? 0) > 0 };
+}
+
+/** D1 で enabled=1 の feed id を Set で返す。collector での in-memory check 用。 */
+export async function getEnabledFeedIds(db: D1Database): Promise<Set<string>> {
+  const rows = await db.prepare(`SELECT id FROM feeds WHERE enabled = 1`).all<{ id: string }>();
+  return new Set(rows.results.map((r) => r.id));
+}
+
 export async function recordFetchError(
   db: D1Database,
   feedId: string,
