@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
+import { AuthorDetail } from "./components/AuthorDetail";
 import { FeedDetail } from "./components/FeedDetail";
 import { FilterBar } from "./components/FilterBar";
 import { type AppView, Header } from "./components/Header";
@@ -85,15 +86,23 @@ function readFeedDetailFromPath(): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+/** /author/<name> パスを解析して著者名を返す。それ以外は null。*/
+function readAuthorFromPath(): string | null {
+  const m = window.location.pathname.match(/^\/author\/(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 function readViewFromUrl(): AppView {
   if (window.location.pathname === "/stats") return "stats";
   if (readFeedDetailFromPath() !== null) return "feed";
+  if (readAuthorFromPath() !== null) return "author";
   return "articles";
 }
 
 function AppInner() {
   const [view, setView] = useState<AppView>(readViewFromUrl);
   const [feedDetailId, setFeedDetailId] = useState<string>(() => readFeedDetailFromPath() ?? "");
+  const [authorName, setAuthorName] = useState<string>(() => readAuthorFromPath() ?? "");
   const [urlFilters, setUrlFilters] = useUrlState();
   const { q, category, lang, bookmarksOnly: bookmarkedOnly } = urlFilters;
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
@@ -119,6 +128,7 @@ function AppInner() {
   const handleViewChange = useCallback((next: AppView) => {
     setView(next);
     setFeedDetailId("");
+    setAuthorName("");
     const path = next === "stats" ? "/stats" : "/";
     if (window.location.pathname !== path) {
       window.history.pushState(null, "", path);
@@ -133,9 +143,16 @@ function AppInner() {
       setView(nextView);
       if (nextView === "feed") {
         setFeedDetailId(readFeedDetailFromPath() ?? "");
+        setAuthorName("");
+        return;
+      }
+      if (nextView === "author") {
+        setAuthorName(readAuthorFromPath() ?? "");
+        setFeedDetailId("");
         return;
       }
       setFeedDetailId("");
+      setAuthorName("");
       const next = readFromUrl();
       setFeedId(next.feedId);
       setDateFrom(next.dateFrom);
@@ -331,6 +348,19 @@ function AppInner() {
     setFeedDetailId("");
   }, []);
 
+  const handleGoToAuthorDetail = useCallback((name: string) => {
+    window.history.pushState(null, "", `/author/${encodeURIComponent(name)}`);
+    setView("author");
+    setAuthorName(name);
+  }, []);
+
+  const handleBackFromAuthorDetail = useCallback(() => {
+    window.history.pushState(null, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    setView("articles");
+    setAuthorName("");
+  }, []);
+
   const query = useMemo(
     () => ({
       category: category || undefined,
@@ -420,13 +450,20 @@ function AppInner() {
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {view === "stats" ? (
-        <StatsDashboard />
+        <StatsDashboard onNavigateToAuthor={handleGoToAuthorDetail} />
       ) : view === "feed" && feedDetailId ? (
         <FeedDetail
           feedId={feedDetailId}
           onBack={handleBackFromFeedDetail}
           onFilterByFeedId={handleGoToFeedDetail}
           onFilterByCategory={handleFilterByCategory}
+        />
+      ) : view === "author" && authorName ? (
+        <AuthorDetail
+          author={authorName}
+          onBack={handleBackFromAuthorDetail}
+          onFilterByCategory={handleFilterByCategory}
+          onFilterByFeedId={handleGoToFeedDetail}
         />
       ) : (
         <>
@@ -532,6 +569,7 @@ function AppInner() {
               selectedIndex={selectedIndex}
               onFilterByCategory={handleFilterByCategory}
               onFilterByFeedId={handleGoToFeedDetail}
+              onNavigateToAuthor={handleGoToAuthorDetail}
               q={q}
             />
           )}

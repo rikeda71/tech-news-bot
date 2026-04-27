@@ -10,11 +10,32 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function BarRow({ label, count, maxCount }: { label: string; count: number; maxCount: number }) {
+function BarRow({
+  label,
+  count,
+  maxCount,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  maxCount: number;
+  onClick?: () => void;
+}) {
   const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
   return (
     <div className="stats-bar-row">
-      <span className="stats-bar-label">{label}</span>
+      {onClick ? (
+        <button
+          type="button"
+          className="stats-bar-label stats-bar-label-clickable"
+          onClick={onClick}
+          title={`${label} の記事一覧`}
+        >
+          {label}
+        </button>
+      ) : (
+        <span className="stats-bar-label">{label}</span>
+      )}
       <div
         className="stats-bar"
         role="img"
@@ -26,7 +47,13 @@ function BarRow({ label, count, maxCount }: { label: string; count: number; maxC
   );
 }
 
-function AuthorsSection({ authors }: { authors: AuthorCount[] }) {
+function AuthorsSection({
+  authors,
+  onAuthorClick,
+}: {
+  authors: AuthorCount[];
+  onAuthorClick?: (author: string) => void;
+}) {
   const top = authors.slice(0, 10);
   const max = top[0]?.count ?? 1;
   return (
@@ -34,7 +61,13 @@ function AuthorsSection({ authors }: { authors: AuthorCount[] }) {
       <h3 className="stats-section-title">著者別 (30 日・上位 10 件)</h3>
       <div className="stats-bar-list">
         {top.map((a) => (
-          <BarRow key={a.author} label={a.author} count={a.count} maxCount={max} />
+          <BarRow
+            key={a.author}
+            label={a.author}
+            count={a.count}
+            maxCount={max}
+            onClick={onAuthorClick ? () => onAuthorClick(a.author) : undefined}
+          />
         ))}
       </div>
     </section>
@@ -86,7 +119,11 @@ function CategorySection({ byCategory }: { byCategory: Record<string, number> })
   );
 }
 
-export function StatsDashboard() {
+interface StatsDashboardProps {
+  onNavigateToAuthor?: (author: string) => void;
+}
+
+export function StatsDashboard({ onNavigateToAuthor }: StatsDashboardProps = {}) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +172,7 @@ export function StatsDashboard() {
       </div>
 
       {stats.top_authors_30d && stats.top_authors_30d.length > 0 && (
-        <AuthorsSection authors={stats.top_authors_30d} />
+        <AuthorsSection authors={stats.top_authors_30d} onAuthorClick={onNavigateToAuthor} />
       )}
 
       {stats.top_publishers_30d && stats.top_publishers_30d.length > 0 && (
