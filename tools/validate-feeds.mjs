@@ -31,7 +31,8 @@ const VALID_CONTENT_TYPES = [
  */
 const XML_BODY_PATTERN = /^\s*<\?xml/;
 
-const USER_AGENT = "tech-news-bot feed validator (+https://github.com/rikeda71/tech-news-bot)";
+// Worker の fetchFeed と同じ UA を使い、bot ブロックの差異を排除する
+const USER_AGENT = "tech-news-bot/1.0 (https://github.com/rikeda71/tech-news-bot)";
 const TIMEOUT_MS = 10_000;
 const CONCURRENCY = 4;
 
