@@ -3,7 +3,7 @@ import { ArticleCard } from "./ArticleCard";
 
 interface Props {
   articles: Article[];
-  focusedId?: number | null;
+  selectedIndex?: number;
   onFilterByCategory: (c: FeedCategory) => void;
   onFilterByFeedId: (id: string) => void;
   q?: string;
@@ -11,18 +11,18 @@ interface Props {
 
 export function ArticleList({
   articles,
-  focusedId,
+  selectedIndex = -1,
   onFilterByCategory,
   onFilterByFeedId,
   q,
 }: Props) {
   return (
     <div className="article-list">
-      {articles.map((a) => (
+      {articles.map((a, i) => (
         <ArticleCard
           key={a.id}
           article={a}
-          focused={focusedId === a.id}
+          isSelected={i === selectedIndex}
           onFilterByCategory={onFilterByCategory}
           onFilterByFeedId={onFilterByFeedId}
           q={q}
