@@ -5,7 +5,7 @@ import { listArticles } from "../db/articles";
 
 const app = new Hono<{ Bindings: Env }>();
 
-const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp"];
+const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
 const VALID_LANGS: FeedLang[] = ["ja", "en"];
 const VALID_FEED_IDS = new Set(loadAllFeeds().map((f) => f.id));
 

@@ -130,6 +130,42 @@ describe("/api/articles", () => {
     const body = (await res.json()) as { articles: unknown[] };
     expect(body.articles.length).toBe(3);
   });
+
+  it("filters by category AND feed_id together", async () => {
+    // ai カテゴリかつ openai-blog のみ → g-ai 1件
+    const res = await SELF.fetch(
+      "https://example.com/api/articles?category=ai&feed_id=openai-blog",
+    );
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.map((a) => a.guid)).toEqual(["g-ai"]);
+  });
+
+  it("returns empty when feed_id does not match category", async () => {
+    // bigtech カテゴリかつ openai-blog (ai) → 0件
+    const res = await SELF.fetch(
+      "https://example.com/api/articles?category=bigtech&feed_id=openai-blog",
+    );
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.length).toBe(0);
+  });
+
+  it("filters by feed_id AND full text search together", async () => {
+    // openai-blog かつ "transformer" → g-ai のみ
+    const res = await SELF.fetch(
+      "https://example.com/api/articles?feed_id=openai-blog&q=transformer",
+    );
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.map((a) => a.guid)).toEqual(["g-ai"]);
+  });
+
+  it("returns empty when feed_id and q do not match same article", async () => {
+    // mercari-engineering かつ "transformer" → 0件
+    const res = await SELF.fetch(
+      "https://example.com/api/articles?feed_id=mercari-engineering&q=transformer",
+    );
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.length).toBe(0);
+  });
 });
 
 describe("/api/stats", () => {

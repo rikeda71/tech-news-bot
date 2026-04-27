@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { listArticles } from "../db/articles";
 
-const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp"];
+const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
 const VALID_LANGS: FeedLang[] = ["ja", "en"];
 const FEED_LIMIT = 50;
 const SITE_TITLE = "tech-news-bot";
