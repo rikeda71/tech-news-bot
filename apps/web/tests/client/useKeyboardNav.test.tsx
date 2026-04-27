@@ -28,50 +28,60 @@ function fireKey(key: string) {
 describe("useKeyboardNav", () => {
   let onMarkRead: ReturnType<typeof vi.fn<(id: number) => void>>;
   let onToggleStar: ReturnType<typeof vi.fn<(id: number) => void>>;
+  // window に残るリスナーを分離するため各テストで unmount を追跡する
+  let unmount: () => void;
 
   beforeEach(() => {
     onMarkRead = vi.fn<(id: number) => void>();
     onToggleStar = vi.fn<(id: number) => void>();
+    unmount = () => {};
   });
 
   afterEach(() => {
+    // リスナーが window に残らないよう確実にアンマウントする
+    unmount();
     vi.clearAllMocks();
   });
 
   it("initially focusedIndex is null", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
-    expect(result.current.focusedIndex).toBeNull();
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
+    expect(h.result.current.focusedIndex).toBeNull();
   });
 
   it("j moves focus to first article when no selection", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("j");
     });
-    expect(result.current.focusedIndex).toBe(0);
+    expect(h.result.current.focusedIndex).toBe(0);
   });
 
   it("ArrowDown moves focus to next article", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("ArrowDown");
     });
     act(() => {
       fireKey("ArrowDown");
     });
-    expect(result.current.focusedIndex).toBe(1);
+    expect(h.result.current.focusedIndex).toBe(1);
   });
 
   it("k moves focus to last article when no selection", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("k");
     });
-    expect(result.current.focusedIndex).toBe(2);
+    expect(h.result.current.focusedIndex).toBe(2);
   });
 
   it("ArrowUp moves focus to previous article", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("j");
     });
@@ -81,32 +91,35 @@ describe("useKeyboardNav", () => {
     act(() => {
       fireKey("ArrowUp");
     });
-    expect(result.current.focusedIndex).toBe(0);
+    expect(h.result.current.focusedIndex).toBe(0);
   });
 
   it("j does not exceed last index", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("j");
       fireKey("j");
       fireKey("j");
       fireKey("j");
     });
-    expect(result.current.focusedIndex).toBe(2);
+    expect(h.result.current.focusedIndex).toBe(2);
   });
 
   it("k does not go below index 0", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("j");
       fireKey("k");
       fireKey("k");
     });
-    expect(result.current.focusedIndex).toBe(0);
+    expect(h.result.current.focusedIndex).toBe(0);
   });
 
   it("m calls onMarkRead with focused article id", () => {
-    renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("j");
     });
@@ -117,7 +130,8 @@ describe("useKeyboardNav", () => {
   });
 
   it("m does nothing when no article is focused", () => {
-    renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("m");
     });
@@ -125,7 +139,8 @@ describe("useKeyboardNav", () => {
   });
 
   it("s calls onToggleStar with focused article id", () => {
-    renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("j");
     });
@@ -136,7 +151,8 @@ describe("useKeyboardNav", () => {
   });
 
   it("s does nothing when no article is focused", () => {
-    renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("s");
     });
@@ -144,42 +160,45 @@ describe("useKeyboardNav", () => {
   });
 
   it("? toggles helpOpen", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
-    expect(result.current.helpOpen).toBe(false);
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
+    expect(h.result.current.helpOpen).toBe(false);
     act(() => {
       fireKey("?");
     });
-    expect(result.current.helpOpen).toBe(true);
+    expect(h.result.current.helpOpen).toBe(true);
     act(() => {
       fireKey("?");
     });
-    expect(result.current.helpOpen).toBe(false);
+    expect(h.result.current.helpOpen).toBe(false);
   });
 
   it("Escape closes helpOpen when open", () => {
-    const { result } = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    const h = renderHook(() => useKeyboardNav({ articles, onMarkRead, onToggleStar }));
+    unmount = h.unmount;
     act(() => {
       fireKey("?");
     });
-    expect(result.current.helpOpen).toBe(true);
+    expect(h.result.current.helpOpen).toBe(true);
     act(() => {
       fireKey("Escape");
     });
-    expect(result.current.helpOpen).toBe(false);
+    expect(h.result.current.helpOpen).toBe(false);
   });
 
   it("focusedIndex resets to last when articles shrink below current index", () => {
-    const { result, rerender } = renderHook(
+    const h = renderHook(
       ({ arts }) => useKeyboardNav({ articles: arts, onMarkRead, onToggleStar }),
       { initialProps: { arts: articles } },
     );
+    unmount = h.unmount;
     act(() => {
       fireKey("j");
       fireKey("j");
       fireKey("j");
     });
-    expect(result.current.focusedIndex).toBe(2);
-    rerender({ arts: [makeArticle(10)] });
-    expect(result.current.focusedIndex).toBe(0);
+    expect(h.result.current.focusedIndex).toBe(2);
+    h.rerender({ arts: [makeArticle(10)] });
+    expect(h.result.current.focusedIndex).toBe(0);
   });
 });
