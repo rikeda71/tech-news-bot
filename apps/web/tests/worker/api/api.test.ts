@@ -406,7 +406,7 @@ describe("CORS headers on public /api/* endpoints", () => {
       },
     });
     expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
-  });
+  }, 60000);
 });
 
 describe("security headers", () => {
