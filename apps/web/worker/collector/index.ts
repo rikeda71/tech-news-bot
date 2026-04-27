@@ -8,6 +8,8 @@ import { recordFetchError, recordFetchSuccess, syncFeeds } from "../db/feeds";
 const MAX_FEED_BYTES = 4 * 1024 * 1024; // 4MB
 const MAX_ITEMS_PER_FEED = 50;
 const ALLOWED_URL_PREFIXES = ["http://", "https://"];
+// backoff: 500ms, 1000ms の 2 回まで。並列度 4 × max 1.5s = 6s < 30s cron 制限
+const BACKOFF_BASE_MS = 500;
 
 export interface CollectResult {
   feedId: string;
@@ -27,7 +29,35 @@ export interface CollectAllResult {
 
 const USER_AGENT = "tech-news-bot/0.1 (+https://github.com/rikeda71/tech-news-bot)";
 
-async function fetchFeed(url: string, timeoutMs: number): Promise<string> {
+/** 一時障害とみなしてリトライすべき HTTP ステータスかどうか */
+function isTransientStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status < 600);
+}
+
+/**
+ * リトライ対象かどうかを判定する。
+ * - AbortError: タイムアウト
+ * - TypeError: ネットワーク接続失敗 ("Failed to fetch" 等)
+ * - HTTP 5xx / 429: 一時的なサーバー障害
+ * - HTTP 4xx (429 除く): 恒久エラーのためリトライしない
+ * テスト用に export する
+ */
+export function isRetryableError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.name === "AbortError") return true;
+  if (err instanceof TypeError) return true;
+  const m = /^HTTP (\d+)/.exec(err.message);
+  if (m) return isTransientStatus(Number(m[1]));
+  // HTTP エラー以外の予期しないエラーはリトライしない
+  return false;
+}
+
+/**
+ * 1 回の HTTP fetch を試みる。失敗時は呼び出し元でリトライを判断する。
+ * - 4xx (429 除く) は恒久エラーなので Error をそのまま throw
+ * - 5xx / 429 / AbortError / ネットワークエラーは throw して呼び出し元がリトライ
+ */
+async function fetchFeedOnce(url: string, timeoutMs: number): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -56,6 +86,39 @@ async function fetchFeed(url: string, timeoutMs: number): Promise<string> {
   }
 }
 
+/**
+ * 一時障害 (5xx / 429 / AbortError / ネットワークエラー) に対して
+ * 指数バックオフ + jitter でリトライする。4xx は即 fail。
+ * sleep は wallclock のみ消費するため Worker の CPU 制限に影響しない。
+ * テスト用に export する
+ */
+export async function fetchFeed(
+  url: string,
+  timeoutMs: number,
+  maxRetries: number,
+): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fetchFeedOnce(url, timeoutMs);
+    } catch (err) {
+      lastError = err;
+
+      const isRetryable = isRetryableError(err);
+
+      if (!isRetryable || attempt >= maxRetries) break;
+
+      // base * 2^attempt + jitter(0..base)
+      const delayMs = BACKOFF_BASE_MS * 2 ** attempt + Math.random() * BACKOFF_BASE_MS;
+      console.warn(
+        `[collector] fetchFeed attempt ${attempt + 1} failed for ${url}: ${err instanceof Error ? err.message : String(err)}. Retrying in ${Math.round(delayMs)}ms`,
+      );
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastError;
+}
+
 function isSafeUrl(url: string): boolean {
   return ALLOWED_URL_PREFIXES.some((p) => url.toLowerCase().startsWith(p));
 }
@@ -65,10 +128,11 @@ async function collectFeed(
   feed: FeedConfig,
   summaryMax: number,
   timeoutMs: number,
+  maxRetries: number,
 ): Promise<CollectResult> {
   const fetchedAt = new Date().toISOString();
   try {
-    const xml = await fetchFeed(feed.url, timeoutMs);
+    const xml = await fetchFeed(feed.url, timeoutMs, maxRetries);
     const allItems = parseFeed(xml, {
       summaryMaxLength: summaryMax,
       fallbackPublishedAt: fetchedAt,
@@ -137,10 +201,11 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
 
   const concurrency = Number(env.COLLECTOR_CONCURRENCY ?? "4") || 4;
   const timeoutMs = Number(env.COLLECTOR_TIMEOUT_MS ?? "10000") || 10000;
+  const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
   const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
 
   const results = await runWithConcurrency(feeds, concurrency, (feed) =>
-    collectFeed(env, feed, summaryMax, timeoutMs),
+    collectFeed(env, feed, summaryMax, timeoutMs, maxRetries),
   );
 
   const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
