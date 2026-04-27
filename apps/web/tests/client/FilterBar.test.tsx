@@ -11,12 +11,14 @@ const defaultProps = {
   dateFrom: "",
   dateTo: "",
   unreadOnly: false,
+  starredOnly: false,
   onCategoryChange: vi.fn<(c: string) => void>(),
   onLangChange: vi.fn<(l: string) => void>(),
   onFeedChange: vi.fn<(id: string) => void>(),
   onDateFromChange: vi.fn<(v: string) => void>(),
   onDateToChange: vi.fn<(v: string) => void>(),
   onUnreadOnlyChange: vi.fn<(v: boolean) => void>(),
+  onStarredOnlyChange: vi.fn<(v: boolean) => void>(),
   onClear: vi.fn<() => void>(),
 };
 
