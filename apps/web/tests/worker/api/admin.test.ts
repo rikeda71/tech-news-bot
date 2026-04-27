@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env, SELF } from "cloudflare:test";
 import { syncFeeds } from "../../../worker/db/feeds";
+import { finishRun, recordRunFeed, startRun } from "../../../worker/db/runs";
 import type { FeedConfig } from "../../../worker/types";
 
 const TEST_FEED: FeedConfig = {
@@ -164,5 +165,85 @@ describe("POST /api/admin/collector/run", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("feed_ids must be an array");
+  });
+});
+
+describe("GET /api/admin/runs", () => {
+  it("200: returns empty runs array when no runs exist", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/runs", {
+      headers: AUTH_HEADER,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { runs: unknown[] };
+    expect(Array.isArray(body.runs)).toBe(true);
+    expect(body.runs).toHaveLength(0);
+  });
+
+  it("200: returns runs list", async () => {
+    const { run_id } = await startRun(env.DB, "2024-04-01T00:00:00.000Z", 3);
+    await finishRun(env.DB, run_id, "2024-04-01T00:00:10.000Z", 2, 1, 15);
+
+    const res = await SELF.fetch("https://example.com/api/admin/runs", {
+      headers: AUTH_HEADER,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { runs: { id: number; feeds_ok: number }[] };
+    expect(body.runs).toHaveLength(1);
+    expect(body.runs[0].id).toBe(run_id);
+    expect(body.runs[0].feeds_ok).toBe(2);
+  });
+
+  it("200: clamps limit to max 100", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/runs?limit=9999", {
+      headers: AUTH_HEADER,
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("401: rejects unauthenticated request", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/runs");
+    expect(res.status).toBe(401);
+  });
+
+  it("401: rejects invalid token", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/runs", {
+      headers: { authorization: "Bearer wrong-token" },
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/admin/runs/:id", () => {
+  it("200: returns run detail with feeds", async () => {
+    const { run_id } = await startRun(env.DB, "2024-04-05T00:00:00.000Z", 2);
+    await recordRunFeed(env.DB, run_id, "feed-a", "ok", 10, 800);
+    await recordRunFeed(env.DB, run_id, "feed-b", "failed", 0, 200, "HTTP 500");
+    await finishRun(env.DB, run_id, "2024-04-05T00:00:05.000Z", 1, 1, 10);
+
+    const res = await SELF.fetch(`https://example.com/api/admin/runs/${run_id}`, {
+      headers: AUTH_HEADER,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      run: { id: number; feeds_ok: number };
+      feeds: { feed_id: string; status: string }[];
+    };
+    expect(body.run.id).toBe(run_id);
+    expect(body.run.feeds_ok).toBe(1);
+    expect(body.feeds).toHaveLength(2);
+    const feedA = body.feeds.find((f) => f.feed_id === "feed-a");
+    expect(feedA!.status).toBe("ok");
+  });
+
+  it("404: returns not found for unknown id", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/runs/99999", {
+      headers: AUTH_HEADER,
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("401: rejects unauthenticated request", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/runs/1");
+    expect(res.status).toBe(401);
   });
 });

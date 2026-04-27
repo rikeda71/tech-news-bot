@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { collectAll, collectFeeds } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { setFeedEnabled } from "../db/feeds";
+import { getRun, listRuns } from "../db/runs";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -150,6 +151,47 @@ app.post("/feeds/:id/enabled", async (c) => {
     return c.json({ error: "feed not found" }, 404);
   }
   return c.json({ id, enabled });
+});
+
+app.get("/runs", async (c) => {
+  const current = c.env.ADMIN_TOKEN;
+  const next = c.env.ADMIN_TOKEN_NEXT;
+  if (!current) {
+    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
+  }
+  const auth = c.req.header("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token || !isValidAdminToken(token, current, next)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+
+  const limitParam = Number(c.req.query("limit") ?? "20");
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
+  const runs = await listRuns(c.env.DB, limit);
+  return c.json({ runs });
+});
+
+app.get("/runs/:id", async (c) => {
+  const current = c.env.ADMIN_TOKEN;
+  const next = c.env.ADMIN_TOKEN_NEXT;
+  if (!current) {
+    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
+  }
+  const auth = c.req.header("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token || !isValidAdminToken(token, current, next)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+
+  const idParam = Number(c.req.param("id"));
+  if (!Number.isFinite(idParam) || idParam <= 0) {
+    return c.json({ error: "invalid id" }, 400);
+  }
+  const detail = await getRun(c.env.DB, idParam);
+  if (!detail) {
+    return c.json({ error: "not found" }, 404);
+  }
+  return c.json(detail);
 });
 
 export default app;
