@@ -1,5 +1,5 @@
 import { applyD1Migrations, env, reset } from "cloudflare:test";
-import { beforeEach } from "vitest";
+import { beforeEach } from "vite-plus/test";
 
 beforeEach(async () => {
   await reset();

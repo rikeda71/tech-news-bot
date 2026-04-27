@@ -76,9 +76,12 @@ pnpm migrate:local
 
 ### ローカル開発
 
+ツールチェインは [Vite+](https://viteplus.dev/) (`vp`)。未インストールなら `curl -fsSL https://vite.plus | bash`。
+
 ```sh
-pnpm dev          # vite + miniflare 統合サーバ (http://localhost:8787 など)
-pnpm test         # vitest run
+pnpm dev          # vp dev (vite + miniflare 統合サーバ http://localhost:8787)
+pnpm test         # vp test run (in apps/web)
+pnpm check        # vp check (lint + format + typecheck)
 pnpm typecheck    # tsc --noEmit
 ```
 

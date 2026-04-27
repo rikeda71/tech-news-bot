@@ -1,7 +1,8 @@
 # コーディングスタイル
 
 - TypeScript strict mode を尊重。`any` の使用は最小限、必要なら `unknown` で受けて narrow する。
-- Lint: oxlint。Format: oxfmt。両方とも Rust 製で高速。ESLint/Prettier 設定は追加しない。
+- Lint: oxlint (`vp lint`)。Format: oxfmt (`vp fmt`)。両方とも Vite+ (`vp`) 同梱。ESLint/Prettier 設定は追加しない。
+- lint/fmt 設定はルート `vite.config.ts` に集約 (`defineConfig({ lint, fmt })`)。`.oxlintrc.json` / `.oxfmtrc.json` は使わない。
 - Import 順序: 外部パッケージ → workspace パッケージ (`@tnb/*`) → 相対 import の順。oxfmt で自動整列されるので手動調整不要。
 - パス alias: パッケージ間は必ず `@tnb/<name>` を使用。深い相対 import (`../../shared/...`) は禁止。
 - コメント: 「なぜ」を書く。「何を」はコードで読めるので書かない。日本語可。

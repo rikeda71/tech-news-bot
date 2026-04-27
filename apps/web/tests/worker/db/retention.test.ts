@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env } from "cloudflare:test";
 import { deleteOlderThan, insertArticles } from "../../../worker/db/articles";
 import { syncFeeds } from "../../../worker/db/feeds";

@@ -8,7 +8,7 @@ export function useFeeds() {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch("/api/feeds");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

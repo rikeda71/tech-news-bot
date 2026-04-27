@@ -27,11 +27,11 @@ tech-news-bot/                         pnpm workspace root
 │   └── feed-config/                   feeds.yaml + ローダー (YAML を build 時に inline)
 ├── migrations/                        D1 マイグレーション (リポジトリルートで保持し全アプリで共有)
 ├── .claude/                           Claude Code 用 rules / skills
-├── .github/workflows/                 CI (pnpm + Vite+ 並列) / Deploy
-├── pnpm-workspace.yaml
+├── .github/workflows/                 CI (vp check/build/test) / Deploy
+├── pnpm-workspace.yaml                catalog: で vite/vitest を vp に alias
 ├── tsconfig.base.json
-├── .oxlintrc.json / .oxfmtrc.json
-└── package.json                       root: ワークスペース横断スクリプト + oxlint/oxfmt
+├── vite.config.ts                     ルート: oxlint/oxfmt 設定 (vp lint/fmt が読む)
+└── package.json                       root: ワークスペース横断スクリプト
 ```
 
 ### パッケージ依存関係
@@ -45,37 +45,35 @@ tech-news-bot/                         pnpm workspace root
 
 ## 主要コマンド (root から)
 
-| 目的                        | コマンド                                |
-| --------------------------- | --------------------------------------- |
-| dev サーバー起動            | `pnpm dev`                              |
-| 本番ビルド                  | `pnpm build`                            |
-| lint (oxlint)               | `pnpm lint` / `pnpm lint:fix`           |
-| format (oxfmt)              | `pnpm format` / `pnpm format:check`     |
-| typecheck (全パッケージ)    | `pnpm typecheck`                        |
-| 全部まとめて                | `pnpm check`                            |
-| テスト                      | `pnpm test` (※先に `pnpm build` が必要) |
-| Cloudflare 型生成           | `pnpm cf-typegen`                       |
-| D1 マイグレーション (local) | `pnpm migrate:local`                    |
-| D1 マイグレーション (prod)  | `pnpm migrate:prod`                     |
-| デプロイ                    | `pnpm deploy`                           |
+ツールチェインは [Vite+](https://viteplus.dev/) (`vp`) ベース。`pnpm` スクリプトは `vp` を呼ぶ thin wrapper。
 
-### Vite+ (https://viteplus.dev/)
+| 目的                        | コマンド (vp 直)                   | pnpm script          |
+| --------------------------- | ---------------------------------- | -------------------- |
+| dev サーバー起動            | `vp dev` (`apps/web/`)             | `pnpm dev`           |
+| 本番ビルド                  | `vp run build`                     | `pnpm build`         |
+| lint                        | `vp lint`                          | `pnpm lint`          |
+| format                      | `vp fmt --write`                   | `pnpm format`        |
+| typecheck                   | `pnpm -r typecheck`                | `pnpm typecheck`     |
+| 全部まとめて                | `vp check`                         | `pnpm check`         |
+| テスト                      | `vp test run` (`apps/web/` で実行) | `pnpm test`          |
+| Cloudflare 型生成           | —                                  | `pnpm cf-typegen`    |
+| D1 マイグレーション (local) | —                                  | `pnpm migrate:local` |
+| D1 マイグレーション (prod)  | —                                  | `pnpm migrate:prod`  |
+| デプロイ                    | —                                  | `pnpm deploy`        |
 
-`vp` CLI もそのまま動く。CI では `viteplus` ジョブで並列実行している。
+`vp` インストール: `curl -fsSL https://vite.plus | bash`
 
-```sh
-vp check      # lint + format + typecheck
-vp run build  # = pnpm build
-vp run test   # = pnpm test
-```
+設定:
 
-ローカルインストール: `curl -fsSL https://vite.plus | bash`
+- **lint/format ルール**: ルート `vite.config.ts` の `defineConfig({ lint, fmt })`
+- **vite/vitest の本体**: `pnpm-workspace.yaml` の `catalog` で `@voidzero-dev/vite-plus-{core,test}` に alias、`overrides` で全 transitive dep にも適用
+- **テストランナー**: vitest 由来の API は `vite-plus/test` から import (`apps/web/tests/setup.ts`)。Cloudflare の `cloudflare:test` (`applyD1Migrations`, `env`, `SELF`) はそのまま使える
 
 ## 規約
 
 - **言語**: TypeScript strict、`target: ES2023`、`module: ESNext`、`moduleResolution: bundler`。
-- **Lint/Format**: oxlint + oxfmt (Rust 系)。ESLint/Prettier は使用しない。
-- **テスト**: vitest 4 + `@cloudflare/vitest-pool-workers` v0.15。テストごとに `reset()` + `applyD1Migrations` (`apps/web/tests/setup.ts`)。
+- **Lint/Format**: oxlint + oxfmt (`vp lint` / `vp fmt`)。ESLint/Prettier は使用しない。
+- **テスト**: `vite-plus/test` (= vp 同梱の vitest 4 系) + `@cloudflare/vitest-pool-workers` v0.15。テストごとに `reset()` + `applyD1Migrations` (`apps/web/tests/setup.ts`)。
 - **import スタイル**:
   - 同一パッケージ内: 相対 import (`../db/articles`)
   - 別パッケージ: workspace alias (`@tnb/shared-types`, `@tnb/feed-config`)

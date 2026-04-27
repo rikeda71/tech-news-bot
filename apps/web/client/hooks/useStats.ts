@@ -24,7 +24,7 @@ export function useStats(refreshSignal: number = 0) {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch("/api/stats");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

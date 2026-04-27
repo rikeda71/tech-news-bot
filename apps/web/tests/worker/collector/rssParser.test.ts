@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { parseFeed } from "../../../worker/collector/rssParser";
 import sampleRss from "../../fixtures/sample-rss.xml?raw";
 import sampleAtom from "../../fixtures/sample-atom.xml?raw";

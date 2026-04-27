@@ -67,7 +67,7 @@ export function useArticles(query: ArticlesQuery) {
   }, [query]);
 
   useEffect(() => {
-    fetchInitial();
+    void fetchInitial();
   }, [fetchInitial]);
 
   const loadMore = useCallback(async () => {

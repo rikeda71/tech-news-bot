@@ -8,22 +8,22 @@
     "build": "pnpm --filter @tnb/web build",
     "preview": "pnpm --filter @tnb/web preview",
     "deploy": "pnpm --filter @tnb/web deploy",
-    "test": "pnpm --filter @tnb/web test",
-    "test:watch": "pnpm --filter @tnb/web test:watch",
+    "test": "pnpm --filter @tnb/web run test",
+    "test:watch": "pnpm --filter @tnb/web run test:watch",
     "typecheck": "pnpm -r typecheck",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
-    "format": "oxfmt --write",
-    "format:check": "oxfmt --check",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck",
+    "lint": "vp lint",
+    "lint:fix": "vp lint --fix",
+    "format": "vp fmt --write",
+    "format:check": "vp fmt --check",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
     "cf-typegen": "pnpm --filter @tnb/web cf-typegen",
     "migrate:local": "pnpm --filter @tnb/web migrate:local",
     "migrate:prod": "pnpm --filter @tnb/web migrate:prod"
   },
   "devDependencies": {
-    "oxfmt": "^0.46.0",
-    "oxlint": "^1.61.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite-plus": "catalog:"
   },
   "engines": {
     "node": ">=24"

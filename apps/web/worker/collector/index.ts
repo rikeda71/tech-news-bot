@@ -151,7 +151,9 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
   try {
     pruned = await deleteOlderThan(env.DB, retentionDays);
   } catch (err) {
-    console.warn(`[collector] retention prune failed: ${err instanceof Error ? err.message : err}`);
+    console.warn(
+      `[collector] retention prune failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 
   const durationMs = Date.now() - start;
