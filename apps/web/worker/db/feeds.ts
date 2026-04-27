@@ -287,6 +287,65 @@ export async function findFeedWithStats(db: D1Database, id: string): Promise<Fee
   };
 }
 
+export interface CategorySummary {
+  category: "bigtech" | "ai" | "jp" | "zenn";
+  feeds_count: number;
+  articles_30d: number;
+  last_published_at: string | null;
+}
+
+const ALL_CATEGORIES: Array<"bigtech" | "ai" | "jp" | "zenn"> = ["bigtech", "ai", "jp", "zenn"];
+
+/**
+ * カテゴリ別のサマリを 1 クエリで取得する。
+ * feeds テーブルに articles を LEFT JOIN して GROUP BY category。
+ * D1 の結果に含まれないカテゴリ (フィード 0 件) は TS 側で 0 埋めして必ず 4 件返す。
+ */
+export async function getCategoriesSummary(db: D1Database): Promise<CategorySummary[]> {
+  const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const rows = await db
+    .prepare(
+      `SELECT f.category,
+              COUNT(DISTINCT f.id) AS feeds_count,
+              COUNT(CASE WHEN a.published_at >= ?1 THEN 1 END) AS articles_30d,
+              MAX(a.published_at) AS last_published_at
+       FROM feeds f
+       LEFT JOIN articles a ON a.feed_id = f.id
+       GROUP BY f.category`,
+    )
+    .bind(threshold)
+    .all<{
+      category: string;
+      feeds_count: number;
+      articles_30d: number;
+      last_published_at: string | null;
+    }>();
+
+  const dbMap = new Map(
+    (rows.results ?? []).map((r) => [
+      r.category,
+      {
+        category: r.category as CategorySummary["category"],
+        feeds_count: r.feeds_count,
+        articles_30d: r.articles_30d,
+        last_published_at: r.last_published_at,
+      },
+    ]),
+  );
+
+  // DB に存在しないカテゴリも 0 埋めして全 4 カテゴリを返す
+  return ALL_CATEGORIES.map(
+    (cat) =>
+      dbMap.get(cat) ?? {
+        category: cat,
+        feeds_count: 0,
+        articles_30d: 0,
+        last_published_at: null,
+      },
+  );
+}
+
 /**
  * 指定フィードの最近の記事を published_at 降順で返す。
  * db/articles.ts への変更を避けるため feeds.ts 内に定義。
