@@ -16,6 +16,10 @@ const STALE_FEEDS_SQL = `
   ORDER BY last_fetched_at IS NULL DESC, last_fetched_at ASC
 `;
 
+// no pagination needed (aggregate-only):
+// total / by_category / by_lang は GROUP BY 1 クエリで完結し行数が増えない。
+// stale_feeds はフィード数 (最大数百) に依存するが、全件表示が運用上必要なため除外しない。
+
 app.get("/", async (c) => {
   const totalRow = await c.env.DB.prepare(
     "SELECT COUNT(*) AS n, MAX(published_at) AS last_published, MAX(fetched_at) AS last_fetched FROM articles",
