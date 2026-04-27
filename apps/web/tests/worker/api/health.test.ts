@@ -100,7 +100,7 @@ describe("GET /api/health/feeds", () => {
   it("returns 200 with an array", async () => {
     const res = await SELF.fetch("https://example.com/api/health/feeds");
     expect(res.status).toBe(200);
-    const body = (await res.json()) as FeedHealth[];
+    const body = (await res.json()) as unknown as FeedHealth[];
     expect(Array.isArray(body)).toBe(true);
     // feeds.yaml に定義されたフィード数以上の要素が返る
     expect(body.length).toBeGreaterThan(0);
@@ -108,7 +108,7 @@ describe("GET /api/health/feeds", () => {
 
   it("returns correct shape for each entry", async () => {
     const res = await SELF.fetch("https://example.com/api/health/feeds");
-    const body = (await res.json()) as FeedHealth[];
+    const body = (await res.json()) as unknown as FeedHealth[];
     // DB 未登録でもゼロ埋めで返る
     const found = body.find((f) => f.feed_id === GOOGLE_DEVELOPERS_ID);
     expect(found).toBeDefined();
@@ -135,7 +135,7 @@ describe("GET /api/health/feeds", () => {
     await recordFetchSuccess(env.DB, GOOGLE_DEVELOPERS_ID, successAt, 5);
 
     const res = await SELF.fetch("https://example.com/api/health/feeds");
-    const body = (await res.json()) as FeedHealth[];
+    const body = (await res.json()) as unknown as FeedHealth[];
     const found = body.find((f) => f.feed_id === GOOGLE_DEVELOPERS_ID);
     expect(found?.last_success_at).toBe(successAt);
     expect(found?.last_failure_at).toBeNull();
@@ -157,7 +157,7 @@ describe("GET /api/health/feeds", () => {
     await recordFetchError(env.DB, GOOGLE_DEVELOPERS_ID, failAt, "timeout");
 
     const res = await SELF.fetch("https://example.com/api/health/feeds");
-    const body = (await res.json()) as FeedHealth[];
+    const body = (await res.json()) as unknown as FeedHealth[];
     const found = body.find((f) => f.feed_id === GOOGLE_DEVELOPERS_ID);
     expect(found?.last_failure_at).toBe(failAt);
     expect(found?.consecutive_failures).toBe(2);
@@ -202,7 +202,7 @@ describe("GET /api/health/feeds", () => {
     ]);
 
     const res = await SELF.fetch("https://example.com/api/health/feeds");
-    const body = (await res.json()) as FeedHealth[];
+    const body = (await res.json()) as unknown as FeedHealth[];
     const found = body.find((f) => f.feed_id === GOOGLE_DEVELOPERS_ID);
     // 直近 7 日は 1 件のみ
     expect(found?.articles_last_7d).toBe(1);
@@ -210,7 +210,7 @@ describe("GET /api/health/feeds", () => {
 
   it("includes feeds.yaml disabled entries with enabled=false", async () => {
     const res = await SELF.fetch("https://example.com/api/health/feeds");
-    const body = (await res.json()) as FeedHealth[];
+    const body = (await res.json()) as unknown as FeedHealth[];
     // feeds.yaml の全フィードが含まれることを確認 (enabled/disabled 問わず)
     const ids = body.map((f) => f.feed_id);
     expect(ids).toContain(GOOGLE_DEVELOPERS_ID);
