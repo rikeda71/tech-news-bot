@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { FilterBar } from "./components/FilterBar";
-import { Header } from "./components/Header";
+import { type AppView, Header } from "./components/Header";
 import { PresetBar } from "./components/PresetBar";
 import { SearchInput } from "./components/SearchInput";
 import { SearchSuggestions } from "./components/SearchSuggestions";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
+import { StatsDashboard } from "./components/StatsDashboard";
 import { StatsPanel } from "./components/Stats";
 import { ToastContainer } from "./components/ToastContainer";
 import { useArticles } from "./hooks/useArticles";
@@ -77,7 +78,12 @@ function buildSearch(
   return s ? `?${s}` : window.location.pathname;
 }
 
+function readViewFromUrl(): AppView {
+  return window.location.pathname === "/stats" ? "stats" : "articles";
+}
+
 function AppInner() {
+  const [view, setView] = useState<AppView>(readViewFromUrl);
   const [urlFilters, setUrlFilters] = useUrlState();
   const { q, category, lang, bookmarksOnly: bookmarkedOnly } = urlFilters;
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
@@ -100,6 +106,14 @@ function AppInner() {
   const { presets, addPreset, removePreset } = usePresets();
   const recentSearches = useRecentSearches();
 
+  const handleViewChange = useCallback((next: AppView) => {
+    setView(next);
+    const path = next === "stats" ? "/stats" : "/";
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, "", path);
+    }
+  }, []);
+
   // popstate でブラウザ戻る/進むに追従する (useUrlState が q/category/lang/bookmarksOnly を処理、
   // feedId/dateFrom/dateTo/unreadOnly/starredOnly はこちらで処理)
   useEffect(() => {
@@ -110,6 +124,7 @@ function AppInner() {
       setDateTo(next.dateTo);
       setUnreadOnly(next.unreadOnly);
       setStarredOnly(next.starredOnly);
+      setView(readViewFromUrl());
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -375,109 +390,125 @@ function AppInner() {
 
   return (
     <div className="app">
-      <Header />
+      <Header view={view} onViewChange={handleViewChange} />
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <header className="header">
-        <span className="subtitle">
-          {stats ? `${stats.total.toLocaleString()} 記事 · 直近 24h: ${stats.last24h}` : ""}
-          {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
-          {stats?.last_fetched_at ? ` · 最終更新 ${formatRelative(stats.last_fetched_at)}` : ""}
-        </span>
-        <button
-          type="button"
-          className={`bookmarks-only-toggle${bookmarkedOnly ? " active" : ""}`}
-          onClick={handleBookmarkedOnlyToggle}
-          aria-pressed={bookmarkedOnly}
-        >
-          ★ {bookmarks.size} 件{bookmarkedOnly ? " (表示中)" : ""}
-        </button>
-        {stats && stats.stale_feeds.length > 0 && (
-          <details className="stale-warning">
-            <summary>⚠ {stats.stale_feeds.length} 件の収集に問題があります</summary>
-            <ul>
-              {stats.stale_feeds.map((f) => (
-                <li key={f.id}>
-                  <strong>{f.name}</strong>
-                  {f.last_status === "error" ? " · error" : " · stale"}
-                  {f.last_fetched_at ? ` · ${formatRelative(f.last_fetched_at)}` : " · 未取得"}
-                  {f.last_error && <div className="stale-error">{f.last_error}</div>}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
-      </header>
 
-      {stats && <StatsPanel stats={stats} />}
+      {view === "stats" ? (
+        <StatsDashboard />
+      ) : (
+        <>
+          <header className="header">
+            <span className="subtitle">
+              {stats ? `${stats.total.toLocaleString()} 記事 · 直近 24h: ${stats.last24h}` : ""}
+              {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
+              {stats?.last_fetched_at ? ` · 最終更新 ${formatRelative(stats.last_fetched_at)}` : ""}
+            </span>
+            <button
+              type="button"
+              className={`bookmarks-only-toggle${bookmarkedOnly ? " active" : ""}`}
+              onClick={handleBookmarkedOnlyToggle}
+              aria-pressed={bookmarkedOnly}
+            >
+              ★ {bookmarks.size} 件{bookmarkedOnly ? " (表示中)" : ""}
+            </button>
+            {stats && stats.stale_feeds.length > 0 && (
+              <details className="stale-warning">
+                <summary>⚠ {stats.stale_feeds.length} 件の収集に問題があります</summary>
+                <ul>
+                  {stats.stale_feeds.map((f) => (
+                    <li key={f.id}>
+                      <strong>{f.name}</strong>
+                      {f.last_status === "error" ? " · error" : " · stale"}
+                      {f.last_fetched_at ? ` · ${formatRelative(f.last_fetched_at)}` : " · 未取得"}
+                      {f.last_error && <div className="stale-error">{f.last_error}</div>}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </header>
 
-      <PresetBar
-        presets={presets}
-        currentFilters={{ category, lang, feedId, q, unreadOnly, starredOnly, dateFrom, dateTo }}
-        onApply={handleApplyPreset}
-        onAdd={addPreset}
-        onRemove={removePreset}
-      />
+          {stats && <StatsPanel stats={stats} />}
 
-      <div className="toolbar">
-        <div className="search-input-wrapper">
-          <SearchInput
-            ref={searchRef}
-            value={q}
-            onChange={handleQChange}
-            onFocus={handleSearchFocusIn}
-            onBlur={handleSearchBlur}
+          <PresetBar
+            presets={presets}
+            currentFilters={{
+              category,
+              lang,
+              feedId,
+              q,
+              unreadOnly,
+              starredOnly,
+              dateFrom,
+              dateTo,
+            }}
+            onApply={handleApplyPreset}
+            onAdd={addPreset}
+            onRemove={removePreset}
           />
-          <SearchSuggestions
-            items={recentSearches.items}
-            onPick={handleSuggestPick}
-            onRemove={handleSuggestRemove}
-            onClearAll={handleSuggestClearAll}
-            visible={suggestVisible}
-          />
-        </div>
-        <FilterBar
-          category={category}
-          lang={lang}
-          feedId={feedId}
-          feeds={feeds}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          unreadOnly={unreadOnly}
-          starredOnly={starredOnly}
-          onCategoryChange={handleCategoryChange}
-          onLangChange={handleLangChange}
-          onFeedChange={handleFeedChange}
-          onDateFromChange={handleDateFromChange}
-          onDateToChange={handleDateToChange}
-          onUnreadOnlyChange={handleUnreadOnlyChange}
-          onStarredOnlyChange={handleStarredOnlyChange}
-          onClear={handleClear}
-        />
-      </div>
 
-      {loading && <div className="loader">読み込み中…</div>}
-      {error && !loading && <div className="error">取得エラー: {error}</div>}
-      {!loading && !error && articles.length === 0 && bookmarkedOnly && (
-        <div className="empty">ブックマークがありません</div>
-      )}
-      {!loading && !error && articles.length === 0 && !bookmarkedOnly && (
-        <div className="empty">記事はまだありません。Cron 実行をお待ちください。</div>
-      )}
+          <div className="toolbar">
+            <div className="search-input-wrapper">
+              <SearchInput
+                ref={searchRef}
+                value={q}
+                onChange={handleQChange}
+                onFocus={handleSearchFocusIn}
+                onBlur={handleSearchBlur}
+              />
+              <SearchSuggestions
+                items={recentSearches.items}
+                onPick={handleSuggestPick}
+                onRemove={handleSuggestRemove}
+                onClearAll={handleSuggestClearAll}
+                visible={suggestVisible}
+              />
+            </div>
+            <FilterBar
+              category={category}
+              lang={lang}
+              feedId={feedId}
+              feeds={feeds}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              unreadOnly={unreadOnly}
+              starredOnly={starredOnly}
+              onCategoryChange={handleCategoryChange}
+              onLangChange={handleLangChange}
+              onFeedChange={handleFeedChange}
+              onDateFromChange={handleDateFromChange}
+              onDateToChange={handleDateToChange}
+              onUnreadOnlyChange={handleUnreadOnlyChange}
+              onStarredOnlyChange={handleStarredOnlyChange}
+              onClear={handleClear}
+            />
+          </div>
 
-      {articles.length > 0 && (
-        <ArticleList
-          articles={articles}
-          selectedIndex={selectedIndex}
-          onFilterByCategory={handleFilterByCategory}
-          onFilterByFeedId={handleFilterByFeedId}
-          q={q}
-        />
-      )}
+          {loading && <div className="loader">読み込み中…</div>}
+          {error && !loading && <div className="error">取得エラー: {error}</div>}
+          {!loading && !error && articles.length === 0 && bookmarkedOnly && (
+            <div className="empty">ブックマークがありません</div>
+          )}
+          {!loading && !error && articles.length === 0 && !bookmarkedOnly && (
+            <div className="empty">記事はまだありません。Cron 実行をお待ちください。</div>
+          )}
 
-      {nextCursor && (
-        <button type="button" className="load-more" onClick={loadMore} disabled={loadingMore}>
-          {loadingMore ? "読み込み中…" : "もっと読み込む"}
-        </button>
+          {articles.length > 0 && (
+            <ArticleList
+              articles={articles}
+              selectedIndex={selectedIndex}
+              onFilterByCategory={handleFilterByCategory}
+              onFilterByFeedId={handleFilterByFeedId}
+              q={q}
+            />
+          )}
+
+          {nextCursor && (
+            <button type="button" className="load-more" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? "読み込み中…" : "もっと読み込む"}
+            </button>
+          )}
+        </>
       )}
       <ToastContainer />
     </div>
