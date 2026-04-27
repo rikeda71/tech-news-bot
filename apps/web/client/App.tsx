@@ -342,6 +342,7 @@ export default function App() {
           focusedId={focusedId}
           onFilterByCategory={handleFilterByCategory}
           onFilterByFeedId={handleFilterByFeedId}
+          q={q}
         />
       )}
 
