@@ -308,12 +308,27 @@ describe("/api/stats", () => {
 });
 
 describe("/api/health", () => {
-  it("returns ok with article count", async () => {
+  it("returns enriched health response with db summary", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string; articles: number };
+    const body = (await res.json()) as {
+      status: string;
+      now: string;
+      db: {
+        articles_total: number;
+        feeds_total: number;
+        feeds_enabled: number;
+        latest_published_at: string | null;
+        latest_fetched_at: string | null;
+      };
+    };
     expect(body.status).toBe("ok");
-    expect(body.articles).toBe(3);
+    expect(typeof body.now).toBe("string");
+    expect(body.db.articles_total).toBe(3);
+    // feeds are synced via syncFeeds in beforeEach (FEEDS has 3 entries, all enabled)
+    expect(body.db.feeds_total).toBeGreaterThanOrEqual(3);
+    expect(body.db.feeds_enabled).toBeGreaterThanOrEqual(3);
+    expect(body.db.latest_published_at).not.toBeNull();
   });
 });
 
@@ -417,9 +432,9 @@ describe("security headers", () => {
 });
 
 describe("cache headers", () => {
-  it("API responses use no-store", async () => {
+  it("/api/health uses public max-age=10", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=10");
   });
 
   it("static asset under /assets/ uses immutable long max-age", async () => {
