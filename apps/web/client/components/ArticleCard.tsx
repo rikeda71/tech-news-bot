@@ -3,6 +3,7 @@ import { useReadState } from "../hooks/useReadState";
 import { useStarredState } from "../hooks/useStarredState";
 import type { Article, FeedCategory } from "../types/api";
 import { highlight } from "../utils/highlight";
+import { ShareButtons } from "./ShareButtons";
 
 interface Props {
   article: Article;
@@ -118,6 +119,7 @@ export function ArticleCard({
         )}
       </div>
       {article.summary && <p className="summary">{highlight(article.summary, q)}</p>}
+      <ShareButtons url={article.url} title={article.title} />
     </article>
   );
 }
