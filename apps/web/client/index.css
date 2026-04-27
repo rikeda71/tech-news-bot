@@ -553,7 +553,72 @@ a:hover {
   border-color: var(--badge-jp);
 }
 
-/* キーボードショートカット ヘルプモーダル */
+/* キーボードショートカット ShortcutsHelp モーダル */
+.shortcuts-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.shortcuts-help-modal {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  min-width: 320px;
+  max-width: 480px;
+  width: 90%;
+}
+
+.shortcuts-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.shortcuts-help-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.shortcuts-help-close {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.shortcuts-help-close:hover {
+  color: var(--fg);
+  background: var(--bg-elev-2);
+}
+
+.shortcuts-help-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.shortcuts-help-table td {
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+
+.shortcuts-help-table td:first-child {
+  width: 40%;
+  white-space: nowrap;
+}
+
+/* キーボードショートカット ヘルプモーダル (旧 HelpModal 互換) */
 .help-overlay {
   position: fixed;
   inset: 0;
