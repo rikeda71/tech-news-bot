@@ -74,6 +74,7 @@ export async function recordFetchSuccess(
        SET last_fetched_at = ?1,
            last_status = ?2,
            last_error = NULL,
+           consecutive_failures = 0,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?3`,
     )
@@ -93,9 +94,21 @@ export async function recordFetchError(
        SET last_fetched_at = ?1,
            last_status = 'error',
            last_error = ?2,
+           consecutive_failures = consecutive_failures + 1,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?3`,
     )
     .bind(fetchedAt, error.slice(0, 1000), feedId)
     .run();
+}
+
+export interface FeedStreak {
+  id: string;
+  consecutive_failures: number;
+}
+
+/** 全フィードの連続失敗カウントを返す。アラート判定に使用する。 */
+export async function getFeedStreaks(db: D1Database): Promise<FeedStreak[]> {
+  const result = await db.prepare(`SELECT id, consecutive_failures FROM feeds`).all<FeedStreak>();
+  return result.results;
 }
