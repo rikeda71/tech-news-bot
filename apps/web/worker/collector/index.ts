@@ -348,30 +348,40 @@ export async function collectFeeds(env: Env, feedIds?: string[]): Promise<Collec
   return { total: activeFeeds.length, inserted, pruned, results, durationMs };
 }
 
-export async function collectAll(env: Env): Promise<CollectAllResult> {
+export async function collectAll(
+  env: Env,
+  opts?: { runId?: number; feedIds?: readonly string[] },
+): Promise<CollectAllResult> {
   const start = Date.now();
   const startedAt = new Date(start).toISOString();
   const feeds = loadEnabledFeeds();
   await syncFeeds(env.DB, feeds);
 
-  // yaml の enabled=true を前提に、D1 で runtime disabled にされた feed を除外する
+  // yaml の enabled=true を前提に、D1 で runtime disabled にされた feed を除外する。
+  // feedIds が指定された場合はその ID に含まれるものだけを対象にする。
   const d1EnabledIds = await getEnabledFeedIds(env.DB);
-  const activeFeeds = feeds.filter((f) => d1EnabledIds.has(f.id));
+  const activeFeeds = feeds.filter((f) => {
+    if (!d1EnabledIds.has(f.id)) return false;
+    if (opts?.feedIds !== undefined) return opts.feedIds.includes(f.id);
+    return true;
+  });
 
   const concurrency = Number(env.COLLECTOR_CONCURRENCY ?? "4") || 4;
   const timeoutMs = Number(env.COLLECTOR_TIMEOUT_MS ?? "10000") || 10000;
   const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
   const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
 
-  // run の開始を記録する
-  let runId: number | null = null;
-  try {
-    const { run_id } = await startRun(env.DB, startedAt, activeFeeds.length);
-    runId = run_id;
-  } catch (err) {
-    console.error(
-      `[collector] startRun failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
+  // run_id が外から渡された場合はそれを使い、渡されなければここで startRun する
+  let runId: number | null = opts?.runId ?? null;
+  if (runId === null) {
+    try {
+      const { run_id } = await startRun(env.DB, startedAt, activeFeeds.length);
+      runId = run_id;
+    } catch (err) {
+      console.error(
+        `[collector] startRun failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   const results = await runWithConcurrency(activeFeeds, concurrency, async (feed) => {
