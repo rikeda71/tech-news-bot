@@ -23,7 +23,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm cf-typegen
       - name: vp check (lint + format + typecheck)
-        run: vp check
+        run: |
+          set -o pipefail
+          vp check 2>&1 | tee /tmp/vp-check.log | tail -500 || (tail -500 /tmp/vp-check.log; exit 1)
       - name: vp build
         run: vp run build
       - name: vp test
