@@ -270,6 +270,57 @@ export async function getRelatedArticles(
   return [...sameFeedArticles, ...(sameCategoryRows.results ?? [])];
 }
 
+export interface NeighborArticles {
+  prev: Article | null;
+  next: Article | null;
+}
+
+/**
+ * guid の前後記事を同 feed_id 内で取得する。
+ * tie-break は published_at が同一の場合 guid の辞書順で決定性を保証する。
+ * guid が存在しない場合は null を返す (呼び出し側で 404 ハンドル)。
+ */
+export async function getNeighbors(db: D1Database, guid: string): Promise<NeighborArticles | null> {
+  const target = await findArticleByGuid(db, guid);
+  if (!target) return null;
+
+  const { feed_id, published_at } = target;
+
+  const [prevResult, nextResult] = await Promise.all([
+    db
+      .prepare(
+        `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+                a.author, a.published_at, a.fetched_at, a.category, a.lang
+         FROM articles a
+         LEFT JOIN feeds f ON f.id = a.feed_id
+         WHERE a.feed_id = ?1
+           AND (a.published_at < ?2 OR (a.published_at = ?2 AND a.guid < ?3))
+         ORDER BY a.published_at DESC, a.guid DESC
+         LIMIT 1`,
+      )
+      .bind(feed_id, published_at, guid)
+      .first<Article>(),
+    db
+      .prepare(
+        `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+                a.author, a.published_at, a.fetched_at, a.category, a.lang
+         FROM articles a
+         LEFT JOIN feeds f ON f.id = a.feed_id
+         WHERE a.feed_id = ?1
+           AND (a.published_at > ?2 OR (a.published_at = ?2 AND a.guid > ?3))
+         ORDER BY a.published_at ASC, a.guid ASC
+         LIMIT 1`,
+      )
+      .bind(feed_id, published_at, guid)
+      .first<Article>(),
+  ]);
+
+  return {
+    prev: prevResult ?? null,
+    next: nextResult ?? null,
+  };
+}
+
 export async function countAllArticles(db: D1Database): Promise<number> {
   const row = await db.prepare(`SELECT COUNT(*) AS c FROM articles`).first<{ c: number }>();
   return row?.c ?? 0;

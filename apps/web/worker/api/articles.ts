@@ -5,6 +5,7 @@ import {
   countArticlesByMonth,
   getArticleById,
   getArticlesByMonth,
+  getNeighbors,
   getRandomArticles,
   getRelatedArticles,
   listArticles,
@@ -140,6 +141,13 @@ app.get("/:guid/related", async (c) => {
   const items = await getRelatedArticles(c.env.DB, guid, n);
   if (items === null) return c.json({ error: "not found" }, 404);
   return c.json({ items }, 200, { "Cache-Control": "public, max-age=300" });
+});
+
+app.get("/:guid/neighbors", async (c) => {
+  const guid = c.req.param("guid");
+  const neighbors = await getNeighbors(c.env.DB, guid);
+  if (neighbors === null) return c.json({ error: "not found" }, 404);
+  return c.json(neighbors, 200, { "Cache-Control": "public, max-age=300" });
 });
 
 app.get("/archive", async (c) => {
