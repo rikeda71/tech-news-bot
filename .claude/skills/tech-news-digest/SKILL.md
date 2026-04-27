@@ -218,8 +218,29 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 - **記事 0 件**: 「該当期間に記事なし」と正直に報告する。creative writing で埋めない
 - **WebFetch 連続失敗**: deep モードで選定記事の半数以上が fetch 失敗したら、残りは `quick` 相当 (`(summary based)` 付き) に退避し、出力末尾に `_注: WebFetch が複数失敗したため一部 summary ベース_` を付ける
 
+## 評価
+
+skill の出力品質を再現性のある指標で測定するためのフレームワークを整備している。
+
+- **評価指標の定義・測定方法**: [EVALUATION.md](./EVALUATION.md)
+- **実行ログ (結果記録)**: [runs.md](./runs.md)
+
+主な評価指標:
+
+| 指標                        | 種別 | 許容範囲       |
+| --------------------------- | ---- | -------------- |
+| 重要記事選定の再現率        | 客観 | 0.6 以上       |
+| 要約の事実整合性            | 主観 | 平均 1.5 / 2.0 |
+| トレンド抽出の意味性        | 主観 | 3 / 5 以上     |
+| WebFetch 失敗率             | 客観 | 0.3 未満       |
+| 同一ホスト連続 fetch 違反数 | 客観 | 0 件           |
+
+skill を実行したら `runs.md` に結果を追記し、指標が退行していれば EVALUATION.md の「チューニング優先度の目安」を参照して SKILL.md を修正する。
+
 ## 関連ファイル
 
 - 実装: `tools/d1-client/recent.mjs`
 - スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds` テーブル)
 - 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
+- 評価指標: `.claude/skills/tech-news-digest/EVALUATION.md`
+- 実行ログ: `.claude/skills/tech-news-digest/runs.md`
