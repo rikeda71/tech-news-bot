@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "./types";
 import api from "./api/router";
 import syndication from "./api/syndication";
+import opml from "./api/opml";
 import { collectAll } from "./collector";
 import { pruneOldArticles } from "./db/retention";
 
@@ -30,6 +31,7 @@ app.use("*", async (c, next) => {
 
 app.route("/api", api);
 app.route("/", syndication);
+app.route("/", opml);
 
 // 静的アセットへのフォールバック (Cloudflare Static Assets binding)
 // Vite は /assets/ 以下に hash 付きファイル名を出力するため、強キャッシュが安全。
