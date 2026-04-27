@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useFeedArticles } from "../hooks/useFeedArticles";
 import { useFeedDetail } from "../hooks/useFeedDetail";
 import type { FeedCategory } from "../types/api";
@@ -10,11 +11,28 @@ const CATEGORY_LABEL: Record<string, string> = {
   zenn: "Zenn",
 };
 
+const CATEGORY_ICON: Record<string, string> = {
+  bigtech: "🏢",
+  ai: "🤖",
+  jp: "🇯🇵",
+  zenn: "📝",
+};
+
 interface Props {
   feedId: string;
   onBack: () => void;
   onFilterByFeedId: (id: string) => void;
   onFilterByCategory: (c: FeedCategory) => void;
+}
+
+/** フィード URL からドメインを抽出し Google favicon API URL を返す */
+function getFaviconUrl(feedUrl: string): string {
+  try {
+    const domain = new URL(feedUrl).hostname;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  } catch {
+    return "";
+  }
 }
 
 export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategory }: Props) {
@@ -29,6 +47,8 @@ export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategor
     loadMore,
     loadingMore,
   } = useFeedArticles(feedId);
+
+  const [faviconError, setFaviconError] = useState(false);
 
   const isLoading = metaLoading || articlesLoading;
   const error = metaError;
@@ -61,6 +81,8 @@ export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategor
 
   if (!feed) return null;
 
+  const faviconUrl = getFaviconUrl(feed.url);
+
   return (
     <div className="feed-detail">
       <button type="button" className="feed-detail-back" onClick={onBack}>
@@ -68,12 +90,31 @@ export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategor
       </button>
 
       <section className="feed-detail-info">
-        <h2 className="feed-detail-name">{feed.name}</h2>
+        <div className="feed-detail-header">
+          {/* favicon または プレースホルダー */}
+          {faviconUrl && !faviconError ? (
+            <img
+              src={faviconUrl}
+              alt=""
+              className="feed-detail-favicon"
+              onError={() => setFaviconError(true)}
+              aria-hidden="true"
+            />
+          ) : (
+            <div className="feed-detail-favicon-placeholder" aria-hidden="true">
+              {CATEGORY_ICON[feed.category] ?? "📰"}
+            </div>
+          )}
+          <h2 className="feed-detail-name">{feed.name}</h2>
+        </div>
         <div className="feed-detail-meta">
           <a href={feed.url} target="_blank" rel="noopener noreferrer" className="feed-detail-url">
             {feed.url}
           </a>
           <span className={`badge cat-${feed.category}`}>
+            <span aria-hidden="true" style={{ marginRight: "3px" }}>
+              {CATEGORY_ICON[feed.category] ?? ""}
+            </span>
             {CATEGORY_LABEL[feed.category] ?? feed.category}
           </span>
           <span className="feed-detail-lang">{feed.lang.toUpperCase()}</span>
@@ -88,7 +129,10 @@ export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategor
         <h3 className="feed-detail-articles-title">直近の記事</h3>
         {articlesError && <div className="error">取得エラー: {articlesError}</div>}
         {!articlesError && articles.length === 0 ? (
-          <div className="empty">記事がありません</div>
+          <div className="empty">
+            <span className="empty-icon">📭</span>
+            <div className="empty-title">記事がありません</div>
+          </div>
         ) : (
           <div className="article-list">
             {articles.map((a) => (

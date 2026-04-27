@@ -597,10 +597,18 @@ function AppInner() {
           {loading && <div className="loader">読み込み中…</div>}
           {error && !loading && <div className="error">取得エラー: {error}</div>}
           {!loading && !error && articles.length === 0 && bookmarkedOnly && (
-            <div className="empty">ブックマークがありません</div>
+            <div className="empty">
+              <span className="empty-icon">🔖</span>
+              <div className="empty-title">ブックマークがありません</div>
+              <div className="empty-body">記事カードのブックマークアイコンから追加できます。</div>
+            </div>
           )}
           {!loading && !error && articles.length === 0 && !bookmarkedOnly && (
-            <div className="empty">記事はまだありません。Cron 実行をお待ちください。</div>
+            <div className="empty">
+              <span className="empty-icon">📭</span>
+              <div className="empty-title">記事がまだありません</div>
+              <div className="empty-body">Cron 実行をお待ちください。</div>
+            </div>
           )}
 
           {articles.length > 0 && (
