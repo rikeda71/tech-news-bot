@@ -627,3 +627,98 @@ kbd {
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 0.8rem;
 }
+
+/* Stats パネル */
+.stats-panel {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.stats-panel-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats-empty {
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* StatsChart */
+.stats-chart-fig {
+  margin: 0;
+}
+
+.stats-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
+.stats-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats-chart-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.stats-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* preserveAspectRatio=none なので aspect-ratio で縦横比を固定 */
+  aspect-ratio: 800 / 160;
+  color: var(--fg);
+}
+
+/* フィード別アクティビティテーブル */
+.stats-feed-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.stats-feed-table th,
+.stats-feed-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+}
+
+.stats-feed-table th {
+  color: var(--fg-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats-feed-table-num {
+  text-align: right;
+  width: 60px;
+}
+
+.stats-feed-table-date {
+  color: var(--fg-muted);
+  white-space: nowrap;
+  width: 160px;
+}
