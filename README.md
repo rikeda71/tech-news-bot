@@ -48,29 +48,29 @@ test/                    # vitest (workers pool)
 ## セットアップ
 
 ```sh
-npm install
+pnpm install
 ```
 
 ### Cloudflare 側の準備
 
 ```sh
 # 1) D1 データベース作成
-npx wrangler d1 create tech-news-bot-db
+pnpm exec wrangler d1 create tech-news-bot-db
 # → 出力された database_id を wrangler.toml の REPLACE_WITH_REAL_ID_FROM_wrangler_d1_create に貼り付ける
 
 # 2) スキーマ適用 (本番)
-npm run migrate:prod
+pnpm migrate:prod
 
 # 3) ローカル D1 にもスキーマ適用 (wrangler dev 用)
-npm run migrate:local
+pnpm migrate:local
 ```
 
 ### ローカル開発
 
 ```sh
-npm run dev          # vite + miniflare 統合サーバ (http://localhost:8787 など)
-npm run test         # vitest run
-npm run typecheck    # tsc --noEmit
+pnpm dev          # vite + miniflare 統合サーバ (http://localhost:8787 など)
+pnpm test         # vitest run
+pnpm typecheck    # tsc --noEmit
 ```
 
 ローカルで Cron を手動実行:
@@ -82,7 +82,7 @@ curl "http://localhost:8787/__scheduled?cron=0+*/3+*+*+*"
 ### デプロイ
 
 ```sh
-npm run deploy
+pnpm deploy
 # vite build → wrangler deploy
 ```
 
