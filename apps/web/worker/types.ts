@@ -68,16 +68,29 @@ export interface FeedSummary {
   article_count: number;
 }
 
+export interface HealthCronRun {
+  id: number;
+  started_at: string;
+  completed_at: string;
+  feeds_total: number;
+  feeds_ok: number;
+  feeds_failed: number;
+  articles_inserted: number;
+}
+
 export interface HealthResponse {
-  status: "ok" | "degraded";
+  ok: boolean;
+  version: string;
   now: string;
-  db: {
-    articles_total: number;
-    feeds_total: number;
-    feeds_enabled: number;
-    latest_published_at: string | null;
-    latest_fetched_at: string | null;
+  feeds: {
+    total: number;
+    enabled: number;
   };
+  articles: {
+    total: number;
+    last_24h: number;
+  };
+  last_cron_run: HealthCronRun | null;
 }
 
 export interface FeedHealth {

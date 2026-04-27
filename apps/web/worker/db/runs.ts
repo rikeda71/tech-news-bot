@@ -78,6 +78,20 @@ export async function finishRun(
     .run();
 }
 
+export async function getLatestCompletedRun(db: D1Database): Promise<RunRow | null> {
+  const row = await db
+    .prepare(
+      `SELECT id, started_at, completed_at, feeds_total, feeds_ok, feeds_failed,
+              articles_inserted, error
+       FROM collector_runs
+       WHERE completed_at IS NOT NULL
+       ORDER BY completed_at DESC
+       LIMIT 1`,
+    )
+    .first<RunRow>();
+  return row ?? null;
+}
+
 export async function listRuns(db: D1Database, limit = 20): Promise<RunRow[]> {
   const safeLimit = Math.min(Math.max(limit, 1), 100);
   const result = await db
