@@ -97,7 +97,7 @@ describe("usePresets (mock)", () => {
 
   it("does not exceed 50 presets and shows alert", () => {
     // happy-dom 環境では window.alert が undefined のためグローバルに差し替える
-    const alertMock = vi.fn();
+    const alertMock = vi.fn<() => void>();
     globalThis.alert = alertMock;
 
     const { result } = renderHook(() => usePresets());

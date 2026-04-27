@@ -41,6 +41,11 @@ export default defineConfig({
         },
       ],
       "@typescript-eslint/no-explicit-any": "warn",
+      // res.json() は any を返すため、テストコードでの型アサーションは必要。
+      // また rssParser や xml utils のような外部ライブラリ由来の any も同様。
+      // CI 環境での typeAware lint が大量 warning → stdout overflow → panic するため無効化。
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/no-unsafe-type-assertion": "off",
       "react/react-in-jsx-scope": "off",
       "import/no-unassigned-import": "off",
     },
