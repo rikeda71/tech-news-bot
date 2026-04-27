@@ -194,6 +194,66 @@ export async function getFeedFailures(
   return result.results ?? [];
 }
 
+export interface FeedHealthRow {
+  total_runs: number;
+  successful_runs: number;
+  failed_runs: number;
+  last_run_at: string | null;
+  last_run_status: string | null;
+  last_error_at: string | null;
+  last_error_message: string | null;
+  avg_duration_ms: number | null;
+  articles_inserted_total: number;
+}
+
+/**
+ * 指定フィードの直近 N 日間の健全性集計を 1 クエリで返す。
+ * collector_run_feeds と collector_runs を JOIN し SUM/COUNT/AVG/MAX で集計する。
+ */
+export async function getFeedHealth(
+  db: D1Database,
+  feedId: string,
+  days: number,
+): Promise<FeedHealthRow> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const row = await db
+    .prepare(
+      `SELECT
+         COUNT(*) AS total_runs,
+         SUM(CASE WHEN crf.status = 'ok' THEN 1 ELSE 0 END) AS successful_runs,
+         SUM(CASE WHEN crf.status = 'failed' THEN 1 ELSE 0 END) AS failed_runs,
+         MAX(cr.started_at) AS last_run_at,
+         MAX(CASE WHEN cr.started_at = (
+           SELECT MAX(cr2.started_at)
+           FROM collector_run_feeds crf2
+           JOIN collector_runs cr2 ON cr2.id = crf2.run_id
+           WHERE crf2.feed_id = ?1 AND cr2.started_at >= ?2
+         ) THEN crf.status END) AS last_run_status,
+         MAX(CASE WHEN crf.status = 'failed' THEN cr.started_at END) AS last_error_at,
+         MAX(CASE WHEN crf.status = 'failed' THEN crf.error END) AS last_error_message,
+         AVG(CASE WHEN crf.status != 'skipped' THEN crf.duration_ms END) AS avg_duration_ms,
+         SUM(crf.articles_inserted) AS articles_inserted_total
+       FROM collector_run_feeds crf
+       JOIN collector_runs cr ON cr.id = crf.run_id
+       WHERE crf.feed_id = ?1
+         AND cr.started_at >= ?2`,
+    )
+    .bind(feedId, since)
+    .first<FeedHealthRow>();
+
+  return {
+    total_runs: row?.total_runs ?? 0,
+    successful_runs: row?.successful_runs ?? 0,
+    failed_runs: row?.failed_runs ?? 0,
+    last_run_at: row?.last_run_at ?? null,
+    last_run_status: row?.last_run_status ?? null,
+    last_error_at: row?.last_error_at ?? null,
+    last_error_message: row?.last_error_message ?? null,
+    avg_duration_ms: row?.avg_duration_ms ?? null,
+    articles_inserted_total: row?.articles_inserted_total ?? 0,
+  };
+}
+
 export async function getRun(
   db: D1Database,
   run_id: number,
