@@ -1,0 +1,95 @@
+name: PR Preview Deploy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: "24"
+          cache: true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm cf-typegen
+      - name: vp build
+        run: vp run build
+      - name: Deploy preview worker
+        id: deploy
+        working-directory: apps/web
+        # --name で PR 番号を含む一意な Worker 名を指定し、preview env の設定を使う
+        run: |
+          WORKER_NAME="tech-news-bot-pr-${{ github.event.pull_request.number }}"
+          pnpm exec wrangler deploy -e preview --name "$WORKER_NAME" 2>&1 | tee /tmp/deploy-output.txt
+          PREVIEW_URL="https://${WORKER_NAME}.${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.workers.dev"
+          echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          echo "worker_name=$WORKER_NAME" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Comment preview URL on PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Preview Deploy
+
+            | Item | Value |
+            |------|-------|
+            | Worker | `${{ steps.deploy.outputs.worker_name }}` |
+            | URL | ${{ steps.deploy.outputs.preview_url }} |
+            | Commit | ${{ github.sha }} |
+
+            > [!NOTE]
+            > READONLY mode が有効なため、admin エンドポイントと cron collector は無効化されています。本番 D1 を参照します。
+          edit-mode: replace
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Delete preview worker
+        working-directory: apps/web
+        run: |
+          WORKER_NAME="tech-news-bot-pr-${{ github.event.pull_request.number }}"
+          pnpm exec wrangler delete --name "$WORKER_NAME" --force || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Comment cleanup on PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Preview Deploy
+
+            | Item | Value |
+            |------|-------|
+            | Worker | `tech-news-bot-pr-${{ github.event.pull_request.number }}` |
+            | Status | Deleted (PR closed) |
+
+            > Preview Worker を削除しました。
+          edit-mode: replace
