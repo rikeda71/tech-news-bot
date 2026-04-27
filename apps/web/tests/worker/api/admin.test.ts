@@ -314,7 +314,7 @@ describe("GET /api/admin/runs", () => {
 });
 
 describe("GET /api/admin/runs/:id", () => {
-  it("200: returns run detail with feeds", async () => {
+  it("200: returns run detail with feeds, duration_ms, and Cache-Control", async () => {
     const { run_id } = await startRun(env.DB, "2024-04-05T00:00:00.000Z", 2);
     await recordRunFeed(env.DB, run_id, "feed-a", "ok", 10, 800);
     await recordRunFeed(env.DB, run_id, "feed-b", "failed", 0, 200, "HTTP 500");
@@ -324,22 +324,46 @@ describe("GET /api/admin/runs/:id", () => {
       headers: AUTH_HEADER,
     });
     expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, max-age=30");
     const body = (await res.json()) as {
-      run: { id: number; feeds_ok: number };
-      feeds: { feed_id: string; status: string }[];
+      run: { id: number; feeds_ok: number; duration_ms: number | null };
+      feeds: { feed_id: string; status: string; error: string | null }[];
     };
     expect(body.run.id).toBe(run_id);
     expect(body.run.feeds_ok).toBe(1);
+    // 5s = 5000ms
+    expect(body.run.duration_ms).toBe(5000);
     expect(body.feeds).toHaveLength(2);
     const feedA = body.feeds.find((f) => f.feed_id === "feed-a");
     expect(feedA!.status).toBe("ok");
+    const feedB = body.feeds.find((f) => f.feed_id === "feed-b");
+    expect(feedB!.status).toBe("failed");
+    expect(feedB!.error).toBe("HTTP 500");
   });
 
-  it("404: returns not found for unknown id", async () => {
+  it("200: duration_ms is null when run is not yet completed", async () => {
+    const { run_id } = await startRun(env.DB, "2024-04-05T00:00:00.000Z", 2);
+
+    const res = await SELF.fetch(`https://example.com/api/admin/runs/${run_id}`, {
+      headers: AUTH_HEADER,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      run: { id: number; duration_ms: number | null };
+      feeds: unknown[];
+    };
+    expect(body.run.id).toBe(run_id);
+    expect(body.run.duration_ms).toBeNull();
+    expect(body.feeds).toHaveLength(0);
+  });
+
+  it("404: returns 'run not found' for unknown id", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/runs/99999", {
       headers: AUTH_HEADER,
     });
     expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("run not found");
   });
 
   it("401: rejects unauthenticated request", async () => {

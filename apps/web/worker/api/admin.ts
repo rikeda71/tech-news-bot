@@ -294,9 +294,18 @@ app.get("/runs/:id", async (c) => {
   }
   const detail = await getRun(c.env.DB, idParam);
   if (!detail) {
-    return c.json({ error: "not found" }, 404);
+    return c.json({ error: "run not found" }, 404);
   }
-  return c.json(detail);
+
+  const { run, feeds } = detail;
+  // started_at / completed_at から duration_ms を計算する
+  const duration_ms =
+    run.completed_at !== null
+      ? Math.round(new Date(run.completed_at).getTime() - new Date(run.started_at).getTime())
+      : null;
+
+  c.header("Cache-Control", "private, max-age=30");
+  return c.json({ run: { ...run, duration_ms }, feeds });
 });
 
 app.get("/feeds/diagnostics", async (c) => {
