@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import type { Context, Next } from "hono";
 import type { Env } from "../types";
 import articles from "./articles";
+import categories from "./categories";
 import feeds from "./feeds";
 import health from "./health";
 import stats from "./stats";
@@ -23,12 +24,13 @@ function allowedOriginsCors(c: Context<{ Bindings: Env }>, next: Next) {
   return cors({ origin: origins })(c, next);
 }
 
-const PUBLIC_PATHS = ["/articles/*", "/feeds/*", "/stats/*", "/health/*"] as const;
+const PUBLIC_PATHS = ["/articles/*", "/categories/*", "/feeds/*", "/stats/*", "/health/*"] as const;
 for (const path of PUBLIC_PATHS) {
   api.use(path, allowedOriginsCors);
 }
 
 api.route("/articles", articles);
+api.route("/categories", categories);
 api.route("/feeds", feeds);
 api.route("/health", health);
 api.route("/stats", stats);
