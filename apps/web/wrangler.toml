@@ -26,6 +26,8 @@ COLLECTOR_TIMEOUT_MS = "10000"
 COLLECTOR_RETRIES = "2"
 SUMMARY_MAX_LENGTH = "500"
 RETENTION_DAYS = "90"
+# カンマ区切りで許可する Origin を列挙。* は非推奨 (明示的 origin で制限する)
+CORS_ALLOWED_ORIGINS = "https://tech-news-bot.rikeda71.workers.dev"
 
 # preview 環境: PR ごとに動的な Worker 名は wrangler CLI の --name で指定する。
 # D1 は本番と同じ DB を使い、READONLY=1 で admin/collector を無効化する。
@@ -49,6 +51,8 @@ database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 [env.preview.vars]
 COLLECTOR_CONCURRENCY = "4"
 COLLECTOR_TIMEOUT_MS = "10000"
+COLLECTOR_RETRIES = "2"
 SUMMARY_MAX_LENGTH = "500"
 RETENTION_DAYS = "90"
 READONLY = "1"
+CORS_ALLOWED_ORIGINS = "https://tech-news-bot.rikeda71.workers.dev"

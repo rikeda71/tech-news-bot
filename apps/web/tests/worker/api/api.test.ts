@@ -320,9 +320,91 @@ describe("/api/health", () => {
 describe("/api/admin/collect", () => {
   it("rejects unauthenticated requests", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/collect", { method: "POST" });
-    // ADMIN_TOKEN is not set in test env -> 503
+    // ADMIN_TOKEN はテスト環境では設定済みのため 401 を期待する
     expect([401, 503]).toContain(res.status);
   });
+
+  it("accepts requests with current ADMIN_TOKEN", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { authorization: "Bearer test-admin-token" },
+    });
+    // 認証は通るが collect は実際のフィード fetch を試みる (タイムアウト後エラーになるが 200 で返る)
+    expect(res.status).toBe(200);
+  }, 60000);
+
+  it("accepts requests with ADMIN_TOKEN_NEXT (rotation support)", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { authorization: "Bearer test-admin-token-next" },
+    });
+    expect(res.status).toBe(200);
+  }, 60000);
+
+  it("rejects requests with invalid token", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { authorization: "Bearer invalid-token" },
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("CORS headers on public /api/* endpoints", () => {
+  const allowedOrigin = "https://tech-news-bot.rikeda71.workers.dev";
+
+  it("returns Access-Control-Allow-Origin for /api/articles GET", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles", {
+      headers: { origin: allowedOrigin },
+    });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
+  });
+
+  it("handles OPTIONS preflight for /api/articles", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles", {
+      method: "OPTIONS",
+      headers: {
+        origin: allowedOrigin,
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "content-type",
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
+    expect(res.headers.get("Access-Control-Allow-Methods")).toMatch(/GET/);
+  });
+
+  it("returns Access-Control-Allow-Origin for /api/health GET", async () => {
+    const res = await SELF.fetch("https://example.com/api/health", {
+      headers: { origin: allowedOrigin },
+    });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
+  });
+
+  it("returns Access-Control-Allow-Origin for /api/stats GET", async () => {
+    const res = await SELF.fetch("https://example.com/api/stats", {
+      headers: { origin: allowedOrigin },
+    });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
+  });
+
+  it("returns Access-Control-Allow-Origin for /api/feeds GET", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds", {
+      headers: { origin: allowedOrigin },
+    });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
+  });
+
+  it("does NOT return Access-Control-Allow-Origin for /api/admin (server-to-server only)", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: {
+        origin: allowedOrigin,
+        authorization: "Bearer test-admin-token",
+      },
+    });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  }, 60000);
 });
 
 describe("security headers", () => {
