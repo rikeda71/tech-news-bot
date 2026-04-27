@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { FilterBar } from "./components/FilterBar";
 import { HelpModal } from "./components/HelpModal";
+import { PresetBar } from "./components/PresetBar";
 import { SearchInput } from "./components/SearchInput";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { usePresets } from "./hooks/usePresets";
 import { useReadState } from "./hooks/useReadState";
 import { useStarredState } from "./hooks/useStarredState";
 import { useStats } from "./hooks/useStats";
@@ -91,6 +93,7 @@ export default function App() {
   const { stats } = useStats();
   const { isRead, markRead, markUnread } = useReadState();
   const { isStarred } = useStarredState();
+  const { presets, addPreset, removePreset } = usePresets();
 
   // popstate でブラウザ戻る/進むに追従する
   useEffect(() => {
@@ -204,6 +207,31 @@ export default function App() {
     [pushFilter, q],
   );
 
+  const handleApplyPreset = useCallback(
+    (filters: {
+      category?: FeedCategory | "";
+      lang?: FeedLang | "";
+      feedId?: string;
+      q?: string;
+      unreadOnly?: boolean;
+      starredOnly?: boolean;
+      dateFrom?: string;
+      dateTo?: string;
+    }) => {
+      pushFilter(
+        filters.category ?? "",
+        filters.lang ?? "",
+        filters.feedId ?? "",
+        filters.q ?? "",
+        filters.dateFrom ?? "",
+        filters.dateTo ?? "",
+        filters.unreadOnly ?? false,
+        filters.starredOnly ?? false,
+      );
+    },
+    [pushFilter],
+  );
+
   // カード上のバッジ/取得元クリックでフィルタを適用する
   const handleFilterByCategory = useCallback(
     (c: FeedCategory) => pushFilter(c, lang, "", q, dateFrom, dateTo, unreadOnly, starredOnly),
@@ -307,6 +335,14 @@ export default function App() {
           </details>
         )}
       </header>
+
+      <PresetBar
+        presets={presets}
+        currentFilters={{ category, lang, feedId, q, unreadOnly, starredOnly, dateFrom, dateTo }}
+        onApply={handleApplyPreset}
+        onAdd={addPreset}
+        onRemove={removePreset}
+      />
 
       <div className="toolbar">
         <SearchInput ref={searchRef} value={q} onChange={handleQChange} />
