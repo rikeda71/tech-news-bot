@@ -1,23 +1,12 @@
 /// <reference types="vite/client" />
-/// <reference types="@cloudflare/workers-types" />
+/// <reference types="@cloudflare/vitest-pool-workers/types" />
 
-declare module "cloudflare:test" {
-  import type { D1Database } from "@cloudflare/workers-types";
+import type { D1Migration } from "@cloudflare/vitest-pool-workers";
 
-  export interface ProvidedEnv {
-    DB: D1Database;
-    TEST_MIGRATIONS: D1Migration[];
-  }
-
-  export const env: ProvidedEnv;
-  export const SELF: Fetcher;
-  export function applyD1Migrations(
-    db: D1Database,
-    migrations: D1Migration[],
-  ): Promise<void>;
-
-  export interface D1Migration {
-    name: string;
-    queries: string[];
+declare global {
+  namespace Cloudflare {
+    interface Env {
+      TEST_MIGRATIONS: D1Migration[];
+    }
   }
 }

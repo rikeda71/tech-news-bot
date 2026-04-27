@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "types": ["@cloudflare/workers-types"],
+    "types": ["@cloudflare/workers-types", "./worker-configuration.d.ts"],
     "baseUrl": ".",
     "paths": {
       "@worker/*": ["worker/*"],
@@ -29,7 +29,8 @@
     "shared/**/*",
     "test/**/*",
     "vite.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "worker-configuration.d.ts"
   ],
   "exclude": ["node_modules", "dist", ".wrangler"]
 }

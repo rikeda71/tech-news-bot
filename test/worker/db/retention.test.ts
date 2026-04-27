@@ -1,5 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { applyD1Migrations, env } from "cloudflare:test";
+import { beforeEach, describe, expect, it } from "vitest";
+import { env } from "cloudflare:test";
 import { deleteOlderThan, insertArticles } from "../../../worker/db/articles";
 import { syncFeeds } from "../../../worker/db/feeds";
 import type { FeedConfig } from "../../../shared/types";
@@ -15,12 +15,7 @@ const FEEDS: FeedConfig[] = [
   },
 ];
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 beforeEach(async () => {
-  await env.DB.exec("DELETE FROM articles_fts; DELETE FROM articles; DELETE FROM feeds;");
   await syncFeeds(env.DB, FEEDS);
 });
 
