@@ -1,7 +1,9 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import type { Env, FeedCategory, FeedLang, FeedsFile } from "../types";
 import { listArticles } from "../db/articles";
 import { computeSyndicationEtag } from "../utils/etag";
+import { loadAllFeeds } from "../feed-config";
 import feedsYaml from "../feeds.yaml";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
@@ -50,10 +52,20 @@ function siteOrigin(reqUrl: string): string {
   }
 }
 
-app.get("/feed.json", async (c) => {
-  const { category, lang } = parseFilters(c);
+interface BuildFeedOpts {
+  feedId?: string;
+  category?: FeedCategory;
+  lang?: FeedLang;
+  /** feeds.yaml の name (per-feed 時に channel.title へ使用) */
+  feedName?: string;
+}
 
-  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang });
+async function buildJsonFeed(
+  c: Context<{ Bindings: Env }>,
+  opts: BuildFeedOpts,
+): Promise<Response> {
+  const { feedId, category, lang, feedName } = opts;
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang, feedId });
   if (c.req.header("If-None-Match") === etag) {
     c.header("ETag", etag);
     c.header("Cache-Control", "public, max-age=60");
@@ -63,16 +75,19 @@ app.get("/feed.json", async (c) => {
   const result = await listArticles(c.env.DB, {
     category,
     lang,
+    feedId,
     limit: FEED_LIMIT,
     cursor: null,
   });
   const origin = siteOrigin(c.req.url);
   const feedUrl = new URL(c.req.url).toString();
+  const title = feedName ?? SITE_TITLE;
+  const description = feedName ? `${feedName} の最新記事` : SITE_DESCRIPTION;
 
   const json = {
     version: "https://jsonfeed.org/version/1.1",
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title,
+    description,
     home_page_url: origin || undefined,
     feed_url: feedUrl,
     language: lang ?? "und",
@@ -93,12 +108,11 @@ app.get("/feed.json", async (c) => {
   c.header("ETag", etag);
   c.header("Cache-Control", "public, max-age=60");
   return c.body(JSON.stringify(json));
-});
+}
 
-app.get("/feed.xml", async (c) => {
-  const { category, lang } = parseFilters(c);
-
-  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang });
+async function buildRssFeed(c: Context<{ Bindings: Env }>, opts: BuildFeedOpts): Promise<Response> {
+  const { feedId, category, lang, feedName } = opts;
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang, feedId });
   if (c.req.header("If-None-Match") === etag) {
     c.header("ETag", etag);
     c.header("Cache-Control", "public, max-age=60");
@@ -108,12 +122,15 @@ app.get("/feed.xml", async (c) => {
   const result = await listArticles(c.env.DB, {
     category,
     lang,
+    feedId,
     limit: FEED_LIMIT,
     cursor: null,
   });
   const origin = siteOrigin(c.req.url);
   const feedUrl = new URL(c.req.url).toString();
   const lastBuild = result.articles[0]?.published_at ?? new Date().toISOString();
+  const title = feedName ?? SITE_TITLE;
+  const description = feedName ? `${feedName} の最新記事` : SITE_DESCRIPTION;
 
   const items = result.articles
     .map((a) => {
@@ -137,9 +154,9 @@ app.get("/feed.xml", async (c) => {
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">` +
     `<channel>` +
-    `<title>${escapeXml(SITE_TITLE)}</title>` +
+    `<title>${escapeXml(title)}</title>` +
     `<link>${escapeXml(origin)}</link>` +
-    `<description>${escapeXml(SITE_DESCRIPTION)}</description>` +
+    `<description>${escapeXml(description)}</description>` +
     `<language>${escapeXml(lang ?? "und")}</language>` +
     `<lastBuildDate>${toRfc822(lastBuild)}</lastBuildDate>` +
     `<atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml"/>` +
@@ -150,6 +167,44 @@ app.get("/feed.xml", async (c) => {
   c.header("ETag", etag);
   c.header("Cache-Control", "public, max-age=60");
   return c.body(xml);
+}
+
+app.get("/feed.json", async (c) => {
+  const { category, lang } = parseFilters(c);
+  return buildJsonFeed(c, { category, lang });
+});
+
+app.get("/feed.xml", async (c) => {
+  const { category, lang } = parseFilters(c);
+  return buildRssFeed(c, { category, lang });
+});
+
+// per-feed エンドポイント: feeds.yaml に定義された id のみ受け付ける
+// enabled: false でも過去記事の履歴閲覧ができるよう全フィードを対象とする
+// ":id.xml" パターンは Hono の RegExpRouter でパラメータ解析が壊れることがあるため、
+// ワイルドカードで受け取り拡張子を手動で分離する。
+app.get("/feeds/:filename", async (c) => {
+  const filename = c.req.param("filename");
+  let feedId: string;
+  let format: "xml" | "json";
+
+  if (filename.endsWith(".xml")) {
+    feedId = filename.slice(0, -4);
+    format = "xml";
+  } else if (filename.endsWith(".json")) {
+    feedId = filename.slice(0, -5);
+    format = "json";
+  } else {
+    return c.notFound();
+  }
+
+  const feedConfig = loadAllFeeds().find((f) => f.id === feedId);
+  if (!feedConfig) return c.notFound();
+
+  if (format === "xml") {
+    return buildRssFeed(c, { feedId, feedName: feedConfig.name, lang: feedConfig.lang });
+  }
+  return buildJsonFeed(c, { feedId, feedName: feedConfig.name, lang: feedConfig.lang });
 });
 
 export default app;
