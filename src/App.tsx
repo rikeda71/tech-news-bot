@@ -4,7 +4,21 @@ import { FilterBar } from "./components/FilterBar";
 import { SearchInput } from "./components/SearchInput";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
+import { useStats } from "./hooks/useStats";
 import type { FeedCategory, FeedLang } from "./types/api";
+
+function formatRelative(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return iso;
+  const diffMs = Date.now() - t;
+  const min = Math.round(diffMs / 60_000);
+  if (min < 1) return "今";
+  if (min < 60) return `${min} 分前`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} 時間前`;
+  const d = Math.round(h / 24);
+  return `${d} 日前`;
+}
 
 function readFromUrl(): {
   category: FeedCategory | "";
@@ -28,6 +42,7 @@ export default function App() {
   const [q, setQ] = useState<string>(() => readFromUrl().q);
 
   const { feeds } = useFeeds();
+  const { stats } = useStats();
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -57,7 +72,9 @@ export default function App() {
       <header className="header">
         <h1>Tech News Bot</h1>
         <span className="subtitle">
-          {feeds.length > 0 ? `${feeds.length} sources` : ""} · 最新の tech blog 集約
+          {stats ? `${stats.total.toLocaleString()} 記事 · 直近 24h: ${stats.last24h}` : ""}
+          {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
+          {stats?.last_fetched_at ? ` · 最終更新 ${formatRelative(stats.last_fetched_at)}` : ""}
         </span>
       </header>
 

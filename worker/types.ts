@@ -4,4 +4,5 @@ export interface Env {
   COLLECTOR_CONCURRENCY: string;
   COLLECTOR_TIMEOUT_MS: string;
   SUMMARY_MAX_LENGTH: string;
+  ADMIN_TOKEN?: string;
 }
