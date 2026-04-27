@@ -5,6 +5,7 @@ import { countAllArticles, countArticlesSince } from "../db/articles";
 import { getLatestCompletedRun } from "../db/runs";
 import { loadAllFeeds } from "../feed-config";
 import type { Env, FeedHealth, HealthResponse } from "../types";
+import type { HealthFeedsResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -47,7 +48,7 @@ app.get("/", async (c) => {
     };
 
     c.header("Cache-Control", "no-cache");
-    return c.json(body);
+    return c.json<HealthResponse>(body);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return c.json({ ok: false, error: message }, 500);
@@ -60,7 +61,7 @@ app.get("/feeds", async (c) => {
     const configFeeds = loadAllFeeds();
     const health: FeedHealth[] = await getFeedHealth(c.env.DB, configFeeds);
     c.header("Cache-Control", "public, max-age=60");
-    return c.json(health);
+    return c.json<HealthFeedsResponse>(health);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return c.json({ status: "degraded", error: message }, 500);

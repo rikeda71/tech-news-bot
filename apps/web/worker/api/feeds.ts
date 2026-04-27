@@ -3,6 +3,7 @@ import { loadAllFeeds } from "../feed-config";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { findFeedWithStats, getRecentArticlesByFeed, listFeedsWithStats } from "../db/feeds";
 import { getFeedHealth } from "../db/runs";
+import type { FeedsListResponse, FeedDetailResponse, FeedRunHealthResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -32,7 +33,7 @@ app.get("/", async (c) => {
   if (enabledRaw !== undefined) opts.enabled = enabledRaw === "true";
 
   const feeds = await listFeedsWithStats(c.env.DB, opts);
-  return c.json({ feeds });
+  return c.json<FeedsListResponse>({ feeds });
 });
 
 const RECENT_DEFAULT = 10;
@@ -62,7 +63,7 @@ app.get("/:id", async (c) => {
   }
 
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({ feed, recent_articles: recentArticles });
+  return c.json<FeedDetailResponse>({ feed, recent_articles: recentArticles });
 });
 
 const DAYS_DEFAULT = 7;
@@ -111,7 +112,7 @@ app.get("/:id/health", async (c) => {
           : null;
 
   c.header("Cache-Control", "public, max-age=300");
-  return c.json({
+  return c.json<FeedRunHealthResponse>({
     feed_id: id,
     window_days: days,
     total_runs: health.total_runs,

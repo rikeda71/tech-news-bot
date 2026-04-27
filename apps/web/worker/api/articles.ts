@@ -21,6 +21,20 @@ import {
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
 import type { FeedsFile } from "../types";
+import type {
+  ArticleArchiveResponse,
+  ArticleByAuthorResponse,
+  ArticleByCategoryResponse,
+  ArticleByDayResponse,
+  ArticleByFeedResponse,
+  ArticleCalendarResponse,
+  ArticleListResponse,
+  ArticleNeighborsResponse,
+  ArticlePopularResponse,
+  ArticleRandomResponse,
+  ArticleRelatedResponse,
+  ArticleSearchResponse,
+} from "./types";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
@@ -114,7 +128,7 @@ app.get("/", async (c) => {
 
   c.header("ETag", etag);
   c.header("Cache-Control", "public, max-age=60");
-  return c.json({
+  return c.json<ArticleListResponse>({
     articles: result.articles,
     nextCursor: encodeCursor(result.nextCursor),
   });
@@ -137,7 +151,7 @@ app.get("/random", async (c) => {
   const feedId = feedIdRaw && VALID_FEED_IDS.has(feedIdRaw) ? feedIdRaw : undefined;
 
   const articles = await getRandomArticles(c.env.DB, { n, category, lang, feedId });
-  return c.json({ articles }, 200, { "Cache-Control": "no-store" });
+  return c.json<ArticleRandomResponse>({ articles }, 200, { "Cache-Control": "no-store" });
 });
 
 app.get("/by-author/:author", async (c) => {
@@ -158,9 +172,11 @@ app.get("/by-author/:author", async (c) => {
 
   const result = await getArticlesByAuthor(c.env.DB, author, limitNum, cursor);
 
-  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
-    "Cache-Control": "public, max-age=300",
-  });
+  return c.json<ArticleByAuthorResponse>(
+    { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
+    200,
+    { "Cache-Control": "public, max-age=300" },
+  );
 });
 
 app.get("/by-feed/:feedId", async (c) => {
@@ -181,9 +197,11 @@ app.get("/by-feed/:feedId", async (c) => {
 
   const result = await getArticlesByFeed(c.env.DB, feedId, limitNum, cursor);
 
-  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
-    "Cache-Control": "public, max-age=300",
-  });
+  return c.json<ArticleByFeedResponse>(
+    { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
+    200,
+    { "Cache-Control": "public, max-age=300" },
+  );
 });
 
 app.get("/by-category/:cat", async (c) => {
@@ -206,9 +224,11 @@ app.get("/by-category/:cat", async (c) => {
 
   const result = await getArticlesByCategory(c.env.DB, category, limitNum, cursor);
 
-  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
-    "Cache-Control": "public, max-age=300",
-  });
+  return c.json<ArticleByCategoryResponse>(
+    { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
+    200,
+    { "Cache-Control": "public, max-age=300" },
+  );
 });
 
 const VALID_CALENDAR_DAYS = [7, 30, 90, 365] as const;
@@ -234,7 +254,7 @@ app.get("/calendar", async (c) => {
 
   const items = await getArticlesCalendar(c.env.DB, days, lang, category);
 
-  return c.json({ days, items }, 200, {
+  return c.json<ArticleCalendarResponse>({ days, items }, 200, {
     "Cache-Control": "public, max-age=600",
   });
 });
@@ -254,7 +274,7 @@ app.get("/popular", async (c) => {
 
   const result = await getPopularArticles(c.env.DB, days, limit);
 
-  return c.json(result, 200, {
+  return c.json<ArticlePopularResponse>(result, 200, {
     "Cache-Control": "public, max-age=600",
   });
 });
@@ -290,7 +310,7 @@ app.get("/search", async (c) => {
 
   const result = await searchArticles(c.env.DB, tokens, limitNum, cursor);
 
-  return c.json(
+  return c.json<ArticleSearchResponse>(
     {
       query: tokens.join(" "),
       tokens,
@@ -310,14 +330,14 @@ app.get("/:guid/related", async (c) => {
 
   const items = await getRelatedArticles(c.env.DB, guid, n);
   if (items === null) return c.json({ error: "not found" }, 404);
-  return c.json({ items }, 200, { "Cache-Control": "public, max-age=300" });
+  return c.json<ArticleRelatedResponse>({ items }, 200, { "Cache-Control": "public, max-age=300" });
 });
 
 app.get("/:guid/neighbors", async (c) => {
   const guid = c.req.param("guid");
   const neighbors = await getNeighbors(c.env.DB, guid);
   if (neighbors === null) return c.json({ error: "not found" }, 404);
-  return c.json(neighbors, 200, { "Cache-Control": "public, max-age=300" });
+  return c.json<ArticleNeighborsResponse>(neighbors, 200, { "Cache-Control": "public, max-age=300" });
 });
 
 app.get("/archive", async (c) => {
@@ -357,7 +377,7 @@ app.get("/archive", async (c) => {
     countArticlesByMonth(c.env.DB, year, month, { category, lang }),
   ]);
 
-  return c.json({ year, month, items, total }, 200, {
+  return c.json<ArticleArchiveResponse>({ year, month, items, total }, 200, {
     "Cache-Control": "public, max-age=600",
   });
 });
@@ -401,7 +421,7 @@ app.get("/by-day/:date", async (c) => {
     countArticlesByDay(c.env.DB, startIso, endIso),
   ]);
 
-  return c.json(
+  return c.json<ArticleByDayResponse>(
     {
       date: dateRaw,
       articles: result.articles,
