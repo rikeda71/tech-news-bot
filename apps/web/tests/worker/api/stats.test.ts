@@ -22,7 +22,7 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "mercari-engineering",
+    id: "cyberagent-developers",
     name: "Mercari Engineering",
     url: "https://x.test/m",
     category: "jp",
@@ -79,7 +79,7 @@ beforeEach(async () => {
     // 1 日前: jp × 1
     {
       guid: "jp-1",
-      feed_id: "mercari-engineering",
+      feed_id: "cyberagent-developers",
       title: "Mercari Article",
       url: "https://x.test/m/1",
       summary: null,
@@ -180,10 +180,10 @@ describe("GET /api/stats — feed_activity", () => {
     };
     const google = body.feed_activity.find((f) => f.feed_id === "google-research");
     const openai = body.feed_activity.find((f) => f.feed_id === "openai-blog");
-    const mercari = body.feed_activity.find((f) => f.feed_id === "mercari-engineering");
+    const cyberagent = body.feed_activity.find((f) => f.feed_id === "cyberagent-developers");
     expect(google?.articles_30d).toBe(2);
     expect(openai?.articles_30d).toBe(1);
-    expect(mercari?.articles_30d).toBe(1);
+    expect(cyberagent?.articles_30d).toBe(1);
   });
 
   it("is sorted by articles_30d descending", async () => {

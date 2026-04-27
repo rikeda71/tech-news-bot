@@ -22,7 +22,7 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "mercari-engineering",
+    id: "cyberagent-developers",
     name: "Mercari",
     url: "https://x.test/m",
     category: "jp",
@@ -58,7 +58,7 @@ beforeEach(async () => {
     },
     {
       guid: "g-jp",
-      feed_id: "mercari-engineering",
+      feed_id: "cyberagent-developers",
       title: "メルカリの記事",
       url: "https://x.test/m/1",
       summary: "メルカリ engineering",
@@ -159,9 +159,9 @@ describe("/api/articles", () => {
   });
 
   it("returns empty when feed_id and q do not match same article", async () => {
-    // mercari-engineering かつ "transformer" → 0件
+    // cyberagent-developers かつ "transformer" → 0件
     const res = await SELF.fetch(
-      "https://example.com/api/articles?feed_id=mercari-engineering&q=transformer",
+      "https://example.com/api/articles?feed_id=cyberagent-developers&q=transformer",
     );
     const body = (await res.json()) as { articles: unknown[] };
     expect(body.articles.length).toBe(0);
@@ -295,7 +295,7 @@ describe("/api/stats", () => {
       .bind(now)
       .run();
     await env.DB.prepare(
-      `UPDATE feeds SET last_fetched_at = ?1, last_status = 'ok:0', last_error = NULL WHERE id = 'mercari-engineering'`,
+      `UPDATE feeds SET last_fetched_at = ?1, last_status = 'ok:0', last_error = NULL WHERE id = 'cyberagent-developers'`,
     )
       .bind(old)
       .run();
@@ -303,7 +303,7 @@ describe("/api/stats", () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as { stale_feeds: { id: string }[] };
     const ids = body.stale_feeds.map((f) => f.id).toSorted();
-    expect(ids).toEqual(["mercari-engineering", "openai-blog"]);
+    expect(ids).toEqual(["cyberagent-developers", "openai-blog"]);
   });
 });
 

@@ -66,7 +66,7 @@ feeds:
 
   - id: netflix-techblog
     name: Netflix Tech Blog
-    url: https://netflixtechblog.com/feed
+    url: https://netflixtechblog.medium.com/feed
     category: bigtech
     lang: en
     enabled: true
@@ -157,12 +157,6 @@ feeds:
     enabled: true
 
   # ─────────── 国内 (corporate tech blogs) ───────────
-  - id: mercari-engineering
-    name: Mercari Engineering Blog
-    url: https://engineering.mercari.com/blog/feed.xml
-    category: jp
-    lang: ja
-    enabled: true
 
   - id: cyberagent-developers
     name: CyberAgent Developers Blog

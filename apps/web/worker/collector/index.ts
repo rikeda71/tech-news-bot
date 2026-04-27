@@ -37,7 +37,10 @@ export interface CollectAllResult {
   durationMs: number;
 }
 
-const USER_AGENT = "tech-news-bot/0.1 (+https://github.com/rikeda71/tech-news-bot)";
+// 一部のブログ (mercari-engineering 等) は WAF が "bot" 名を含む UA を 403 で弾くため、
+// Mozilla 互換プレフィックスを付ける。Feedly / NewsBlur など主要 RSS リーダも同様の手法。
+const USER_AGENT =
+  "Mozilla/5.0 (compatible; tech-news-bot/0.1; +https://github.com/rikeda71/tech-news-bot)";
 
 /** 一時障害とみなしてリトライすべき HTTP ステータスかどうか */
 function isTransientStatus(status: number): boolean {
