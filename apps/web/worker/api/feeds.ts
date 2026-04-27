@@ -1,74 +1,36 @@
 import { Hono } from "hono";
-import type { Env } from "../types";
-import { loadAllFeeds } from "../feed-config";
+import type { Env, FeedCategory, FeedLang } from "../types";
+import { listFeedsWithStats } from "../db/feeds";
 
 const app = new Hono<{ Bindings: Env }>();
 
-const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 100;
+const VALID_CATEGORIES = new Set<FeedCategory>(["bigtech", "ai", "jp", "zenn"]);
+const VALID_LANGS = new Set<FeedLang>(["ja", "en"]);
 
 app.get("/", async (c) => {
   const { req } = c;
-  const limitRaw = req.query("limit");
-  const cursorRaw = req.query("cursor");
+  const categoryRaw = req.query("category");
+  const langRaw = req.query("lang");
+  const enabledRaw = req.query("enabled");
 
-  const limit = Math.min(
-    Math.max(Number(limitRaw ?? DEFAULT_LIMIT) || DEFAULT_LIMIT, 1),
-    MAX_LIMIT,
-  );
-
-  const configFeeds = loadAllFeeds();
-  const result = await c.env.DB.prepare(
-    `SELECT f.id, f.name, f.url, f.category, f.lang, f.enabled,
-            f.last_fetched_at, f.last_status,
-            (SELECT COUNT(*) FROM articles a WHERE a.feed_id = f.id) AS article_count
-     FROM feeds f`,
-  ).all<{
-    id: string;
-    name: string;
-    url: string;
-    category: string;
-    lang: string;
-    enabled: number;
-    last_fetched_at: string | null;
-    last_status: string | null;
-    article_count: number;
-  }>();
-
-  const dbMap = new Map((result.results ?? []).map((r) => [r.id, r]));
-  const allMerged = configFeeds.map((f) => {
-    const db = dbMap.get(f.id);
-    return {
-      id: f.id,
-      name: f.name,
-      url: f.url,
-      category: f.category,
-      lang: f.lang,
-      enabled: f.enabled,
-      last_fetched_at: db?.last_fetched_at ?? null,
-      last_status: db?.last_status ?? null,
-      article_count: db?.article_count ?? 0,
-    };
-  });
-
-  // cursor は id の base64 エンコード。cursor が指す id の次から返す。
-  let startIdx = 0;
-  if (cursorRaw) {
-    try {
-      const cursorId = atob(cursorRaw);
-      const idx = allMerged.findIndex((f) => f.id === cursorId);
-      // cursor の id が見つかった場合、その次の要素から返す
-      if (idx !== -1) startIdx = idx + 1;
-    } catch {
-      // 不正な cursor は無視して先頭から返す
-    }
+  // 不正なクエリパラメータは 400 を返す
+  if (categoryRaw !== undefined && !VALID_CATEGORIES.has(categoryRaw as FeedCategory)) {
+    return c.json({ error: `invalid category: ${categoryRaw}` }, 400);
+  }
+  if (langRaw !== undefined && !VALID_LANGS.has(langRaw as FeedLang)) {
+    return c.json({ error: `invalid lang: ${langRaw}` }, 400);
+  }
+  if (enabledRaw !== undefined && enabledRaw !== "true" && enabledRaw !== "false") {
+    return c.json({ error: `invalid enabled: ${enabledRaw}` }, 400);
   }
 
-  const page = allMerged.slice(startIdx, startIdx + limit);
-  const hasMore = startIdx + limit < allMerged.length;
-  const nextCursor = hasMore ? btoa(page[page.length - 1].id) : null;
+  const opts: { category?: FeedCategory; lang?: FeedLang; enabled?: boolean } = {};
+  if (categoryRaw !== undefined) opts.category = categoryRaw as FeedCategory;
+  if (langRaw !== undefined) opts.lang = langRaw as FeedLang;
+  if (enabledRaw !== undefined) opts.enabled = enabledRaw === "true";
 
-  return c.json({ feeds: page, nextCursor });
+  const feeds = await listFeedsWithStats(c.env.DB, opts);
+  return c.json({ feeds });
 });
 
 export default app;
