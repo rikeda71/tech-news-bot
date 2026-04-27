@@ -35,21 +35,34 @@ const makeArticle = (id: number): Article => ({
   lang: "en",
 });
 
-describe("FeedDetail", () => {
-  const originalFetch = globalThis.fetch;
+function makeFeedMetaResponse() {
+  return {
+    ok: true,
+    json: () => Promise.resolve(baseFeedResponse),
+  };
+}
 
+function makeArticlesResponse(articles: Article[], nextCursor: string | null = null) {
+  return {
+    ok: true,
+    json: () => Promise.resolve({ articles, nextCursor }),
+  };
+}
+
+describe("FeedDetail", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
   it("ローディング中は読み込み中テキストを表示する", () => {
     // fetch を pending のままにして loading 状態を維持する
-    globalThis.fetch = vi.fn<() => Promise<Response>>(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", vi.fn<() => Promise<Response>>().mockReturnValue(new Promise(() => {})));
     render(
       <FeedDetail
         feedId="test-feed"
@@ -62,10 +75,14 @@ describe("FeedDetail", () => {
   });
 
   it("フィード名・URL・articles_30d を表示する", async () => {
-    globalThis.fetch = vi.fn<() => Promise<Response>>().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(baseFeedResponse),
-    } as unknown as Response);
+    // 1 回目: /api/feeds/:id (feed meta), 2 回目: /api/articles/by-feed/:id
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<() => Promise<Response>>()
+        .mockResolvedValueOnce(makeFeedMetaResponse() as unknown as Response)
+        .mockResolvedValueOnce(makeArticlesResponse([]) as unknown as Response),
+    );
 
     render(
       <FeedDetail
@@ -86,10 +103,13 @@ describe("FeedDetail", () => {
 
   it("記事 5 件の場合に 5 枚のカードが表示される", async () => {
     const articles = Array.from({ length: 5 }, (_, i) => makeArticle(i + 1));
-    globalThis.fetch = vi.fn<() => Promise<Response>>().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ ...baseFeedResponse, recent_articles: articles }),
-    } as unknown as Response);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<() => Promise<Response>>()
+        .mockResolvedValueOnce(makeFeedMetaResponse() as unknown as Response)
+        .mockResolvedValueOnce(makeArticlesResponse(articles) as unknown as Response),
+    );
 
     render(
       <FeedDetail
@@ -111,10 +131,13 @@ describe("FeedDetail", () => {
   });
 
   it("記事 0 件のとき空状態メッセージを表示する", async () => {
-    globalThis.fetch = vi.fn<() => Promise<Response>>().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ ...baseFeedResponse, recent_articles: [] }),
-    } as unknown as Response);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<() => Promise<Response>>()
+        .mockResolvedValueOnce(makeFeedMetaResponse() as unknown as Response)
+        .mockResolvedValueOnce(makeArticlesResponse([]) as unknown as Response),
+    );
 
     render(
       <FeedDetail
@@ -131,10 +154,13 @@ describe("FeedDetail", () => {
   });
 
   it("404 エラーのとき「フィードが見つかりません」を表示する", async () => {
-    globalThis.fetch = vi.fn<() => Promise<Response>>().mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    } as unknown as Response);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<() => Promise<Response>>().mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      } as unknown as Response),
+    );
 
     render(
       <FeedDetail
@@ -151,10 +177,13 @@ describe("FeedDetail", () => {
   });
 
   it("「← 一覧に戻る」ボタンクリックで onBack が呼ばれる", async () => {
-    globalThis.fetch = vi.fn<() => Promise<Response>>().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(baseFeedResponse),
-    } as unknown as Response);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<() => Promise<Response>>()
+        .mockResolvedValueOnce(makeFeedMetaResponse() as unknown as Response)
+        .mockResolvedValueOnce(makeArticlesResponse([]) as unknown as Response),
+    );
 
     const onBack = vi.fn<() => void>();
     render(
@@ -176,22 +205,97 @@ describe("FeedDetail", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
+  it("「もっと見る」ボタンクリックで次ページが追加表示される", async () => {
+    const page1 = Array.from({ length: 20 }, (_, i) => makeArticle(i + 1));
+    const page2 = Array.from({ length: 5 }, (_, i) => makeArticle(i + 21));
+
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<() => Promise<Response>>()
+        .mockResolvedValueOnce(makeFeedMetaResponse() as unknown as Response)
+        .mockResolvedValueOnce(makeArticlesResponse(page1, "cursor-next") as unknown as Response)
+        .mockResolvedValueOnce(makeArticlesResponse(page2, null) as unknown as Response),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <FeedDetail
+        feedId="test-feed"
+        onBack={() => {}}
+        onFilterByFeedId={() => {}}
+        onFilterByCategory={() => {}}
+      />,
+    );
+
+    // フィードメタが表示されるまで待つ
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Test Feed" })).toBeTruthy();
+    });
+
+    // 初期 20 件が表示される
+    await waitFor(() => {
+      expect(screen.getByText("Article 1")).toBeTruthy();
+      expect(screen.getByText("Article 20")).toBeTruthy();
+    });
+
+    // 「もっと見る」ボタンが表示される
+    const loadMoreBtn = await screen.findByRole("button", { name: /もっと見る/ });
+    expect(loadMoreBtn).toBeTruthy();
+
+    // クリックで次ページが追加される
+    await user.click(loadMoreBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Article 25")).toBeTruthy();
+    });
+
+    // nextCursor=null で「もっと見る」ボタンが消える
+    expect(screen.queryByRole("button", { name: /もっと見る/ })).toBeNull();
+  });
+
+  it("hasMore=false (nextCursor=null) のとき「もっと見る」ボタンが表示されない", async () => {
+    const articles = Array.from({ length: 5 }, (_, i) => makeArticle(i + 1));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<() => Promise<Response>>()
+        .mockResolvedValueOnce(makeFeedMetaResponse() as unknown as Response)
+        .mockResolvedValueOnce(makeArticlesResponse(articles, null) as unknown as Response),
+    );
+
+    render(
+      <FeedDetail
+        feedId="test-feed"
+        onBack={() => {}}
+        onFilterByFeedId={() => {}}
+        onFilterByCategory={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Article 5")).toBeTruthy();
+    });
+
+    expect(screen.queryByRole("button", { name: /もっと見る/ })).toBeNull();
+  });
+
   it("feedId が変わると再 fetch する", async () => {
-    const fetchMock = vi.fn<() => Promise<Response>>();
-    fetchMock
+    const feedMeta2 = {
+      ...baseFeedResponse,
+      feed: { ...baseFeedResponse.feed, id: "other-feed", name: "Other Feed" },
+    };
+
+    const fetchMock = vi
+      .fn<() => Promise<Response>>()
+      .mockResolvedValueOnce(makeFeedMetaResponse() as unknown as Response)
+      .mockResolvedValueOnce(makeArticlesResponse([]) as unknown as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(baseFeedResponse),
+        json: () => Promise.resolve(feedMeta2),
       } as unknown as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            ...baseFeedResponse,
-            feed: { ...baseFeedResponse.feed, id: "other-feed", name: "Other Feed" },
-          }),
-      } as unknown as Response);
-    globalThis.fetch = fetchMock;
+      .mockResolvedValueOnce(makeArticlesResponse([]) as unknown as Response);
+    vi.stubGlobal("fetch", fetchMock);
 
     const { rerender } = render(
       <FeedDetail
@@ -219,8 +323,17 @@ describe("FeedDetail", () => {
       expect(screen.getByRole("heading", { name: "Other Feed" })).toBeTruthy();
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // feed meta と articles で各 2 回ずつ、計 4 回 fetch
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/feeds/test-feed?recent=20");
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/feeds/other-feed?recent=20");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("/api/articles/by-feed/test-feed"),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/feeds/other-feed?recent=20");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining("/api/articles/by-feed/other-feed"),
+    );
   });
 });
