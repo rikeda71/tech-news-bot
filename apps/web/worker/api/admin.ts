@@ -3,7 +3,7 @@ import type { Env } from "../types";
 import { collectAll, collectFeeds } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { setFeedEnabled } from "../db/feeds";
-import { getRun, listRuns, startRun } from "../db/runs";
+import { getCronHealth, getFeedFailures, getRun, listRuns, startRun } from "../db/runs";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -237,6 +237,34 @@ app.get("/runs/:id", async (c) => {
     return c.json({ error: "not found" }, 404);
   }
   return c.json(detail);
+});
+
+app.get("/cron-health", async (c) => {
+  const current = c.env.ADMIN_TOKEN;
+  const next = c.env.ADMIN_TOKEN_NEXT;
+  if (!current) {
+    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
+  }
+  const auth = c.req.header("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token || !isValidAdminToken(token, current, next)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+
+  const daysParam = c.req.query("days") ?? "7";
+  const daysNum = Number(daysParam);
+  if (daysNum !== 7 && daysNum !== 30) {
+    return c.json({ error: "days must be 7 or 30" }, 400);
+  }
+  const days = daysNum as 7 | 30;
+
+  const [health, topFailingFeeds] = await Promise.all([
+    getCronHealth(c.env.DB, days),
+    getFeedFailures(c.env.DB, days, 10),
+  ]);
+
+  c.header("Cache-Control", "private, max-age=60");
+  return c.json({ ...health, top_failing_feeds: topFailingFeeds });
 });
 
 export default app;

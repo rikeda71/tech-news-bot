@@ -102,3 +102,21 @@ export interface FeedHealth {
   consecutive_failures: number;
   articles_last_7d: number;
 }
+
+export interface CronHealth {
+  window_days: number;
+  runs_total: number;
+  runs_succeeded: number;
+  runs_failed: number;
+  avg_run_ms: number | null;
+  articles_collected: number;
+  top_failing_feeds: FeedFailure[];
+}
+
+export interface FeedFailure {
+  feed_id: string;
+  failures: number;
+  successes: number;
+  last_error: string | null;
+  last_attempted_at: string | null;
+}
