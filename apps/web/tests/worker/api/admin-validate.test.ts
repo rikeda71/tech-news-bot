@@ -140,9 +140,7 @@ describe("POST /api/admin/feeds/validate", () => {
   });
 
   it("200 + ok:false: fetch が 404 → ok:false と error を含む", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("Not Found", { status: 404 }),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
     const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
       method: "POST",

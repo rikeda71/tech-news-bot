@@ -411,9 +411,7 @@ export async function validateFeedUrl(url: string): Promise<ValidateFeedResult> 
     if (!title) return { ok: false, error: "Atom feed has no <title>" };
     // Atom の言語は xml:lang 属性 (@_xml:lang) で表現されることが多い
     const lang =
-      pickText(atomFeed["language"]) ??
-      (atomFeed["@_xml:lang"] as string | undefined) ??
-      null;
+      pickText(atomFeed["language"]) ?? (atomFeed["@_xml:lang"] as string | undefined) ?? null;
     const entries = asArray(
       atomFeed["entry"] as Record<string, unknown> | Record<string, unknown>[] | undefined,
     );
