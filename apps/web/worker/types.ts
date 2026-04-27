@@ -12,6 +12,8 @@ export interface Env {
   ADMIN_TOKEN_NEXT?: string;
   // preview 環境では "1" をセット。admin/collector を no-op にする。
   READONLY?: string;
+  // preview 環境では binding が存在しない場合があるため optional
+  COLLECTOR_AE?: AnalyticsEngineDataset;
 }
 
 export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";

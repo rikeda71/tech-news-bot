@@ -2,6 +2,7 @@ import type { Env, FeedConfig } from "../types";
 import { loadEnabledFeeds } from "../feed-config";
 import { parseFeed } from "./rssParser";
 import { buildGuids } from "./deduplicator";
+import { writeCollectorEvent } from "./metrics";
 import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
 import {
   loadFeedHeaders,
@@ -175,6 +176,7 @@ async function collectFeed(
   maxRetries: number,
 ): Promise<CollectResult> {
   const fetchedAt = new Date().toISOString();
+  const t0 = performance.now();
   try {
     // 前回の conditional GET ヘッダを読み込んでリクエストに付与する
     const savedHeaders = await loadFeedHeaders(env.DB, feed.id);
@@ -186,6 +188,12 @@ async function collectFeed(
     // 304 Not Modified: parse/insert をスキップし last_fetched_at だけ更新する
     if (result.notModified) {
       await recordFetchSuccess(env.DB, feed.id, fetchedAt, 0, "not_modified");
+      writeCollectorEvent(env, {
+        feedId: feed.id,
+        status: "not_modified",
+        ms: Math.round(performance.now() - t0),
+        statusCode: 304,
+      });
       return { feedId: feed.id, status: "not_modified", inserted: 0, parsed: 0 };
     }
 
@@ -223,6 +231,12 @@ async function collectFeed(
 
     const inserted = await insertArticles(env.DB, rows);
     await recordFetchSuccess(env.DB, feed.id, fetchedAt, inserted);
+    writeCollectorEvent(env, {
+      feedId: feed.id,
+      status: "ok",
+      ms: Math.round(performance.now() - t0),
+      statusCode: 200,
+    });
     return { feedId: feed.id, status: "ok", inserted, parsed: allItems.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -231,6 +245,15 @@ async function collectFeed(
     } catch (logErr) {
       console.error(`Failed to record error for ${feed.id}`, logErr);
     }
+    // HTTP エラーコードをメッセージから抽出する (例: "HTTP 503 ...")
+    const statusMatch = /^HTTP (\d+)/.exec(message);
+    const statusCode = statusMatch ? Number(statusMatch[1]) : 0;
+    writeCollectorEvent(env, {
+      feedId: feed.id,
+      status: "error",
+      ms: Math.round(performance.now() - t0),
+      statusCode,
+    });
     return { feedId: feed.id, status: "error", inserted: 0, parsed: 0, error: message };
   }
 }
