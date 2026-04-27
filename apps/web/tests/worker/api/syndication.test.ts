@@ -659,10 +659,11 @@ describe("/feeds/lang/:lang.xml (lang RSS)", () => {
   });
 
   it("returns articles in published_at DESC order", async () => {
-    // ja 記事を追加して並び順を確認
+    // ja 記事を追加して並び順を確認。g-jp という prefix を含む guid を避けるため
+    // 別の名前を使い indexOf のマッチ重複を防ぐ。
     await insertArticles(env.DB, [
       {
-        guid: "g-jp-newer",
+        guid: "lang-ja-newest",
         feed_id: "cyberagent-developers",
         title: "新しい日本語記事",
         url: "https://x.test/m/newer",
@@ -675,7 +676,7 @@ describe("/feeds/lang/:lang.xml (lang RSS)", () => {
     ]);
     const res = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
     const text = await res.text();
-    const pos1 = text.indexOf("g-jp-newer");
+    const pos1 = text.indexOf("lang-ja-newest");
     const pos2 = text.indexOf("g-jp");
     expect(pos1).toBeLessThan(pos2);
   });
