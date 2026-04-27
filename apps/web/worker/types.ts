@@ -3,6 +3,7 @@ export interface Env {
   ASSETS: Fetcher;
   COLLECTOR_CONCURRENCY: string;
   COLLECTOR_TIMEOUT_MS: string;
+  COLLECTOR_RETRIES: string;
   SUMMARY_MAX_LENGTH: string;
   RETENTION_DAYS: string;
   ADMIN_TOKEN?: string;
