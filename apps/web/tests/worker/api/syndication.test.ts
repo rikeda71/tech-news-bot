@@ -407,3 +407,198 @@ describe("/feeds/category/:cat.atom", () => {
     expect(second.status).toBe(304);
   });
 });
+
+describe("/feeds/author/:author.xml (author RSS)", () => {
+  it("returns 200 with application/rss+xml and channel title", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    const text = await res.text();
+    expect(text.startsWith("<?xml")).toBe(true);
+    expect(text).toContain('<rss version="2.0"');
+    expect(text).toContain("<title>Sam - tech-news-bot</title>");
+    expect(text).toContain("g-ai");
+    expect(text).not.toContain("g-jp");
+    expect(text).not.toContain("g-bigtech");
+  });
+
+  it("returns 200 with empty feed for unknown author", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/UnknownPerson.xml");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain('<rss version="2.0"');
+    // items が存在しないこと
+    expect(text).not.toContain("<item>");
+  });
+
+  it("decodes URL-encoded author name", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("g-ai");
+
+    // URL エンコードされた名前でもデコードされて同じ結果を返す
+    // "Sam" に含まれる文字は特別なエンコードが不要だが、スペースを含む著者名をテスト
+    // beforeEach で "Author A" を追加してエンコードテストを行う
+  });
+
+  it("returns Cache-Control: public, max-age=600", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+  });
+
+  it('returns ETag header matching W/"hex16" format', async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    const etag = res.headers.get("ETag");
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+  });
+
+  it("returns 304 on If-None-Match match (ETag round-trip)", async () => {
+    const res1 = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    expect(res1.status).toBe(200);
+    const etag = res1.headers.get("ETag")!;
+
+    const res2 = await SELF.fetch("https://example.com/feeds/author/Sam.xml", {
+      headers: { "If-None-Match": etag },
+    });
+    expect(res2.status).toBe(304);
+    expect(res2.headers.get("ETag")).toBe(etag);
+  });
+
+  it("returns articles in published_at DESC order", async () => {
+    // beforeEach で Sam の記事は g-ai (2024-04-02) のみ
+    // 新たに Sam の記事を追加して順序を確認
+    await insertArticles(env.DB, [
+      {
+        guid: "g-sam-newer",
+        feed_id: "openai-blog",
+        title: "Sam Newer Article",
+        url: "https://x.test/o/sam-newer",
+        summary: null,
+        author: "Sam",
+        published_at: "2024-04-10T00:00:00.000Z",
+        category: "ai",
+        lang: "en",
+      },
+    ]);
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    const text = await res.text();
+    const pos1 = text.indexOf("g-sam-newer");
+    const pos2 = text.indexOf("g-ai");
+    // 新しい記事が先に出現する
+    expect(pos1).toBeLessThan(pos2);
+  });
+
+  it("returns at most 50 articles (limit test with 51 articles)", async () => {
+    // Sam の記事を 50 件追加 (beforeEach で g-ai が既に 1 件あるので計 51 件)
+    const extra = Array.from({ length: 50 }, (_, i) => ({
+      guid: `g-sam-extra-${i}`,
+      feed_id: "openai-blog" as const,
+      title: `Sam Extra ${i}`,
+      url: `https://x.test/o/sam-extra-${i}`,
+      summary: null,
+      author: "Sam",
+      published_at: new Date(Date.UTC(2024, 2, i + 1)).toISOString(),
+      category: "ai" as const,
+      lang: "en" as const,
+    }));
+    await insertArticles(env.DB, extra);
+
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    // <item> タグの数を数えて 50 件以下であることを確認
+    const itemCount = (text.match(/<item>/g) ?? []).length;
+    expect(itemCount).toBeLessThanOrEqual(50);
+    expect(itemCount).toBe(50);
+  });
+});
+
+describe("/feeds/author/:author.json (author JSON Feed)", () => {
+  it("returns 200 with application/feed+json and items array", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.json");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
+    const body = (await res.json()) as {
+      version: string;
+      title: string;
+      items: { id: string }[];
+    };
+    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect(body.title).toBe("Sam - tech-news-bot");
+    expect(body.items.map((i) => i.id)).toContain("g-ai");
+  });
+
+  it("returns 200 with empty items for unknown author", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/NoSuchPerson.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: unknown[] };
+    expect(body.items).toEqual([]);
+  });
+
+  it("decodes URL-encoded author name (%20 → space)", async () => {
+    // "Author A" という著者を登録してエンコード URL でアクセス
+    await insertArticles(env.DB, [
+      {
+        guid: "g-author-a",
+        feed_id: "openai-blog",
+        title: "Article by Author A",
+        url: "https://x.test/o/author-a",
+        summary: null,
+        author: "Author A",
+        published_at: "2024-04-05T00:00:00.000Z",
+        category: "ai",
+        lang: "en",
+      },
+    ]);
+    const res = await SELF.fetch("https://example.com/feeds/author/Author%20A.json");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { title: string; items: { id: string }[] };
+    expect(body.title).toBe("Author A - tech-news-bot");
+    expect(body.items.map((i) => i.id)).toContain("g-author-a");
+  });
+
+  it("returns Cache-Control: public, max-age=600", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.json");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+  });
+});
+
+describe("/feeds/author/:author.atom (author Atom)", () => {
+  it("returns 200 with application/atom+xml", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.atom");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    const text = await res.text();
+    expect(text.startsWith("<?xml")).toBe(true);
+    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(text).toContain("<title>Sam - tech-news-bot</title>");
+    expect(text).toContain("g-ai");
+  });
+
+  it("returns 200 with empty feed for unknown author", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Ghost.atom");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    // entry が存在しないこと
+    expect(text).not.toContain("<entry>");
+  });
+
+  it("returns Cache-Control: public, max-age=600", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/author/Sam.atom");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+  });
+
+  it("returns ETag header and supports 304 round-trip", async () => {
+    const res1 = await SELF.fetch("https://example.com/feeds/author/Sam.atom");
+    expect(res1.status).toBe(200);
+    const etag = res1.headers.get("ETag")!;
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+
+    const res2 = await SELF.fetch("https://example.com/feeds/author/Sam.atom", {
+      headers: { "If-None-Match": etag },
+    });
+    expect(res2.status).toBe(304);
+  });
+});

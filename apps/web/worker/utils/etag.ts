@@ -13,6 +13,7 @@ export interface SyndicationEtagParams {
   category?: FeedCategory;
   lang?: FeedLang;
   feedId?: string;
+  author?: string;
 }
 
 // MAX(published_at) を取るだけの軽量クエリでリビジョンを取得する
@@ -98,9 +99,18 @@ export async function computeSyndicationEtag(
     conditions.push(`feed_id = ?${binds.length + 1}`);
     binds.push(params.feedId);
   }
+  if (params.author) {
+    conditions.push(`author = ?${binds.length + 1}`);
+    binds.push(params.author);
+  }
 
   const maxPublished = await fetchMaxPublishedAt(db, conditions, binds);
-  const paramStr = [opt(params.category), opt(params.lang), opt(params.feedId)].join("|");
+  const paramStr = [
+    opt(params.category),
+    opt(params.lang),
+    opt(params.feedId),
+    opt(params.author),
+  ].join("|");
   const source = `${maxPublished}|v${feedsVersion}|${paramStr}`;
   const hash = await sha256Hex16(source);
   return `W/"${hash}"`;
