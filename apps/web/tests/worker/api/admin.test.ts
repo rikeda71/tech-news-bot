@@ -98,32 +98,28 @@ describe("POST /api/admin/feeds/:id/enabled", () => {
 });
 
 describe("POST /api/admin/collector/run", () => {
-  it(
-    "200: 認証 OK + body なし (全件実行) → results 配列を返す",
-    async () => {
-      const res = await SELF.fetch("https://example.com/api/admin/collector/run", {
-        method: "POST",
-        headers: { ...AUTH_HEADER },
-      });
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as {
-        started_at: string;
-        finished_at: string;
-        results: { feed_id: string; status: string; new_articles: number }[];
-      };
-      expect(typeof body.started_at).toBe("string");
-      expect(typeof body.finished_at).toBe("string");
-      expect(Array.isArray(body.results)).toBe(true);
-      // 全 enabled feed に対して results が返る (外部 fetch はテスト環境では失敗するが error として返る)
-      expect(body.results.length).toBeGreaterThan(0);
-      for (const r of body.results) {
-        expect(typeof r.feed_id).toBe("string");
-        expect(["ok", "error", "not_modified"]).toContain(r.status);
-        expect(typeof r.new_articles).toBe("number");
-      }
-    },
-    60_000,
-  );
+  it("200: 認証 OK + body なし (全件実行) → results 配列を返す", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collector/run", {
+      method: "POST",
+      headers: { ...AUTH_HEADER },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      started_at: string;
+      finished_at: string;
+      results: { feed_id: string; status: string; new_articles: number }[];
+    };
+    expect(typeof body.started_at).toBe("string");
+    expect(typeof body.finished_at).toBe("string");
+    expect(Array.isArray(body.results)).toBe(true);
+    // 全 enabled feed に対して results が返る (外部 fetch はテスト環境では失敗するが error として返る)
+    expect(body.results.length).toBeGreaterThan(0);
+    for (const r of body.results) {
+      expect(typeof r.feed_id).toBe("string");
+      expect(["ok", "error", "not_modified"]).toContain(r.status);
+      expect(typeof r.new_articles).toBe("number");
+    }
+  }, 60_000);
 
   it("401: 認証なし → 401", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/collector/run", {
