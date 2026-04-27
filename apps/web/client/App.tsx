@@ -6,6 +6,7 @@ import { PresetBar } from "./components/PresetBar";
 import { SearchInput } from "./components/SearchInput";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { StatsPanel } from "./components/Stats";
+import { ToastContainer } from "./components/ToastContainer";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
 import { useKeyboardNav } from "./hooks/useKeyboardNav";
@@ -13,6 +14,7 @@ import { usePresets } from "./hooks/usePresets";
 import { useReadState } from "./hooks/useReadState";
 import { useStarredState } from "./hooks/useStarredState";
 import { useStats } from "./hooks/useStats";
+import { ToastContext, useToastState } from "./hooks/useToast";
 import type { FeedCategory, FeedLang } from "./types/api";
 
 function formatRelative(iso: string): string {
@@ -75,7 +77,7 @@ function buildSearch(
   return s ? `?${s}` : window.location.pathname;
 }
 
-export default function App() {
+function AppInner() {
   const [category, setCategory] = useState<FeedCategory | "">(() => readFromUrl().category);
   const [lang, setLang] = useState<FeedLang | "">(() => readFromUrl().lang);
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
@@ -364,6 +366,16 @@ export default function App() {
           {loadingMore ? "読み込み中…" : "もっと読み込む"}
         </button>
       )}
+      <ToastContainer />
     </div>
+  );
+}
+
+export default function App() {
+  const toastState = useToastState();
+  return (
+    <ToastContext.Provider value={toastState}>
+      <AppInner />
+    </ToastContext.Provider>
   );
 }
