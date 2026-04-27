@@ -6,6 +6,8 @@ export interface ArticlesQuery {
   lang?: FeedLang;
   feedId?: string;
   q?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 interface State {
@@ -30,6 +32,8 @@ function buildUrl(query: ArticlesQuery, cursor?: string | null): string {
   if (query.lang) params.set("lang", query.lang);
   if (query.feedId) params.set("feed_id", query.feedId);
   if (query.q) params.set("q", query.q);
+  if (query.dateFrom) params.set("date_from", query.dateFrom);
+  if (query.dateTo) params.set("date_to", query.dateTo);
   if (cursor) params.set("cursor", cursor);
   params.set("limit", "20");
   return `/api/articles?${params.toString()}`;

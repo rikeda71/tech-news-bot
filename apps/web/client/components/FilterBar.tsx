@@ -5,9 +5,13 @@ interface Props {
   lang: FeedLang | "";
   feedId: string;
   feeds: FeedSummary[];
+  dateFrom: string;
+  dateTo: string;
   onCategoryChange: (c: FeedCategory | "") => void;
   onLangChange: (l: FeedLang | "") => void;
   onFeedChange: (id: string) => void;
+  onDateFromChange: (v: string) => void;
+  onDateToChange: (v: string) => void;
   onClear: () => void;
 }
 
@@ -16,16 +20,21 @@ export function FilterBar({
   lang,
   feedId,
   feeds,
+  dateFrom,
+  dateTo,
   onCategoryChange,
   onLangChange,
   onFeedChange,
+  onDateFromChange,
+  onDateToChange,
   onClear,
 }: Props) {
   const visibleFeeds = feeds
     .filter((f) => (category ? f.category === category : true))
     .filter((f) => (lang ? f.lang === lang : true));
 
-  const hasFilter = category !== "" || lang !== "" || feedId !== "";
+  const hasFilter =
+    category !== "" || lang !== "" || feedId !== "" || dateFrom !== "" || dateTo !== "";
 
   return (
     <>
@@ -59,6 +68,22 @@ export function FilterBar({
           </option>
         ))}
       </select>
+
+      <input
+        type="date"
+        className="date-input"
+        value={dateFrom}
+        onChange={(e) => onDateFromChange(e.target.value)}
+        aria-label="期間 開始日"
+      />
+      <span className="date-sep">〜</span>
+      <input
+        type="date"
+        className="date-input"
+        value={dateTo}
+        onChange={(e) => onDateToChange(e.target.value)}
+        aria-label="期間 終了日"
+      />
 
       {hasFilter && (
         <button type="button" className="clear-filter" onClick={onClear}>
