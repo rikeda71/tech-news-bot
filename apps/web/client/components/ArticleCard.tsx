@@ -22,6 +22,13 @@ const CATEGORY_LABEL: Record<string, string> = {
   zenn: "Zenn",
 };
 
+const CATEGORY_ICON: Record<string, string> = {
+  bigtech: "🏢",
+  ai: "🤖",
+  jp: "🇯🇵",
+  zenn: "📝",
+};
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -112,6 +119,9 @@ export function ArticleCard({
           onClick={() => onFilterByCategory(article.category)}
           title={`${CATEGORY_LABEL[article.category] ?? article.category} で絞り込む`}
         >
+          <span aria-hidden="true" style={{ marginRight: "3px" }}>
+            {CATEGORY_ICON[article.category] ?? ""}
+          </span>
           {CATEGORY_LABEL[article.category] ?? article.category}
         </button>
         <button
