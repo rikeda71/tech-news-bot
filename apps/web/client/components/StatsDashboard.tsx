@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CalendarHeatmap } from "./CalendarHeatmap";
 import type { AuthorCount, PublisherCount, Stats } from "../hooks/useStats";
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
@@ -170,6 +171,8 @@ export function StatsDashboard({ onNavigateToAuthor }: StatsDashboardProps = {})
         <SummaryCard label="直近 7 日" value={articles7d} />
         <SummaryCard label="直近 30 日" value={articles30d} />
       </div>
+
+      <CalendarHeatmap days={90} />
 
       {stats.top_authors_30d && stats.top_authors_30d.length > 0 && (
         <AuthorsSection authors={stats.top_authors_30d} onAuthorClick={onNavigateToAuthor} />
