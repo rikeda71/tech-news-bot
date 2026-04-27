@@ -1,6 +1,10 @@
 import { Hono } from "hono";
-import type { Env, FeedCategory, FeedLang } from "../types";
+import type { Env, FeedCategory, FeedLang, FeedsFile } from "../types";
 import { listArticles } from "../db/articles";
+import { computeSyndicationEtag } from "../utils/etag";
+import feedsYaml from "../feeds.yaml";
+
+const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
 const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
 const VALID_LANGS: FeedLang[] = ["ja", "en"];
@@ -48,6 +52,14 @@ function siteOrigin(reqUrl: string): string {
 
 app.get("/feed.json", async (c) => {
   const { category, lang } = parseFilters(c);
+
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang });
+  if (c.req.header("If-None-Match") === etag) {
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=60");
+    return c.body(null, 304);
+  }
+
   const result = await listArticles(c.env.DB, {
     category,
     lang,
@@ -78,12 +90,21 @@ app.get("/feed.json", async (c) => {
   };
 
   c.header("Content-Type", "application/feed+json; charset=utf-8");
-  c.header("Cache-Control", "public, max-age=300");
+  c.header("ETag", etag);
+  c.header("Cache-Control", "public, max-age=60");
   return c.body(JSON.stringify(json));
 });
 
 app.get("/feed.xml", async (c) => {
   const { category, lang } = parseFilters(c);
+
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { category, lang });
+  if (c.req.header("If-None-Match") === etag) {
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=60");
+    return c.body(null, 304);
+  }
+
   const result = await listArticles(c.env.DB, {
     category,
     lang,
@@ -126,7 +147,8 @@ app.get("/feed.xml", async (c) => {
     `</channel></rss>`;
 
   c.header("Content-Type", "application/rss+xml; charset=utf-8");
-  c.header("Cache-Control", "public, max-age=300");
+  c.header("ETag", etag);
+  c.header("Cache-Control", "public, max-age=60");
   return c.body(xml);
 });
 
