@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
-import { setFeedEnabled } from "../db/feeds";
+import { getFeedsDiagnostics, setFeedEnabled } from "../db/feeds";
 import { getCronHealth, getFeedFailures, getRun, listRuns, startRun } from "../db/runs";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -297,6 +297,23 @@ app.get("/runs/:id", async (c) => {
     return c.json({ error: "not found" }, 404);
   }
   return c.json(detail);
+});
+
+app.get("/feeds/diagnostics", async (c) => {
+  const current = c.env.ADMIN_TOKEN;
+  const next = c.env.ADMIN_TOKEN_NEXT;
+  if (!current) {
+    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
+  }
+  const auth = c.req.header("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token || !isValidAdminToken(token, current, next)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+
+  const feeds = await getFeedsDiagnostics(c.env.DB);
+  c.header("Cache-Control", "private, max-age=30");
+  return c.json({ feeds, count: feeds.length });
 });
 
 app.get("/cron-health", async (c) => {
