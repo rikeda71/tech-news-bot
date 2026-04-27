@@ -4,6 +4,7 @@ import { FilterBar } from "./components/FilterBar";
 import { Header } from "./components/Header";
 import { PresetBar } from "./components/PresetBar";
 import { SearchInput } from "./components/SearchInput";
+import { SearchSuggestions } from "./components/SearchSuggestions";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { StatsPanel } from "./components/Stats";
 import { ToastContainer } from "./components/ToastContainer";
@@ -13,6 +14,7 @@ import { useFeeds } from "./hooks/useFeeds";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePresets } from "./hooks/usePresets";
 import { useReadState } from "./hooks/useReadState";
+import { useRecentSearches } from "./hooks/useRecentSearches";
 import { useStarredState } from "./hooks/useStarredState";
 import { useStats } from "./hooks/useStats";
 import { ToastContext, useToastState } from "./hooks/useToast";
@@ -85,8 +87,10 @@ function AppInner() {
   const [starredOnly, setStarredOnly] = useState<boolean>(() => readFromUrl().starredOnly);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [suggestVisible, setSuggestVisible] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { feeds } = useFeeds();
   const { stats } = useStats();
@@ -94,6 +98,7 @@ function AppInner() {
   const { isStarred } = useStarredState();
   const { bookmarks, toggle: toggleBookmark } = useBookmarks();
   const { presets, addPreset, removePreset } = usePresets();
+  const recentSearches = useRecentSearches();
 
   // popstate でブラウザ戻る/進むに追従する (useUrlState が q/category/lang/bookmarksOnly を処理、
   // feedId/dateFrom/dateTo/unreadOnly/starredOnly はこちらで処理)
@@ -178,6 +183,47 @@ function AppInner() {
   );
 
   const handleQChange = useCallback((v: string) => setUrlFilters({ q: v }), [setUrlFilters]);
+
+  // filters.q が URL に反映されたタイミングで検索履歴に追加する
+  useEffect(() => {
+    if (q !== "") {
+      recentSearches.add(q);
+    }
+    // recentSearches.add は安定した参照なので依存配列に含めない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  const handleSearchFocusIn = useCallback(() => {
+    if (blurTimerRef.current !== null) {
+      clearTimeout(blurTimerRef.current);
+      blurTimerRef.current = null;
+    }
+    setSuggestVisible(true);
+  }, []);
+
+  const handleSearchBlur = useCallback(() => {
+    // mousedown の取りこぼし防止のため 150ms 遅延させる
+    blurTimerRef.current = setTimeout(() => {
+      setSuggestVisible(false);
+    }, 150);
+  }, []);
+
+  const handleSuggestPick = useCallback(
+    (picked: string) => {
+      setUrlFilters({ q: picked });
+      recentSearches.add(picked);
+      setSuggestVisible(false);
+      searchRef.current?.focus();
+    },
+    [setUrlFilters, recentSearches],
+  );
+
+  const handleSuggestRemove = useCallback(
+    (item: string) => recentSearches.remove(item),
+    [recentSearches],
+  );
+
+  const handleSuggestClearAll = useCallback(() => recentSearches.clear(), [recentSearches]);
 
   const handleDateFromChange = useCallback(
     (v: string) => pushFilter(category, lang, feedId, q, v, dateTo, unreadOnly, starredOnly),
@@ -373,7 +419,22 @@ function AppInner() {
       />
 
       <div className="toolbar">
-        <SearchInput ref={searchRef} value={q} onChange={handleQChange} />
+        <div className="search-input-wrapper">
+          <SearchInput
+            ref={searchRef}
+            value={q}
+            onChange={handleQChange}
+            onFocus={handleSearchFocusIn}
+            onBlur={handleSearchBlur}
+          />
+          <SearchSuggestions
+            items={recentSearches.items}
+            onPick={handleSuggestPick}
+            onRemove={handleSuggestRemove}
+            onClearAll={handleSuggestClearAll}
+            visible={suggestVisible}
+          />
+        </div>
         <FilterBar
           category={category}
           lang={lang}
