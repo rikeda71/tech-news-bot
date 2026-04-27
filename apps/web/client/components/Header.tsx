@@ -10,46 +10,38 @@ interface HeaderProps {
   onViewChange?: (view: AppView) => void;
 }
 
+const NAV_TABS: Array<{ id: AppView; label: string; icon: string }> = [
+  { id: "articles", label: "Articles", icon: "📰" },
+  { id: "stats", label: "Stats", icon: "📊" },
+  { id: "categories", label: "カテゴリ", icon: "🗂️" },
+  { id: "trending", label: "トレンド", icon: "🔥" },
+];
+
 export function Header({ view, onViewChange }: HeaderProps) {
   const { theme, setTheme } = useTheme();
 
   return (
     <header className="app-header">
-      <h1>Tech News Bot</h1>
+      <h1>
+        <span className="header-logo-emoji" aria-hidden="true">
+          🤖
+        </span>
+        Tech News Bot
+      </h1>
       {onViewChange && (
         <nav className="app-nav" aria-label="ページ切替">
-          <button
-            type="button"
-            className={`app-nav-tab${view === "articles" ? " active" : ""}`}
-            onClick={() => onViewChange("articles")}
-            aria-current={view === "articles" ? "page" : undefined}
-          >
-            Articles
-          </button>
-          <button
-            type="button"
-            className={`app-nav-tab${view === "stats" ? " active" : ""}`}
-            onClick={() => onViewChange("stats")}
-            aria-current={view === "stats" ? "page" : undefined}
-          >
-            Stats
-          </button>
-          <button
-            type="button"
-            className={`app-nav-tab${view === "categories" ? " active" : ""}`}
-            onClick={() => onViewChange("categories")}
-            aria-current={view === "categories" ? "page" : undefined}
-          >
-            カテゴリ
-          </button>
-          <button
-            type="button"
-            className={`app-nav-tab${view === "trending" ? " active" : ""}`}
-            onClick={() => onViewChange("trending")}
-            aria-current={view === "trending" ? "page" : undefined}
-          >
-            トレンド
-          </button>
+          {NAV_TABS.map(({ id, label, icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`app-nav-tab${view === id ? " active" : ""}`}
+              onClick={() => onViewChange(id)}
+              aria-current={view === id ? "page" : undefined}
+            >
+              <span aria-hidden="true">{icon}</span>
+              {label}
+            </button>
+          ))}
         </nav>
       )}
       <ThemeToggle theme={theme} onSetTheme={setTheme} />
