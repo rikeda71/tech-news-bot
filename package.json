@@ -9,6 +9,7 @@
     "preview": "pnpm --filter @tnb/web preview",
     "deploy": "pnpm --filter @tnb/web deploy",
     "test": "pnpm --filter @tnb/web run test",
+    "test:client": "pnpm --filter @tnb/web run test:client",
     "test:watch": "pnpm --filter @tnb/web run test:watch",
     "typecheck": "pnpm -r typecheck",
     "lint": "vp lint",
