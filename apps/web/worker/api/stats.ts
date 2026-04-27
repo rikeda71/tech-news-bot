@@ -1,5 +1,11 @@
 import { Hono } from "hono";
-import { getCategoryTrend30d, getFeedActivity30d } from "../db/articles";
+import {
+  getByLang30d,
+  getCategoryTrend30d,
+  getFeedActivity30d,
+  getTopAuthors30d,
+  getTopPublishers30d,
+} from "../db/articles";
 import type { Env } from "../types";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -46,10 +52,14 @@ app.get("/", async (c) => {
     last_error: string | null;
   }>();
 
-  const [categoryTrend30d, feedActivity] = await Promise.all([
-    getCategoryTrend30d(c.env.DB),
-    getFeedActivity30d(c.env.DB),
-  ]);
+  const [categoryTrend30d, feedActivity, topAuthors30d, topPublishers30d, byLang30d] =
+    await Promise.all([
+      getCategoryTrend30d(c.env.DB),
+      getFeedActivity30d(c.env.DB),
+      getTopAuthors30d(c.env.DB),
+      getTopPublishers30d(c.env.DB),
+      getByLang30d(c.env.DB),
+    ]);
 
   return c.json({
     total: totalRow?.n ?? 0,
@@ -61,6 +71,9 @@ app.get("/", async (c) => {
     stale_feeds: staleRows.results ?? [],
     category_trend_30d: categoryTrend30d,
     feed_activity: feedActivity,
+    top_authors_30d: topAuthors30d,
+    top_publishers_30d: topPublishers30d,
+    by_lang_30d: byLang30d,
   });
 });
 
