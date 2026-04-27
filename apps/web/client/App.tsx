@@ -16,6 +16,7 @@ import { useReadState } from "./hooks/useReadState";
 import { useStarredState } from "./hooks/useStarredState";
 import { useStats } from "./hooks/useStats";
 import { ToastContext, useToastState } from "./hooks/useToast";
+import { useUrlState } from "./hooks/useUrlState";
 import type { FeedCategory, FeedLang } from "./types/api";
 
 function formatRelative(iso: string): string {
@@ -32,10 +33,7 @@ function formatRelative(iso: string): string {
 }
 
 function readFromUrl(): {
-  category: FeedCategory | "";
-  lang: FeedLang | "";
   feedId: string;
-  q: string;
   dateFrom: string;
   dateTo: string;
   unreadOnly: boolean;
@@ -43,10 +41,7 @@ function readFromUrl(): {
 } {
   const params = new URLSearchParams(window.location.search);
   return {
-    category: (params.get("category") as FeedCategory | null) ?? "",
-    lang: (params.get("lang") as FeedLang | null) ?? "",
     feedId: params.get("feed_id") ?? "",
-    q: params.get("q") ?? "",
     dateFrom: params.get("date_from") ?? "",
     dateTo: params.get("date_to") ?? "",
     unreadOnly: params.get("unread") === "1",
@@ -63,6 +58,7 @@ function buildSearch(
   dateTo: string,
   unreadOnly: boolean,
   starredOnly: boolean,
+  bookmarksOnly: boolean,
 ): string {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
@@ -74,20 +70,19 @@ function buildSearch(
   // true のときだけ付ける
   if (unreadOnly) params.set("unread", "1");
   if (starredOnly) params.set("starred", "1");
+  if (bookmarksOnly) params.set("bookmarks", "only");
   const s = params.toString();
   return s ? `?${s}` : window.location.pathname;
 }
 
 function AppInner() {
-  const [category, setCategory] = useState<FeedCategory | "">(() => readFromUrl().category);
-  const [lang, setLang] = useState<FeedLang | "">(() => readFromUrl().lang);
+  const [urlFilters, setUrlFilters] = useUrlState();
+  const { q, category, lang, bookmarksOnly: bookmarkedOnly } = urlFilters;
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
-  const [q, setQ] = useState<string>(() => readFromUrl().q);
   const [dateFrom, setDateFrom] = useState<string>(() => readFromUrl().dateFrom);
   const [dateTo, setDateTo] = useState<string>(() => readFromUrl().dateTo);
   const [unreadOnly, setUnreadOnly] = useState<boolean>(() => readFromUrl().unreadOnly);
   const [starredOnly, setStarredOnly] = useState<boolean>(() => readFromUrl().starredOnly);
-  const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -100,14 +95,12 @@ function AppInner() {
   const { bookmarks, toggle: toggleBookmark } = useBookmarks();
   const { presets, addPreset, removePreset } = usePresets();
 
-  // popstate でブラウザ戻る/進むに追従する
+  // popstate でブラウザ戻る/進むに追従する (useUrlState が q/category/lang/bookmarksOnly を処理、
+  // feedId/dateFrom/dateTo/unreadOnly/starredOnly はこちらで処理)
   useEffect(() => {
     const onPop = () => {
       const next = readFromUrl();
-      setCategory(next.category);
-      setLang(next.lang);
       setFeedId(next.feedId);
-      setQ(next.q);
       setDateFrom(next.dateFrom);
       setDateTo(next.dateTo);
       setUnreadOnly(next.unreadOnly);
@@ -118,6 +111,8 @@ function AppInner() {
   }, []);
 
   // フィルタ変更時は pushState で履歴に積む
+  // useUrlState が q/category/lang/bookmarksOnly の URL 同期を担うため、
+  // pushState 後に popstate を dispatch して useUrlState のキャッシュを更新する
   const pushFilter = useCallback(
     (
       nextCategory: FeedCategory | "",
@@ -138,6 +133,7 @@ function AppInner() {
         nextDateTo,
         nextUnreadOnly,
         nextStarredOnly,
+        bookmarkedOnly,
       );
       const current = buildSearch(
         category,
@@ -148,21 +144,20 @@ function AppInner() {
         dateTo,
         unreadOnly,
         starredOnly,
+        bookmarkedOnly,
       );
-      // 同じ URL なら重複履歴を作らない
       if (next !== current) {
         window.history.pushState(null, "", next);
+        // useUrlState の subscribe リスナー (popstate) を起動してキャッシュを無効化する
+        window.dispatchEvent(new PopStateEvent("popstate"));
       }
-      setCategory(nextCategory);
-      setLang(nextLang);
       setFeedId(nextFeedId);
-      setQ(nextQ);
       setDateFrom(nextDateFrom);
       setDateTo(nextDateTo);
       setUnreadOnly(nextUnreadOnly);
       setStarredOnly(nextStarredOnly);
     },
-    [category, lang, feedId, q, dateFrom, dateTo, unreadOnly, starredOnly],
+    [category, lang, feedId, q, dateFrom, dateTo, unreadOnly, starredOnly, bookmarkedOnly],
   );
 
   const handleCategoryChange = useCallback(
@@ -182,10 +177,7 @@ function AppInner() {
     [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
-  const handleQChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, v, dateFrom, dateTo, unreadOnly, starredOnly),
-    [pushFilter, category, lang, feedId, dateFrom, dateTo, unreadOnly, starredOnly],
-  );
+  const handleQChange = useCallback((v: string) => setUrlFilters({ q: v }), [setUrlFilters]);
 
   const handleDateFromChange = useCallback(
     (v: string) => pushFilter(category, lang, feedId, q, v, dateTo, unreadOnly, starredOnly),
@@ -208,8 +200,8 @@ function AppInner() {
   );
 
   const handleClear = useCallback(
-    () => pushFilter("", "", "", q, "", "", false, false),
-    [pushFilter, q],
+    () => pushFilter("", "", "", "", "", "", false, false),
+    [pushFilter],
   );
 
   const handleApplyPreset = useCallback(
@@ -236,6 +228,10 @@ function AppInner() {
     },
     [pushFilter],
   );
+
+  const handleBookmarkedOnlyToggle = useCallback(() => {
+    setUrlFilters({ bookmarksOnly: !bookmarkedOnly });
+  }, [setUrlFilters, bookmarkedOnly]);
 
   // カード上のバッジ/取得元クリックでフィルタを適用する
   const handleFilterByCategory = useCallback(
@@ -344,7 +340,7 @@ function AppInner() {
         <button
           type="button"
           className={`bookmarks-only-toggle${bookmarkedOnly ? " active" : ""}`}
-          onClick={() => setBookmarkedOnly((prev) => !prev)}
+          onClick={handleBookmarkedOnlyToggle}
           aria-pressed={bookmarkedOnly}
         >
           ★ {bookmarks.size} 件{bookmarkedOnly ? " (表示中)" : ""}
