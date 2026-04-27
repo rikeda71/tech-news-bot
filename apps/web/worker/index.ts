@@ -48,6 +48,11 @@ app.all("*", async (c) => {
 const handler: ExportedHandler<Env> = {
   fetch: app.fetch,
   async scheduled(_controller, env, ctx) {
+    // READONLY=1 の preview 環境ではコレクターを起動しない
+    if (env.READONLY === "1") {
+      console.log("[scheduled] READONLY mode – skipping collectAll");
+      return;
+    }
     ctx.waitUntil(
       collectAll(env).catch((err) => {
         console.error("[scheduled] collectAll failed", err);
