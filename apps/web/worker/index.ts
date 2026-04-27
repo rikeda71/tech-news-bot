@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "./types";
 import api from "./api/router";
 import sitemap from "./api/sitemap";
+import robots from "./api/robots";
 import syndication from "./api/syndication";
 import opml from "./api/opml";
 import { collectAll } from "./collector";
@@ -32,6 +33,7 @@ app.use("*", async (c, next) => {
 
 app.route("/api", api);
 app.route("/", sitemap);
+app.route("/", robots);
 app.route("/", syndication);
 app.route("/", opml);
 
