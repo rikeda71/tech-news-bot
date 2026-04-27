@@ -21,6 +21,14 @@ const FEEDS: FeedConfig[] = [
     lang: "en",
     enabled: true,
   },
+  {
+    id: "feed-z",
+    name: "Zenn Feed",
+    url: "https://zenn.dev/feed",
+    category: "zenn",
+    lang: "ja",
+    enabled: true,
+  },
 ];
 
 beforeEach(async () => {
@@ -135,5 +143,38 @@ describe("articles db", () => {
 
     const onlyFeedA = await listArticles(env.DB, { limit: 10, feedId: "feed-a" });
     expect(onlyFeedA.articles.map((a) => a.guid)).toEqual(["ga"]);
+  });
+
+  it("inserts and retrieves zenn category articles", async () => {
+    const inserted = await insertArticles(env.DB, [
+      {
+        guid: "gz1",
+        feed_id: "feed-z",
+        title: "Zenn 記事 1",
+        url: "https://zenn.dev/user/articles/abc123",
+        summary: "Zenn の記事サマリ",
+        author: "zenn-author",
+        published_at: "2024-04-10T00:00:00.000Z",
+        category: "zenn",
+        lang: "ja",
+      },
+      {
+        guid: "gz2",
+        feed_id: "feed-z",
+        title: "Zenn 記事 2",
+        url: "https://zenn.dev/user/articles/def456",
+        summary: null,
+        author: null,
+        published_at: "2024-04-11T00:00:00.000Z",
+        category: "zenn",
+        lang: "ja",
+      },
+    ]);
+    expect(inserted).toBe(2);
+
+    const onlyZenn = await listArticles(env.DB, { limit: 10, category: "zenn" });
+    expect(onlyZenn.articles.map((a) => a.guid)).toEqual(["gz2", "gz1"]);
+    expect(onlyZenn.articles[0].category).toBe("zenn");
+    expect(onlyZenn.articles[0].lang).toBe("ja");
   });
 });

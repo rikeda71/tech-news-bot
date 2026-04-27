@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { FilterBar } from "./components/FilterBar";
 import { SearchInput } from "./components/SearchInput";
@@ -35,6 +35,21 @@ function readFromUrl(): {
   };
 }
 
+function buildSearch(
+  category: FeedCategory | "",
+  lang: FeedLang | "",
+  feedId: string,
+  q: string,
+): string {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (lang) params.set("lang", lang);
+  if (feedId) params.set("feed_id", feedId);
+  if (q) params.set("q", q);
+  const s = params.toString();
+  return s ? `?${s}` : window.location.pathname;
+}
+
 export default function App() {
   const [category, setCategory] = useState<FeedCategory | "">(() => readFromUrl().category);
   const [lang, setLang] = useState<FeedLang | "">(() => readFromUrl().lang);
@@ -44,16 +59,73 @@ export default function App() {
   const { feeds } = useFeeds();
   const { stats } = useStats();
 
+  // popstate でブラウザ戻る/進むに追従する
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (category) params.set("category", category);
-    if (lang) params.set("lang", lang);
-    if (feedId) params.set("feed_id", feedId);
-    if (q) params.set("q", q);
-    const search = params.toString();
-    const next = search ? `?${search}` : window.location.pathname;
-    window.history.replaceState(null, "", next);
-  }, [category, lang, feedId, q]);
+    const onPop = () => {
+      const next = readFromUrl();
+      setCategory(next.category);
+      setLang(next.lang);
+      setFeedId(next.feedId);
+      setQ(next.q);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // フィルタ変更時は pushState で履歴に積む
+  const pushFilter = useCallback(
+    (
+      nextCategory: FeedCategory | "",
+      nextLang: FeedLang | "",
+      nextFeedId: string,
+      nextQ: string,
+    ) => {
+      const next = buildSearch(nextCategory, nextLang, nextFeedId, nextQ);
+      const current = buildSearch(category, lang, feedId, q);
+      // 同じ URL なら重複履歴を作らない
+      if (next !== current) {
+        window.history.pushState(null, "", next);
+      }
+      setCategory(nextCategory);
+      setLang(nextLang);
+      setFeedId(nextFeedId);
+      setQ(nextQ);
+    },
+    [category, lang, feedId, q],
+  );
+
+  const handleCategoryChange = useCallback(
+    (v: FeedCategory | "") => pushFilter(v, lang, v ? feedId : "", q),
+    [pushFilter, lang, feedId, q],
+  );
+
+  const handleLangChange = useCallback(
+    (v: FeedLang | "") => pushFilter(category, v, v ? feedId : "", q),
+    [pushFilter, category, feedId, q],
+  );
+
+  const handleFeedChange = useCallback(
+    (id: string) => pushFilter(category, lang, id, q),
+    [pushFilter, category, lang, q],
+  );
+
+  const handleQChange = useCallback(
+    (v: string) => pushFilter(category, lang, feedId, v),
+    [pushFilter, category, lang, feedId],
+  );
+
+  const handleClear = useCallback(() => pushFilter("", "", "", q), [pushFilter, q]);
+
+  // カード上のバッジ/取得元クリックでフィルタを適用する
+  const handleFilterByCategory = useCallback(
+    (c: FeedCategory) => pushFilter(c, lang, "", q),
+    [pushFilter, lang, q],
+  );
+
+  const handleFilterByFeedId = useCallback(
+    (id: string) => pushFilter(category, lang, id, q),
+    [pushFilter, category, lang, q],
+  );
 
   const query = useMemo(
     () => ({
@@ -94,21 +166,16 @@ export default function App() {
       </header>
 
       <div className="toolbar">
-        <SearchInput value={q} onChange={setQ} />
+        <SearchInput value={q} onChange={handleQChange} />
         <FilterBar
           category={category}
           lang={lang}
           feedId={feedId}
           feeds={feeds}
-          onCategoryChange={(v) => {
-            setCategory(v);
-            setFeedId("");
-          }}
-          onLangChange={(v) => {
-            setLang(v);
-            setFeedId("");
-          }}
-          onFeedChange={setFeedId}
+          onCategoryChange={handleCategoryChange}
+          onLangChange={handleLangChange}
+          onFeedChange={handleFeedChange}
+          onClear={handleClear}
         />
       </div>
 
@@ -118,7 +185,13 @@ export default function App() {
         <div className="empty">記事はまだありません。Cron 実行をお待ちください。</div>
       )}
 
-      {articles.length > 0 && <ArticleList articles={articles} />}
+      {articles.length > 0 && (
+        <ArticleList
+          articles={articles}
+          onFilterByCategory={handleFilterByCategory}
+          onFilterByFeedId={handleFilterByFeedId}
+        />
+      )}
 
       {nextCursor && (
         <button type="button" className="load-more" onClick={loadMore} disabled={loadingMore}>
