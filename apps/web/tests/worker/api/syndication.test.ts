@@ -447,7 +447,7 @@ describe("/feeds/author/:author.xml (author RSS)", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
   });
 
-  it("returns ETag header matching W/\"hex16\" format", async () => {
+  it('returns ETag header matching W/"hex16" format', async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
     const etag = res.headers.get("ETag");
     expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
