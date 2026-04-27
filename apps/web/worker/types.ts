@@ -64,3 +64,15 @@ export interface FeedSummary {
   last_status: string | null;
   article_count: number;
 }
+
+export interface HealthResponse {
+  status: "ok" | "degraded";
+  now: string;
+  db: {
+    articles_total: number;
+    feeds_total: number;
+    feeds_enabled: number;
+    latest_published_at: string | null;
+    latest_fetched_at: string | null;
+  };
+}
