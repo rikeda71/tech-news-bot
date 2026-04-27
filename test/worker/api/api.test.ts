@@ -173,3 +173,20 @@ describe("security headers", () => {
     expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
   });
 });
+
+describe("cache headers", () => {
+  it("API responses use no-store", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("static asset under /assets/ uses immutable long max-age", async () => {
+    const res = await SELF.fetch("https://example.com/assets/index-BYIbkfak.js");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+  });
+
+  it("HTML / SPA fallback uses no-cache", async () => {
+    const res = await SELF.fetch("https://example.com/");
+    expect(res.headers.get("Cache-Control")).toBe("no-cache, must-revalidate");
+  });
+});

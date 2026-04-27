@@ -31,8 +31,18 @@ app.route("/api", api);
 app.route("/", syndication);
 
 // 静的アセットへのフォールバック (Cloudflare Static Assets binding)
+// Vite は /assets/ 以下に hash 付きファイル名を出力するため、強キャッシュが安全。
+// それ以外 (index.html / SPA fallback) は no-cache で常に最新を取得する。
 app.all("*", async (c) => {
-  return c.env.ASSETS.fetch(c.req.raw);
+  const res = await c.env.ASSETS.fetch(c.req.raw);
+  const url = new URL(c.req.url);
+  const isHashed = url.pathname.startsWith("/assets/");
+  const headers = new Headers(res.headers);
+  headers.set(
+    "Cache-Control",
+    isHashed ? "public, max-age=31536000, immutable" : "no-cache, must-revalidate",
+  );
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 });
 
 const handler: ExportedHandler<Env> = {
