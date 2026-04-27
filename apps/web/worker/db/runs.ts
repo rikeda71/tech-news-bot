@@ -107,6 +107,93 @@ export async function listRuns(db: D1Database, limit = 20): Promise<RunRow[]> {
   return result.results ?? [];
 }
 
+interface CronHealthRow {
+  runs_total: number;
+  runs_succeeded: number;
+  runs_failed: number;
+  avg_run_ms: number | null;
+  articles_collected: number;
+}
+
+interface FeedFailureRow {
+  feed_id: string;
+  failures: number;
+  successes: number;
+  last_error: string | null;
+  last_attempted_at: string | null;
+}
+
+// collector_runs を集計して運用メトリクスを返す。1 クエリで完結させ D1 CPU を節約する。
+export async function getCronHealth(
+  db: D1Database,
+  days: 7 | 30,
+): Promise<{
+  window_days: number;
+  runs_total: number;
+  runs_succeeded: number;
+  runs_failed: number;
+  avg_run_ms: number | null;
+  articles_collected: number;
+}> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const row = await db
+    .prepare(
+      `SELECT
+         COUNT(*) AS runs_total,
+         SUM(CASE WHEN completed_at IS NOT NULL AND (error IS NULL OR error = '') THEN 1 ELSE 0 END) AS runs_succeeded,
+         SUM(CASE WHEN error IS NOT NULL AND error != '' THEN 1 ELSE 0 END) AS runs_failed,
+         AVG(
+           CASE
+             WHEN completed_at IS NOT NULL
+             THEN CAST((julianday(completed_at) - julianday(started_at)) * 86400000 AS INTEGER)
+           END
+         ) AS avg_run_ms,
+         SUM(COALESCE(articles_inserted, 0)) AS articles_collected
+       FROM collector_runs
+       WHERE started_at >= ?1`,
+    )
+    .bind(since)
+    .first<CronHealthRow>();
+
+  return {
+    window_days: days,
+    runs_total: row?.runs_total ?? 0,
+    runs_succeeded: row?.runs_succeeded ?? 0,
+    runs_failed: row?.runs_failed ?? 0,
+    avg_run_ms: row?.avg_run_ms ?? null,
+    articles_collected: row?.articles_collected ?? 0,
+  };
+}
+
+// 指定期間内で失敗の多いフィードを返す。failures 降順、successes 昇順で上位 N 件を返す。
+export async function getFeedFailures(
+  db: D1Database,
+  days: 7 | 30,
+  limit: number,
+): Promise<FeedFailureRow[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const safeLimit = Math.min(Math.max(limit, 1), 100);
+  const result = await db
+    .prepare(
+      `SELECT
+         crf.feed_id,
+         SUM(CASE WHEN crf.status = 'failed' THEN 1 ELSE 0 END) AS failures,
+         SUM(CASE WHEN crf.status = 'ok' THEN 1 ELSE 0 END) AS successes,
+         MAX(CASE WHEN crf.status = 'failed' THEN crf.error END) AS last_error,
+         MAX(cr.started_at) AS last_attempted_at
+       FROM collector_run_feeds crf
+       JOIN collector_runs cr ON cr.id = crf.run_id
+       WHERE cr.started_at >= ?1
+       GROUP BY crf.feed_id
+       HAVING failures > 0
+       ORDER BY failures DESC, successes ASC
+       LIMIT ?2`,
+    )
+    .bind(since, safeLimit)
+    .all<FeedFailureRow>();
+  return result.results ?? [];
+}
+
 export async function getRun(
   db: D1Database,
   run_id: number,
