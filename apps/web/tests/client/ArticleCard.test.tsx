@@ -3,15 +3,21 @@ import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { Article } from "../../client/types/api";
 
-// ArticleCard は useReadState (useSyncExternalStore ベース) を内部で使っている。
-// happy-dom 環境では getSnapshot の参照安定性問題で無限ループになるため
-// useReadState をモックして ArticleCard の描画ロジックに集中する。
+// ArticleCard は useReadState / useStarredState (どちらも useSyncExternalStore ベース) を
+// 内部で使っており、happy-dom 環境では getSnapshot の参照安定性問題で
+// 無限ループになるため両方ともモックして ArticleCard の描画ロジックに集中する。
 vi.mock("../../client/hooks/useReadState", () => ({
   useReadState: () => ({
     isRead: (id: number) => id === 1,
     markRead: vi.fn<(id: number) => void>(),
     markUnread: vi.fn<(id: number) => void>(),
     clearAll: vi.fn<() => void>(),
+  }),
+}));
+vi.mock("../../client/hooks/useStarredState", () => ({
+  useStarredState: () => ({
+    isStarred: () => false,
+    toggleStar: vi.fn<(id: number) => void>(),
   }),
 }));
 
