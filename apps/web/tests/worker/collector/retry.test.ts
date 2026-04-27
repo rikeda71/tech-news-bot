@@ -68,7 +68,8 @@ describe("fetchFeed retry behavior", () => {
       .mockResolvedValueOnce(new Response(VALID_XML, { status: 200 }));
 
     const result = await fetchFeed(DUMMY_URL, 10000, 2);
-    expect(result).toBe(VALID_XML);
+    expect(result.xml).toBe(VALID_XML);
+    expect(result.notModified).toBe(false);
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
@@ -83,7 +84,7 @@ describe("fetchFeed retry behavior", () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(result).toBe(VALID_XML);
+    expect(result.xml).toBe(VALID_XML);
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
@@ -98,7 +99,7 @@ describe("fetchFeed retry behavior", () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(result).toBe(VALID_XML);
+    expect(result.xml).toBe(VALID_XML);
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
@@ -145,7 +146,7 @@ describe("fetchFeed retry behavior", () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(result).toBe(VALID_XML);
+    expect(result.xml).toBe(VALID_XML);
     expect(spy).toHaveBeenCalledTimes(2);
   });
 

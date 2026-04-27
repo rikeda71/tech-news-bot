@@ -3,7 +3,13 @@ import { loadEnabledFeeds } from "../feed-config";
 import { parseFeed } from "./rssParser";
 import { buildGuids } from "./deduplicator";
 import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
-import { recordFetchError, recordFetchSuccess, syncFeeds } from "../db/feeds";
+import {
+  loadFeedHeaders,
+  recordFetchError,
+  recordFetchSuccess,
+  syncFeeds,
+  updateFeedHeaders,
+} from "../db/feeds";
 
 const MAX_FEED_BYTES = 4 * 1024 * 1024; // 4MB
 const MAX_ITEMS_PER_FEED = 50;
@@ -13,7 +19,7 @@ const BACKOFF_BASE_MS = 500;
 
 export interface CollectResult {
   feedId: string;
-  status: "ok" | "error";
+  status: "ok" | "error" | "not_modified";
   inserted: number;
   parsed: number;
   error?: string;
@@ -52,26 +58,54 @@ export function isRetryableError(err: unknown): boolean {
   return false;
 }
 
+/** fetchFeedOnce の戻り値。304 の場合は xml が null になる。 */
+interface FetchFeedResult {
+  xml: string | null;
+  etag: string | null;
+  lastModified: string | null;
+  notModified: boolean;
+}
+
 /**
  * 1 回の HTTP fetch を試みる。失敗時は呼び出し元でリトライを判断する。
  * - 4xx (429 除く) は恒久エラーなので Error をそのまま throw
  * - 5xx / 429 / AbortError / ネットワークエラーは throw して呼び出し元がリトライ
+ * - 304 Not Modified は notModified=true で返す (リトライしない)
  */
-async function fetchFeedOnce(url: string, timeoutMs: number): Promise<string> {
+async function fetchFeedOnce(
+  url: string,
+  timeoutMs: number,
+  conditionalHeaders: { etag: string | null; lastModified: string | null },
+): Promise<FetchFeedResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const reqHeaders: Record<string, string> = {
+      "User-Agent": USER_AGENT,
+      Accept: "application/atom+xml, application/rss+xml, application/xml;q=0.9, */*;q=0.5",
+    };
+    if (conditionalHeaders.etag) {
+      reqHeaders["if-none-match"] = conditionalHeaders.etag;
+    }
+    if (conditionalHeaders.lastModified) {
+      reqHeaders["if-modified-since"] = conditionalHeaders.lastModified;
+    }
+
     const res = await fetch(url, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/atom+xml, application/rss+xml, application/xml;q=0.9, */*;q=0.5",
-      },
+      headers: reqHeaders,
       signal: controller.signal,
       redirect: "follow",
     });
+
+    // 304: サーバが変更なしと判断。parse/insert をスキップする。
+    if (res.status === 304) {
+      return { xml: null, etag: null, lastModified: null, notModified: true };
+    }
+
     if (!res.ok) {
       throw new Error(`HTTP ${res.status} ${res.statusText}`);
     }
+
     const contentLength = Number(res.headers.get("content-length") ?? 0);
     if (contentLength > MAX_FEED_BYTES) {
       throw new Error(`Feed too large: ${contentLength} bytes`);
@@ -80,7 +114,13 @@ async function fetchFeedOnce(url: string, timeoutMs: number): Promise<string> {
     if (text.length > MAX_FEED_BYTES) {
       throw new Error(`Feed body too large: ${text.length} bytes`);
     }
-    return text;
+
+    return {
+      xml: text,
+      etag: res.headers.get("etag"),
+      lastModified: res.headers.get("last-modified"),
+      notModified: false,
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -88,7 +128,7 @@ async function fetchFeedOnce(url: string, timeoutMs: number): Promise<string> {
 
 /**
  * 一時障害 (5xx / 429 / AbortError / ネットワークエラー) に対して
- * 指数バックオフ + jitter でリトライする。4xx は即 fail。
+ * 指数バックオフ + jitter でリトライする。4xx / 304 は即 return。
  * sleep は wallclock のみ消費するため Worker の CPU 制限に影響しない。
  * テスト用に export する
  */
@@ -96,11 +136,15 @@ export async function fetchFeed(
   url: string,
   timeoutMs: number,
   maxRetries: number,
-): Promise<string> {
+  conditionalHeaders: { etag: string | null; lastModified: string | null } = {
+    etag: null,
+    lastModified: null,
+  },
+): Promise<FetchFeedResult> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fetchFeedOnce(url, timeoutMs);
+      return await fetchFeedOnce(url, timeoutMs, conditionalHeaders);
     } catch (err) {
       lastError = err;
 
@@ -132,8 +176,23 @@ async function collectFeed(
 ): Promise<CollectResult> {
   const fetchedAt = new Date().toISOString();
   try {
-    const xml = await fetchFeed(feed.url, timeoutMs, maxRetries);
-    const allItems = parseFeed(xml, {
+    // 前回の conditional GET ヘッダを読み込んでリクエストに付与する
+    const savedHeaders = await loadFeedHeaders(env.DB, feed.id);
+    const result = await fetchFeed(feed.url, timeoutMs, maxRetries, {
+      etag: savedHeaders.last_etag,
+      lastModified: savedHeaders.last_modified,
+    });
+
+    // 304 Not Modified: parse/insert をスキップし last_fetched_at だけ更新する
+    if (result.notModified) {
+      await recordFetchSuccess(env.DB, feed.id, fetchedAt, 0, "not_modified");
+      return { feedId: feed.id, status: "not_modified", inserted: 0, parsed: 0 };
+    }
+
+    // 200 OK: レスポンスの ETag / Last-Modified を保存する
+    await updateFeedHeaders(env.DB, feed.id, result.etag, result.lastModified);
+
+    const allItems = parseFeed(result.xml!, {
       summaryMaxLength: summaryMax,
       fallbackPublishedAt: fetchedAt,
     });
@@ -209,6 +268,7 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
   );
 
   const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
+  const skipped304 = results.filter((r) => r.status === "not_modified").length;
 
   const retentionDays = Number(env.RETENTION_DAYS ?? "90") || 90;
   let pruned = 0;
@@ -222,7 +282,7 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
 
   const durationMs = Date.now() - start;
   console.log(
-    `[collector] feeds=${feeds.length} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
+    `[collector] feeds=${feeds.length} skipped304=${skipped304} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
   );
   for (const r of results) {
     if (r.status === "error") {
