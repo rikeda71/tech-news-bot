@@ -1,13 +1,16 @@
-import type { CollectResult } from "./index";
+import type { Env } from "../types";
+import type { CollectAllResult, CollectResult } from "./index";
 
 export interface AlertSummary {
   failedFeeds: { id: string; error: string }[];
   streakFeeds: { id: string; consecutiveFailures: number }[];
 }
 
+const TOP_ERRORS_MAX = 5;
+
 /**
  * Slack Incoming Webhook 互換の payload で失敗を通知する。
- * Discord は ?slack suffix を付けることで同じ {text} 形式を受け入れる。
+ * Discord は blocks を無視して text フィールドをメッセージとして表示する。
  * 通知失敗は console.error のみ。Cron を落とさないよう throw しない。
  */
 export async function notifyCollectorFailure(
@@ -47,6 +50,63 @@ export async function notifyCollectorFailure(
   } catch (err) {
     console.error(
       `[alert] failed to send webhook: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * collectAll の結果から Slack/Discord 互換の blocks 形式で通知する。
+ * COLLECTOR_ALERT_WEBHOOK が未設定なら no-op。fetch 失敗は console.error のみ。
+ */
+export async function sendAlert(env: Env, result: CollectAllResult): Promise<void> {
+  const webhookUrl = env.COLLECTOR_ALERT_WEBHOOK;
+  if (!webhookUrl) return;
+
+  const threshold = Number(env.COLLECTOR_ALERT_THRESHOLD ?? "5") || 5;
+  const feedsFailed = result.results.filter((r) => r.status === "error").length;
+
+  if (feedsFailed < threshold) return;
+
+  const now = new Date().toISOString();
+  const topErrors = result.results
+    .filter((r) => r.status === "error")
+    .slice(0, TOP_ERRORS_MAX)
+    .map((r) => `${r.feedId} (${(r.error ?? "unknown").slice(0, 100)})`)
+    .join(", ");
+
+  const mrkdwn = `*Failed:* ${feedsFailed} / ${result.total}\n*Time:* ${now}\n*Top errors:* ${topErrors}`;
+
+  const payload = {
+    text: "tech-news-bot collector alert",
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: mrkdwn,
+        },
+      },
+    ],
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      console.error(`[alert] sendAlert webhook returned non-2xx: ${res.status} ${res.statusText}`);
+    }
+  } catch (err) {
+    console.error(
+      `[alert] sendAlert failed: ${err instanceof Error ? err.message : String(err)}`,
     );
   } finally {
     clearTimeout(timer);

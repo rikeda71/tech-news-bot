@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { env } from "cloudflare:test";
-import { maybeAlert, notifyCollectorFailure } from "../../../worker/collector/alert";
+import { maybeAlert, notifyCollectorFailure, sendAlert } from "../../../worker/collector/alert";
 import {
   getFeedStreaks,
   syncFeeds,
   recordFetchError,
   recordFetchSuccess,
 } from "../../../worker/db/feeds";
-import type { CollectResult } from "../../../worker/collector/index";
-import type { FeedConfig } from "../../../worker/types";
+import type { CollectAllResult, CollectResult } from "../../../worker/collector/index";
+import type { Env, FeedConfig } from "../../../worker/types";
 
 const WEBHOOK_URL = "https://hooks.example.com/webhook";
 
@@ -172,6 +172,107 @@ describe("maybeAlert", () => {
     await maybeAlert(WEBHOOK_URL, [okResult("feed-a")], streaks, 3, 5);
 
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendAlert", () => {
+  const makeResult = (failed: number, total: number): CollectAllResult => {
+    const results: CollectResult[] = [];
+    for (let i = 0; i < failed; i++) {
+      results.push(errResult(`feed-${i}`, `HTTP ${500 + i}`));
+    }
+    for (let i = failed; i < total; i++) {
+      results.push(okResult(`feed-${i}`));
+    }
+    return { total, inserted: total - failed, pruned: 0, results, durationMs: 100 };
+  };
+
+  it("does not call webhook when COLLECTOR_ALERT_WEBHOOK is not set", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    const mockEnv = { ...env, COLLECTOR_ALERT_WEBHOOK: undefined } as unknown as Env;
+    await sendAlert(mockEnv, makeResult(10, 30));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("does not call webhook when COLLECTOR_ALERT_WEBHOOK is empty string", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    const mockEnv = { ...env, COLLECTOR_ALERT_WEBHOOK: "" } as unknown as Env;
+    await sendAlert(mockEnv, makeResult(10, 30));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("calls webhook when failed feeds >= threshold (default 5)", async () => {
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    const mockEnv = { ...env, COLLECTOR_ALERT_WEBHOOK: WEBHOOK_URL } as unknown as Env;
+    await sendAlert(mockEnv, makeResult(5, 30));
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe(WEBHOOK_URL);
+    const body = JSON.parse(init?.body as string) as {
+      text: string;
+      blocks: { type: string; text: { type: string; text: string } }[];
+    };
+    expect(body.text).toContain("collector alert");
+    expect(body.blocks).toHaveLength(1);
+    expect(body.blocks[0].text.type).toBe("mrkdwn");
+    expect(body.blocks[0].text.text).toContain("Failed:");
+  });
+
+  it("does not call webhook when failed feeds < threshold (default 5)", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    const mockEnv = { ...env, COLLECTOR_ALERT_WEBHOOK: WEBHOOK_URL } as unknown as Env;
+    await sendAlert(mockEnv, makeResult(4, 30));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("respects COLLECTOR_ALERT_THRESHOLD env var", async () => {
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    const mockEnv = {
+      ...env,
+      COLLECTOR_ALERT_WEBHOOK: WEBHOOK_URL,
+      COLLECTOR_ALERT_THRESHOLD: "3",
+    } as unknown as Env;
+    await sendAlert(mockEnv, makeResult(3, 30));
+
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("limits top errors to 5 in the payload", async () => {
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    const mockEnv = { ...env, COLLECTOR_ALERT_WEBHOOK: WEBHOOK_URL } as unknown as Env;
+    // 10 件失敗しても blocks には最大 5 件しか含まれない
+    await sendAlert(mockEnv, makeResult(10, 30));
+
+    const body = JSON.parse(spy.mock.calls[0][1]?.body as string) as {
+      blocks: { type: string; text: { type: string; text: string } }[];
+    };
+    const mrkdwn = body.blocks[0].text.text;
+    // "feed-5" 〜 "feed-9" は含まれないことを確認 (top 5 = feed-0 〜 feed-4)
+    expect(mrkdwn).toContain("feed-0");
+    expect(mrkdwn).toContain("feed-4");
+    expect(mrkdwn).not.toContain("feed-5");
+  });
+
+  it("does not throw on non-2xx webhook response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 500 }));
+    const mockEnv = { ...env, COLLECTOR_ALERT_WEBHOOK: WEBHOOK_URL } as unknown as Env;
+    await expect(sendAlert(mockEnv, makeResult(5, 30))).resolves.toBeUndefined();
+  });
+
+  it("does not throw on network error", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const mockEnv = { ...env, COLLECTOR_ALERT_WEBHOOK: WEBHOOK_URL } as unknown as Env;
+    await expect(sendAlert(mockEnv, makeResult(5, 30))).resolves.toBeUndefined();
   });
 });
 

@@ -17,6 +17,10 @@ export interface Env {
   ALERT_WEBHOOK_URL?: string;
   ALERT_MIN_FAILURES?: string;
   ALERT_FEED_STREAK?: string;
+  // Slack/Discord 互換 webhook URL (wrangler secret put COLLECTOR_ALERT_WEBHOOK)
+  COLLECTOR_ALERT_WEBHOOK?: string;
+  // 閾値: feeds_failed がこの値以上になったら通知する (default: "5")
+  COLLECTOR_ALERT_THRESHOLD?: string;
 }
 
 export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";

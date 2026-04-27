@@ -139,6 +139,11 @@ pnpm migrate:prod
 
 # 3. Admin Token を登録 (省略可)
 pnpm exec wrangler secret put ADMIN_TOKEN
+
+# 4. Collector アラート webhook を登録 (省略可)
+#    Slack / Discord の incoming webhook URL を設定すると、
+#    フィード取得失敗数が COLLECTOR_ALERT_THRESHOLD (default: 5) 以上のとき通知される
+pnpm exec wrangler secret put COLLECTOR_ALERT_WEBHOOK
 ```
 
 ### GitHub Actions による自動デプロイ

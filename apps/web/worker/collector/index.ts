@@ -4,7 +4,7 @@ import { parseFeed } from "./rssParser";
 import { parseXml, pickText, asArray } from "../utils/xml";
 import { buildGuids } from "./deduplicator";
 import { writeCollectorEvent } from "./metrics";
-import { maybeAlert } from "./alert";
+import { maybeAlert, sendAlert } from "./alert";
 import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
 import {
   getEnabledFeedIds,
@@ -538,5 +538,16 @@ export async function collectAll(
     }
   }
 
-  return { total: activeFeeds.length, inserted, pruned, results, durationMs };
+  const finalResult = { total: activeFeeds.length, inserted, pruned, results, durationMs };
+
+  // COLLECTOR_ALERT_WEBHOOK ベースのシンプルな閾値アラート (best-effort)
+  try {
+    await sendAlert(env, finalResult);
+  } catch (err) {
+    console.error(
+      `[collector] sendAlert failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  return finalResult;
 }
