@@ -100,8 +100,9 @@ describe("FeedDetail", () => {
       />,
     );
 
+    // フィード名は h2 として表示されるため role で絞り込む
     await waitFor(() => {
-      expect(screen.getByText("Test Feed")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "Test Feed" })).toBeTruthy();
     });
 
     for (let i = 1; i <= 5; i++) {
@@ -166,7 +167,7 @@ describe("FeedDetail", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Test Feed")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "Test Feed" })).toBeTruthy();
     });
 
     const backButton = screen.getByText("← 一覧に戻る");
@@ -202,7 +203,7 @@ describe("FeedDetail", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Test Feed")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "Test Feed" })).toBeTruthy();
     });
 
     rerender(
@@ -215,7 +216,7 @@ describe("FeedDetail", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Other Feed")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "Other Feed" })).toBeTruthy();
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
