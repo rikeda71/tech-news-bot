@@ -918,3 +918,93 @@ kbd {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* 検索履歴ドロップダウン */
+.search-input-wrapper {
+  position: relative;
+}
+
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 50;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.search-suggestion-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+}
+
+.search-suggestion-pick {
+  flex: 1;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--fg);
+  font-size: 0.9rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-suggestion-pick:hover {
+  background: var(--bg-elev-2);
+  color: var(--accent);
+}
+
+.search-suggestion-remove {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.search-suggestion-remove:hover {
+  opacity: 1;
+  color: var(--fg);
+}
+
+.search-suggestion-clear-row {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.search-suggestion-clear-all {
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.search-suggestion-clear-all:hover {
+  background: var(--bg-elev-2);
+  color: var(--fg);
+}
