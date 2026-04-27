@@ -6,13 +6,7 @@
  * client/types/api.ts と shape を一致させること。
  */
 
-import type {
-  Article,
-  FeedDiagnostic,
-  FeedFailure,
-  FeedHealth,
-  HealthCronRun,
-} from "../types";
+import type { Article, FeedDiagnostic, FeedFailure, FeedHealth, HealthCronRun } from "../types";
 import type {
   CalendarItem,
   CategoryTrendPoint,

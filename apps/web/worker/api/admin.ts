@@ -188,10 +188,11 @@ app.post("/collector/run", async (c) => {
     }
     const body = parsed as Record<string, unknown>;
     if ("feed_ids" in body) {
-      if (!Array.isArray(body.feed_ids)) {
-        return c.json({ error: "feed_ids must be an array" }, 400);
+      const rawFeedIds = body.feed_ids;
+      if (!Array.isArray(rawFeedIds) || !rawFeedIds.every((v) => typeof v === "string")) {
+        return c.json({ error: "feed_ids must be an array of strings" }, 400);
       }
-      feedIds = body.feed_ids as string[];
+      feedIds = rawFeedIds;
       // 存在しない feed_id が含まれていれば 400
       const allIds = new Set(loadAllFeeds().map((f) => f.id));
       const unknown = feedIds.filter((id) => !allIds.has(id));
@@ -235,7 +236,11 @@ app.post("/collector/run", async (c) => {
     ...(r.error !== undefined ? { error: r.error } : {}),
   }));
 
-  return c.json<AdminCollectorRunResponse>({ started_at: startedAt, finished_at: finishedAt, results });
+  return c.json<AdminCollectorRunResponse>({
+    started_at: startedAt,
+    finished_at: finishedAt,
+    results,
+  });
 });
 
 app.post("/feeds/:id/enabled", async (c) => {

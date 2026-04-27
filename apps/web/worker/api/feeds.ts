@@ -3,12 +3,13 @@ import { loadAllFeeds } from "../feed-config";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { findFeedWithStats, getRecentArticlesByFeed, listFeedsWithStats } from "../db/feeds";
 import { getFeedHealth } from "../db/runs";
+import { makeOneOf } from "../utils/types";
 import type { FeedsListResponse, FeedDetailResponse, FeedRunHealthResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 
-const VALID_CATEGORIES = new Set<FeedCategory>(["bigtech", "ai", "jp", "zenn"]);
-const VALID_LANGS = new Set<FeedLang>(["ja", "en"]);
+const isCategory = makeOneOf<FeedCategory>(["bigtech", "ai", "jp", "zenn"]);
+const isLang = makeOneOf<FeedLang>(["ja", "en"]);
 
 app.get("/", async (c) => {
   const { req } = c;
@@ -17,10 +18,10 @@ app.get("/", async (c) => {
   const enabledRaw = req.query("enabled");
 
   // 不正なクエリパラメータは 400 を返す
-  if (categoryRaw !== undefined && !VALID_CATEGORIES.has(categoryRaw as FeedCategory)) {
+  if (categoryRaw !== undefined && !isCategory(categoryRaw)) {
     return c.json({ error: `invalid category: ${categoryRaw}` }, 400);
   }
-  if (langRaw !== undefined && !VALID_LANGS.has(langRaw as FeedLang)) {
+  if (langRaw !== undefined && !isLang(langRaw)) {
     return c.json({ error: `invalid lang: ${langRaw}` }, 400);
   }
   if (enabledRaw !== undefined && enabledRaw !== "true" && enabledRaw !== "false") {
@@ -28,8 +29,8 @@ app.get("/", async (c) => {
   }
 
   const opts: { category?: FeedCategory; lang?: FeedLang; enabled?: boolean } = {};
-  if (categoryRaw !== undefined) opts.category = categoryRaw as FeedCategory;
-  if (langRaw !== undefined) opts.lang = langRaw as FeedLang;
+  if (isCategory(categoryRaw)) opts.category = categoryRaw;
+  if (isLang(langRaw)) opts.lang = langRaw;
   if (enabledRaw !== undefined) opts.enabled = enabledRaw === "true";
 
   const feeds = await listFeedsWithStats(c.env.DB, opts);
