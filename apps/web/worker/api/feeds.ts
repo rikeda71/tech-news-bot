@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
-import { listFeedsWithStats } from "../db/feeds";
+import { findFeedWithStats, getRecentArticlesByFeed, listFeedsWithStats } from "../db/feeds";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -31,6 +31,36 @@ app.get("/", async (c) => {
 
   const feeds = await listFeedsWithStats(c.env.DB, opts);
   return c.json({ feeds });
+});
+
+const RECENT_DEFAULT = 10;
+const RECENT_MAX = 50;
+
+app.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  const recentRaw = c.req.query("recent");
+
+  // recent バリデーション
+  let recent = RECENT_DEFAULT;
+  if (recentRaw !== undefined) {
+    const parsed = Number(recentRaw);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > RECENT_MAX) {
+      return c.json({ error: `recent must be an integer between 0 and ${RECENT_MAX}` }, 400);
+    }
+    recent = parsed;
+  }
+
+  const [feed, recentArticles] = await Promise.all([
+    findFeedWithStats(c.env.DB, id),
+    recent > 0 ? getRecentArticlesByFeed(c.env.DB, id, recent) : Promise.resolve([]),
+  ]);
+
+  if (!feed) {
+    return c.json({ error: "feed not found" }, 404);
+  }
+
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({ feed, recent_articles: recentArticles });
 });
 
 export default app;

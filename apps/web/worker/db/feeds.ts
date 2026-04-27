@@ -1,4 +1,4 @@
-import type { FeedCategory, FeedConfig, FeedHealth, FeedLang } from "../types";
+import type { Article, FeedCategory, FeedConfig, FeedHealth, FeedLang } from "../types";
 
 export interface FeedHeaders {
   last_etag: string | null;
@@ -242,6 +242,77 @@ export async function listFeedsWithStats(
     articles_30d: r.articles_30d,
     last_published_at: r.last_published_at,
   }));
+}
+
+/**
+ * 1 件のフィードを articles 集計付きで返す。
+ * id が存在しない場合は null。
+ */
+export async function findFeedWithStats(
+  db: D1Database,
+  id: string,
+): Promise<FeedWithStats | null> {
+  const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const row = await db
+    .prepare(
+      `SELECT f.id, f.name, f.url, f.category, f.lang, f.enabled,
+              COUNT(CASE WHEN a.published_at >= ?2 THEN 1 END) AS articles_30d,
+              MAX(a.published_at) AS last_published_at
+       FROM feeds f
+       LEFT JOIN articles a ON a.feed_id = f.id
+       WHERE f.id = ?1
+       GROUP BY f.id, f.name, f.url, f.category, f.lang, f.enabled`,
+    )
+    .bind(id, threshold)
+    .first<{
+      id: string;
+      name: string;
+      url: string;
+      category: string;
+      lang: string;
+      enabled: number;
+      articles_30d: number;
+      last_published_at: string | null;
+    }>();
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    category: row.category as FeedCategory,
+    lang: row.lang as FeedLang,
+    enabled: row.enabled === 1,
+    articles_30d: row.articles_30d,
+    last_published_at: row.last_published_at,
+  };
+}
+
+/**
+ * 指定フィードの最近の記事を published_at 降順で返す。
+ * db/articles.ts への変更を避けるため feeds.ts 内に定義。
+ */
+export async function getRecentArticlesByFeed(
+  db: D1Database,
+  feedId: string,
+  limit: number,
+): Promise<Article[]> {
+  const rows = await db
+    .prepare(
+      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+              a.author, a.published_at, a.fetched_at, a.category, a.lang
+       FROM articles a
+       LEFT JOIN feeds f ON f.id = a.feed_id
+       WHERE a.feed_id = ?1
+       ORDER BY a.published_at DESC
+       LIMIT ?2`,
+    )
+    .bind(feedId, limit)
+    .all<Article>();
+
+  return rows.results ?? [];
 }
 
 /**
