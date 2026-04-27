@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useReadState } from "../hooks/useReadState";
 import { useStarredState } from "../hooks/useStarredState";
 import type { Article, FeedCategory } from "../types/api";
+import { highlight } from "../utils/highlight";
 
 interface Props {
   article: Article;
   focused?: boolean;
   onFilterByCategory: (c: FeedCategory) => void;
   onFilterByFeedId: (id: string) => void;
+  q?: string;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -38,7 +40,13 @@ function safeHref(url: string): string {
   }
 }
 
-export function ArticleCard({ article, focused, onFilterByCategory, onFilterByFeedId }: Props) {
+export function ArticleCard({
+  article,
+  focused,
+  onFilterByCategory,
+  onFilterByFeedId,
+  q = "",
+}: Props) {
   const { isRead, markRead, markUnread } = useReadState();
   const { isStarred, toggleStar } = useStarredState();
   const [hovered, setHovered] = useState(false);
@@ -61,7 +69,7 @@ export function ArticleCard({ article, focused, onFilterByCategory, onFilterByFe
           className="title"
           onClick={() => markRead(article.id)}
         >
-          {article.title}
+          {highlight(article.title, q)}
         </a>
         <button
           type="button"
@@ -109,7 +117,7 @@ export function ArticleCard({ article, focused, onFilterByCategory, onFilterByFe
           </>
         )}
       </div>
-      {article.summary && <p className="summary">{article.summary}</p>}
+      {article.summary && <p className="summary">{highlight(article.summary, q)}</p>}
     </article>
   );
 }

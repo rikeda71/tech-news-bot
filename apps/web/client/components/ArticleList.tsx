@@ -6,9 +6,16 @@ interface Props {
   focusedId?: number | null;
   onFilterByCategory: (c: FeedCategory) => void;
   onFilterByFeedId: (id: string) => void;
+  q?: string;
 }
 
-export function ArticleList({ articles, focusedId, onFilterByCategory, onFilterByFeedId }: Props) {
+export function ArticleList({
+  articles,
+  focusedId,
+  onFilterByCategory,
+  onFilterByFeedId,
+  q,
+}: Props) {
   return (
     <div className="article-list">
       {articles.map((a) => (
@@ -18,6 +25,7 @@ export function ArticleList({ articles, focusedId, onFilterByCategory, onFilterB
           focused={focusedId === a.id}
           onFilterByCategory={onFilterByCategory}
           onFilterByFeedId={onFilterByFeedId}
+          q={q}
         />
       ))}
     </div>
