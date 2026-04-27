@@ -22,7 +22,7 @@ export async function startRun(
   db: D1Database,
   started_at: string,
   feeds_total: number,
-): Promise<{ run_id: number }> {
+): Promise<{ run_id: number; d1Meta: D1Result["meta"] }> {
   const result = await db
     .prepare(
       `INSERT INTO collector_runs (started_at, feeds_total)
@@ -31,7 +31,7 @@ export async function startRun(
     .bind(started_at, feeds_total)
     .run();
   const run_id = result.meta.last_row_id as number;
-  return { run_id };
+  return { run_id, d1Meta: result.meta };
 }
 
 export async function recordRunFeed(
@@ -42,16 +42,17 @@ export async function recordRunFeed(
   articles_inserted: number,
   duration_ms: number,
   error?: string,
-): Promise<void> {
+): Promise<D1Result["meta"]> {
   // 200 文字で切り詰め。長いスタックトレースを D1 に書かないため。
   const errorTruncated = error ? error.slice(0, 200) : null;
-  await db
+  const result = await db
     .prepare(
       `INSERT INTO collector_run_feeds (run_id, feed_id, status, articles_inserted, duration_ms, error)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
     )
     .bind(run_id, feed_id, status, articles_inserted, duration_ms, errorTruncated)
     .run();
+  return result.meta;
 }
 
 export async function finishRun(
@@ -62,9 +63,9 @@ export async function finishRun(
   feeds_failed: number,
   articles_inserted: number,
   error?: string,
-): Promise<void> {
+): Promise<D1Result["meta"]> {
   const errorTruncated = error ? error.slice(0, 200) : null;
-  await db
+  const result = await db
     .prepare(
       `UPDATE collector_runs
        SET completed_at = ?1,
@@ -76,6 +77,7 @@ export async function finishRun(
     )
     .bind(completed_at, feeds_ok, feeds_failed, articles_inserted, errorTruncated, run_id)
     .run();
+  return result.meta;
 }
 
 export async function getLatestCompletedRun(db: D1Database): Promise<RunRow | null> {

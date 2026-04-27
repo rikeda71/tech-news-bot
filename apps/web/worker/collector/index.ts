@@ -3,7 +3,7 @@ import { loadEnabledFeeds } from "../feed-config";
 import { parseFeed } from "./rssParser";
 import { parseXml, pickText, asArray } from "../utils/xml";
 import { buildGuids } from "./deduplicator";
-import { writeCollectorEvent } from "./metrics";
+import { D1CostAccumulator, writeCollectorEvent, writeD1CostEvent } from "./metrics";
 import { maybeAlert, sendAlert } from "./alert";
 import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
 import {
@@ -444,12 +444,15 @@ export async function collectAll(
   const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
   const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
 
+  const d1Acc = new D1CostAccumulator();
+
   // run_id が外から渡された場合はそれを使い、渡されなければここで startRun する
   let runId: number | null = opts?.runId ?? null;
   if (runId === null) {
     try {
-      const { run_id } = await startRun(env.DB, startedAt, activeFeeds.length);
+      const { run_id, d1Meta } = await startRun(env.DB, startedAt, activeFeeds.length);
       runId = run_id;
+      d1Acc.add(d1Meta);
     } catch (err) {
       console.error(
         `[collector] startRun failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -467,7 +470,7 @@ export async function collectAll(
       const status =
         result.status === "error" ? "failed" : result.status === "not_modified" ? "skipped" : "ok";
       try {
-        await recordRunFeed(
+        const meta = await recordRunFeed(
           env.DB,
           runId,
           feed.id,
@@ -476,6 +479,7 @@ export async function collectAll(
           durationMs,
           result.error,
         );
+        d1Acc.add(meta);
       } catch (err) {
         console.error(
           `[collector] recordRunFeed(${feed.id}) failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -507,7 +511,8 @@ export async function collectAll(
   // run の完了を記録する
   if (runId !== null) {
     try {
-      await finishRun(env.DB, runId, completedAt, feedsOk, feedsFailed, inserted);
+      const meta = await finishRun(env.DB, runId, completedAt, feedsOk, feedsFailed, inserted);
+      d1Acc.add(meta);
     } catch (err) {
       console.error(
         `[collector] finishRun failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -518,6 +523,22 @@ export async function collectAll(
   console.log(
     `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
   );
+
+  // D1 コスト集計を AE に送信する (best-effort)
+  try {
+    const d1Stats = d1Acc.toStats();
+    writeD1CostEvent(env, {
+      rowsRead: d1Stats.rowsRead,
+      rowsWritten: d1Stats.rowsWritten,
+      durationTotalMs: d1Stats.durationTotalMs,
+      feedsCount: activeFeeds.length,
+      articlesInserted: inserted,
+    });
+  } catch (err) {
+    console.warn(
+      `[collector] writeD1CostEvent failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
   for (const r of results) {
     if (r.status === "error") {
       console.warn(`[collector] ${r.feedId} ERROR: ${r.error}`);

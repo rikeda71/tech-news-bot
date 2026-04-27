@@ -202,6 +202,30 @@ feeds:
 
 YAML は `@modyfi/vite-plugin-yaml` により build 時に JSON へ変換され Worker bundle に inline されます (runtime 依存なし)。設定変更は再デプロイで反映されます。
 
+## D1 コスト監視 (Analytics Engine)
+
+Cron 収集が完了するたびに、D1 読み書き回数と実行時間を Cloudflare Analytics Engine (dataset: `tnb_collector_events`) に記録します。
+
+Cloudflare Dashboard でクエリする手順:
+
+1. Dashboard → Workers & Pages → Analytics Engine → SQL Console を開く
+2. 以下の SQL を実行して直近の集計を確認する:
+
+```sql
+SELECT
+  toStartOfHour(timestamp) AS hour,
+  SUM(_sample_interval * double1) AS rows_read,
+  SUM(_sample_interval * double2) AS rows_written,
+  SUM(_sample_interval * double4) AS articles_inserted
+FROM tnb_collector_events
+WHERE index1 = 'd1_cost'
+  AND timestamp > NOW() - INTERVAL '7' DAY
+GROUP BY hour
+ORDER BY hour DESC
+```
+
+> `double1` = rows_read, `double2` = rows_written, `double3` = duration_total_ms, `double4` = articles_inserted
+
 ## 無料枠と制約
 
 | 項目               | 無料上限  | 想定使用量                     |
