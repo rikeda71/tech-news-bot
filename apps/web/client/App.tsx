@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { FilterBar } from "./components/FilterBar";
+import { Header } from "./components/Header";
 import { HelpModal } from "./components/HelpModal";
 import { SearchInput } from "./components/SearchInput";
-import { ThemeToggle } from "./components/ThemeToggle";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useReadState } from "./hooks/useReadState";
 import { useStarredState } from "./hooks/useStarredState";
 import { useStats } from "./hooks/useStats";
-import { useTheme } from "./hooks/useTheme";
 import type { FeedCategory, FeedLang } from "./types/api";
 
 function formatRelative(iso: string): string {
@@ -86,7 +85,6 @@ export default function App() {
 
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const { theme, toggleTheme } = useTheme();
   const { feeds } = useFeeds();
   const { stats } = useStats();
   const { isRead, markRead, markUnread } = useReadState();
@@ -282,10 +280,9 @@ export default function App() {
 
   return (
     <div className="app">
+      <Header />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
       <header className="header">
-        <h1>Tech News Bot</h1>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         <span className="subtitle">
           {stats ? `${stats.total.toLocaleString()} 記事 · 直近 24h: ${stats.last24h}` : ""}
           {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
