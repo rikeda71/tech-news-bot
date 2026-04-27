@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import type { Env, FeedCategory, FeedLang, FeedsFile } from "../types";
+import type { Article, Env, FeedCategory, FeedLang, FeedsFile } from "../types";
 import { listArticles } from "../db/articles";
 import { computeSyndicationEtag } from "../utils/etag";
 import { loadAllFeeds } from "../feed-config";
@@ -298,6 +298,214 @@ app.get("/feeds/category/*", async (c) => {
   }
   return buildRssFeed(c, { category: cat, titleOverride });
 });
+
+// 著者別 syndication エンドポイント
+// /feeds/category/* と同様、/feeds/:filename より先に登録することで優先マッチさせる。
+// author は URL decode して大文字小文字を区別する完全一致で検索する。
+// 0 件でも 200 で空 feed を返す (RSS リーダーが定期 polling するため 404 にしない)。
+app.get("/feeds/author/*", async (c) => {
+  const pathname = new URL(c.req.url).pathname;
+  const basename = pathname.replace(/^.*\/feeds\/author\//, "");
+
+  let rawAuthor: string;
+  let format: "xml" | "json" | "atom";
+
+  if (basename.endsWith(".json")) {
+    rawAuthor = basename.slice(0, -5);
+    format = "json";
+  } else if (basename.endsWith(".xml")) {
+    rawAuthor = basename.slice(0, -4);
+    format = "xml";
+  } else if (basename.endsWith(".atom")) {
+    rawAuthor = basename.slice(0, -5);
+    format = "atom";
+  } else {
+    return c.json({ error: "Not Found" }, 404);
+  }
+
+  const author = decodeURIComponent(rawAuthor);
+  const titleOverride = `${author} - tech-news-bot`;
+
+  if (format === "json") {
+    return buildAuthorJsonFeed(c, author, titleOverride);
+  }
+  if (format === "atom") {
+    return buildAuthorAtomFeed(c, author, titleOverride);
+  }
+  return buildAuthorRssFeed(c, author, titleOverride);
+});
+
+// 著者別記事取得: db/articles.ts を変更せず syndication 層で直接クエリする
+async function fetchArticlesByAuthor(db: D1Database, author: string): Promise<Article[]> {
+  const result = await db
+    .prepare(
+      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+              a.author, a.published_at, a.fetched_at, a.category, a.lang
+       FROM articles a
+       LEFT JOIN feeds f ON f.id = a.feed_id
+       WHERE a.author = ?1
+       ORDER BY a.published_at DESC, a.id DESC
+       LIMIT ?2`,
+    )
+    .bind(author, FEED_LIMIT)
+    .all<Article>();
+  return result.results ?? [];
+}
+
+async function buildAuthorRssFeed(
+  c: Context<{ Bindings: Env }>,
+  author: string,
+  title: string,
+): Promise<Response> {
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { author });
+  if (c.req.header("If-None-Match") === etag) {
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=600");
+    return c.body(null, 304);
+  }
+
+  const articles = await fetchArticlesByAuthor(c.env.DB, author);
+  const origin = siteOrigin(c.req.url);
+  const feedUrl = new URL(c.req.url).toString();
+  const lastBuild = articles[0]?.published_at ?? new Date().toISOString();
+  const description = `${author} の最新記事`;
+
+  const items = articles
+    .map((a) => {
+      const parts = [
+        `<item>`,
+        `<title>${escapeXml(a.title)}</title>`,
+        `<link>${escapeXml(a.url)}</link>`,
+        `<guid isPermaLink="false">${escapeXml(a.guid)}</guid>`,
+        `<pubDate>${toRfc822(a.published_at)}</pubDate>`,
+        `<category>${escapeXml(a.category)}</category>`,
+      ];
+      if (a.feed_name) parts.push(`<source>${escapeXml(a.feed_name)}</source>`);
+      if (a.author) parts.push(`<author>${escapeXml(a.author)}</author>`);
+      if (a.summary) parts.push(`<description>${escapeXml(a.summary)}</description>`);
+      parts.push(`</item>`);
+      return parts.join("");
+    })
+    .join("");
+
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">` +
+    `<channel>` +
+    `<title>${escapeXml(title)}</title>` +
+    `<link>${escapeXml(origin)}</link>` +
+    `<description>${escapeXml(description)}</description>` +
+    `<lastBuildDate>${toRfc822(lastBuild)}</lastBuildDate>` +
+    `<atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml"/>` +
+    items +
+    `</channel></rss>`;
+
+  c.header("Content-Type", "application/rss+xml; charset=utf-8");
+  c.header("ETag", etag);
+  c.header("Cache-Control", "public, max-age=600");
+  return c.body(xml);
+}
+
+async function buildAuthorJsonFeed(
+  c: Context<{ Bindings: Env }>,
+  author: string,
+  title: string,
+): Promise<Response> {
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { author });
+  if (c.req.header("If-None-Match") === etag) {
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=600");
+    return c.body(null, 304);
+  }
+
+  const articles = await fetchArticlesByAuthor(c.env.DB, author);
+  const origin = siteOrigin(c.req.url);
+  const feedUrl = new URL(c.req.url).toString();
+  const description = `${author} の最新記事`;
+
+  const json = {
+    version: "https://jsonfeed.org/version/1.1",
+    title,
+    description,
+    home_page_url: origin || undefined,
+    feed_url: feedUrl,
+    items: articles.map((a) => ({
+      id: a.guid,
+      url: a.url,
+      title: a.title,
+      content_text: a.summary ?? "",
+      summary: a.summary ?? undefined,
+      date_published: a.published_at,
+      authors: a.author ? [{ name: a.author }] : undefined,
+      tags: [a.category, a.lang, ...(a.feed_name ? [a.feed_name] : [])],
+      _feed_id: a.feed_id,
+    })),
+  };
+
+  c.header("Content-Type", "application/feed+json; charset=utf-8");
+  c.header("ETag", etag);
+  c.header("Cache-Control", "public, max-age=600");
+  return c.body(JSON.stringify(json));
+}
+
+async function buildAuthorAtomFeed(
+  c: Context<{ Bindings: Env }>,
+  author: string,
+  title: string,
+): Promise<Response> {
+  const etag = await computeSyndicationEtag(c.env.DB, FEEDS_VERSION, { author });
+  if (c.req.header("If-None-Match") === etag) {
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=600");
+    return c.body(null, 304);
+  }
+
+  const articles = await fetchArticlesByAuthor(c.env.DB, author);
+  const origin = siteOrigin(c.req.url);
+  const feedUrl = new URL(c.req.url).toString();
+  const feedPath = new URL(c.req.url).pathname;
+  const hostname = new URL(c.req.url).hostname || "example.com";
+  const year = new Date().getFullYear();
+  const description = `${author} の最新記事`;
+  const updated = articles[0]?.published_at ?? new Date().toISOString();
+
+  const entries = articles
+    .map((a) => {
+      const authorName = a.author ?? a.feed_name ?? "";
+      const parts = [
+        `<entry>`,
+        `<title>${escapeXml(a.title)}</title>`,
+        `<id>${escapeXml(a.guid)}</id>`,
+        `<link href="${escapeXml(a.url)}" rel="alternate"/>`,
+        `<updated>${a.published_at}</updated>`,
+        `<published>${a.published_at}</published>`,
+      ];
+      if (authorName) parts.push(`<author><name>${escapeXml(authorName)}</name></author>`);
+      parts.push(`<category term="${escapeXml(a.category)}"/>`);
+      if (a.summary) parts.push(`<summary type="html">${escapeXml(a.summary)}</summary>`);
+      parts.push(`</entry>`);
+      return parts.join("");
+    })
+    .join("");
+
+  const xml =
+    `<?xml version="1.0" encoding="utf-8"?>` +
+    `<feed xmlns="http://www.w3.org/2005/Atom">` +
+    `<title>${escapeXml(title)}</title>` +
+    `<subtitle>${escapeXml(description)}</subtitle>` +
+    `<link href="${escapeXml(origin)}/" rel="alternate"/>` +
+    `<link href="${escapeXml(feedUrl)}" rel="self"/>` +
+    `<id>tag:${escapeXml(hostname)},${year}:${escapeXml(feedPath)}</id>` +
+    `<updated>${updated}</updated>` +
+    `<generator uri="https://github.com/rikeda71/tech-news-bot">tech-news-bot</generator>` +
+    entries +
+    `</feed>`;
+
+  c.header("Content-Type", "application/atom+xml; charset=utf-8");
+  c.header("ETag", etag);
+  c.header("Cache-Control", "public, max-age=600");
+  return c.body(xml);
+}
 
 // per-feed エンドポイント: feeds.yaml に定義された id のみ受け付ける
 // enabled: false でも過去記事の履歴閲覧ができるよう全フィードを対象とする
