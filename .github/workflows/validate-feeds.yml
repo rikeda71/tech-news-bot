@@ -1,0 +1,24 @@
+name: Validate Feed URLs
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/web/worker/feeds.yaml"
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Validate feed URLs
+        run: node tools/validate-feeds.mjs
