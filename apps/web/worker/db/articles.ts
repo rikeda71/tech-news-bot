@@ -574,6 +574,56 @@ export async function countArticlesByMonth(
   return row?.c ?? 0;
 }
 
+export interface GetArticlesByAuthorResult {
+  articles: Article[];
+  nextCursor: { publishedAt: string; id: number } | null;
+}
+
+/** 著者名で記事を published_at DESC で取得。cursor は listArticles と同形式 */
+export async function getArticlesByAuthor(
+  db: D1Database,
+  author: string,
+  limit: number,
+  cursor: { publishedAt: string; id: number } | null,
+): Promise<GetArticlesByAuthorResult> {
+  const conds: string[] = [`a.author = ?1`];
+  const binds: unknown[] = [author];
+
+  if (cursor) {
+    conds.push(
+      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
+    );
+    binds.push(cursor.publishedAt, cursor.id);
+  }
+
+  const where = `WHERE ${conds.join(" AND ")}`;
+  const sql = `
+    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+           a.author, a.published_at, a.fetched_at, a.category, a.lang
+    FROM articles a
+    LEFT JOIN feeds f ON f.id = a.feed_id
+    ${where}
+    ORDER BY a.published_at DESC, a.id DESC
+    LIMIT ?${binds.length + 1}
+  `;
+  binds.push(limit + 1);
+
+  const result = await db
+    .prepare(sql)
+    .bind(...binds)
+    .all<Article>();
+
+  const rows = result.results ?? [];
+  let nextCursor: { publishedAt: string; id: number } | null = null;
+  let articles = rows;
+  if (rows.length > limit) {
+    articles = rows.slice(0, limit);
+    const last = articles[articles.length - 1];
+    nextCursor = { publishedAt: last.published_at, id: last.id };
+  }
+  return { articles, nextCursor };
+}
+
 function escapeFtsQuery(input: string): string {
   // FTS5 で安全に扱うため、特殊記号を除去して各単語をフレーズ扱いにする
   const tokens = input
