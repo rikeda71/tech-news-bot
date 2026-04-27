@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { loadAllFeeds } from "../feed-config";
-import { getArticleById, listArticles } from "../db/articles";
+import { getArticleById, getRandomArticles, listArticles } from "../db/articles";
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
 import type { FeedsFile } from "../types";
@@ -102,6 +102,26 @@ app.get("/", async (c) => {
     articles: result.articles,
     nextCursor: encodeCursor(result.nextCursor),
   });
+});
+
+app.get("/random", async (c) => {
+  const n = Number(c.req.query("n") ?? "10");
+  if (!Number.isInteger(n) || n < 1 || n > 50) return c.json({ error: "n must be 1-50" }, 400);
+
+  const categoryRaw = c.req.query("category");
+  const langRaw = c.req.query("lang");
+  const feedIdRaw = c.req.query("feed_id") ?? undefined;
+
+  const category =
+    categoryRaw && (VALID_CATEGORIES as string[]).includes(categoryRaw)
+      ? (categoryRaw as FeedCategory)
+      : undefined;
+  const lang =
+    langRaw && (VALID_LANGS as string[]).includes(langRaw) ? (langRaw as FeedLang) : undefined;
+  const feedId = feedIdRaw && VALID_FEED_IDS.has(feedIdRaw) ? feedIdRaw : undefined;
+
+  const articles = await getRandomArticles(c.env.DB, { n, category, lang, feedId });
+  return c.json({ articles }, 200, { "Cache-Control": "no-store" });
 });
 
 app.get("/:id", async (c) => {
