@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useReadState } from "../hooks/useReadState";
 import type { Article, FeedCategory } from "../types/api";
 
 interface Props {
@@ -35,11 +37,37 @@ function safeHref(url: string): string {
 }
 
 export function ArticleCard({ article, onFilterByCategory, onFilterByFeedId }: Props) {
+  const { isRead, markRead, markUnread } = useReadState();
+  const [hovered, setHovered] = useState(false);
+  const read = isRead(article.id);
+
   return (
-    <article className="article-card">
-      <a href={safeHref(article.url)} target="_blank" rel="noopener noreferrer" className="title">
-        {article.title}
-      </a>
+    <article
+      className={`article-card${read ? " read" : ""}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div className="article-card-title-row">
+        <a
+          href={safeHref(article.url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="title"
+          onClick={() => markRead(article.id)}
+        >
+          {article.title}
+        </a>
+        {/* hover 時に既読 / 未読切り替えボタンを薄く表示 */}
+        {hovered && (
+          <button
+            type="button"
+            className="read-toggle"
+            onClick={() => (read ? markUnread(article.id) : markRead(article.id))}
+          >
+            {read ? "未読に戻す" : "既読にする"}
+          </button>
+        )}
+      </div>
       <div className="meta">
         <button
           type="button"

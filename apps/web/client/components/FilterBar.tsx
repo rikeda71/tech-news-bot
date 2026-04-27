@@ -7,11 +7,13 @@ interface Props {
   feeds: FeedSummary[];
   dateFrom: string;
   dateTo: string;
+  unreadOnly: boolean;
   onCategoryChange: (c: FeedCategory | "") => void;
   onLangChange: (l: FeedLang | "") => void;
   onFeedChange: (id: string) => void;
   onDateFromChange: (v: string) => void;
   onDateToChange: (v: string) => void;
+  onUnreadOnlyChange: (v: boolean) => void;
   onClear: () => void;
 }
 
@@ -22,11 +24,13 @@ export function FilterBar({
   feeds,
   dateFrom,
   dateTo,
+  unreadOnly,
   onCategoryChange,
   onLangChange,
   onFeedChange,
   onDateFromChange,
   onDateToChange,
+  onUnreadOnlyChange,
   onClear,
 }: Props) {
   const visibleFeeds = feeds
@@ -34,7 +38,12 @@ export function FilterBar({
     .filter((f) => (lang ? f.lang === lang : true));
 
   const hasFilter =
-    category !== "" || lang !== "" || feedId !== "" || dateFrom !== "" || dateTo !== "";
+    category !== "" ||
+    lang !== "" ||
+    feedId !== "" ||
+    dateFrom !== "" ||
+    dateTo !== "" ||
+    unreadOnly;
 
   return (
     <>
@@ -84,6 +93,15 @@ export function FilterBar({
         onChange={(e) => onDateToChange(e.target.value)}
         aria-label="期間 終了日"
       />
+
+      <label className="unread-only-label">
+        <input
+          type="checkbox"
+          checked={unreadOnly}
+          onChange={(e) => onUnreadOnlyChange(e.target.checked)}
+        />
+        未読のみ
+      </label>
 
       {hasFilter && (
         <button type="button" className="clear-filter" onClick={onClear}>

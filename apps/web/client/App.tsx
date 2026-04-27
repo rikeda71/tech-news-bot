@@ -5,6 +5,7 @@ import { SearchInput } from "./components/SearchInput";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
+import { useReadState } from "./hooks/useReadState";
 import { useStats } from "./hooks/useStats";
 import { useTheme } from "./hooks/useTheme";
 import type { FeedCategory, FeedLang } from "./types/api";
@@ -29,6 +30,7 @@ function readFromUrl(): {
   q: string;
   dateFrom: string;
   dateTo: string;
+  unreadOnly: boolean;
 } {
   const params = new URLSearchParams(window.location.search);
   return {
@@ -38,6 +40,7 @@ function readFromUrl(): {
     q: params.get("q") ?? "",
     dateFrom: params.get("date_from") ?? "",
     dateTo: params.get("date_to") ?? "",
+    unreadOnly: params.get("unread") === "1",
   };
 }
 
@@ -48,6 +51,7 @@ function buildSearch(
   q: string,
   dateFrom: string,
   dateTo: string,
+  unreadOnly: boolean,
 ): string {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
@@ -56,6 +60,8 @@ function buildSearch(
   if (q) params.set("q", q);
   if (dateFrom) params.set("date_from", dateFrom);
   if (dateTo) params.set("date_to", dateTo);
+  // true のときだけ付ける
+  if (unreadOnly) params.set("unread", "1");
   const s = params.toString();
   return s ? `?${s}` : window.location.pathname;
 }
@@ -67,10 +73,12 @@ export default function App() {
   const [q, setQ] = useState<string>(() => readFromUrl().q);
   const [dateFrom, setDateFrom] = useState<string>(() => readFromUrl().dateFrom);
   const [dateTo, setDateTo] = useState<string>(() => readFromUrl().dateTo);
+  const [unreadOnly, setUnreadOnly] = useState<boolean>(() => readFromUrl().unreadOnly);
 
   const { theme, toggleTheme } = useTheme();
   const { feeds } = useFeeds();
   const { stats } = useStats();
+  const { isRead } = useReadState();
 
   // popstate でブラウザ戻る/進むに追従する
   useEffect(() => {
@@ -82,6 +90,7 @@ export default function App() {
       setQ(next.q);
       setDateFrom(next.dateFrom);
       setDateTo(next.dateTo);
+      setUnreadOnly(next.unreadOnly);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -96,9 +105,18 @@ export default function App() {
       nextQ: string,
       nextDateFrom: string,
       nextDateTo: string,
+      nextUnreadOnly: boolean,
     ) => {
-      const next = buildSearch(nextCategory, nextLang, nextFeedId, nextQ, nextDateFrom, nextDateTo);
-      const current = buildSearch(category, lang, feedId, q, dateFrom, dateTo);
+      const next = buildSearch(
+        nextCategory,
+        nextLang,
+        nextFeedId,
+        nextQ,
+        nextDateFrom,
+        nextDateTo,
+        nextUnreadOnly,
+      );
+      const current = buildSearch(category, lang, feedId, q, dateFrom, dateTo, unreadOnly);
       // 同じ URL なら重複履歴を作らない
       if (next !== current) {
         window.history.pushState(null, "", next);
@@ -109,51 +127,57 @@ export default function App() {
       setQ(nextQ);
       setDateFrom(nextDateFrom);
       setDateTo(nextDateTo);
+      setUnreadOnly(nextUnreadOnly);
     },
-    [category, lang, feedId, q, dateFrom, dateTo],
+    [category, lang, feedId, q, dateFrom, dateTo, unreadOnly],
   );
 
   const handleCategoryChange = useCallback(
-    (v: FeedCategory | "") => pushFilter(v, lang, v ? feedId : "", q, dateFrom, dateTo),
-    [pushFilter, lang, feedId, q, dateFrom, dateTo],
+    (v: FeedCategory | "") => pushFilter(v, lang, v ? feedId : "", q, dateFrom, dateTo, unreadOnly),
+    [pushFilter, lang, feedId, q, dateFrom, dateTo, unreadOnly],
   );
 
   const handleLangChange = useCallback(
-    (v: FeedLang | "") => pushFilter(category, v, v ? feedId : "", q, dateFrom, dateTo),
-    [pushFilter, category, feedId, q, dateFrom, dateTo],
+    (v: FeedLang | "") => pushFilter(category, v, v ? feedId : "", q, dateFrom, dateTo, unreadOnly),
+    [pushFilter, category, feedId, q, dateFrom, dateTo, unreadOnly],
   );
 
   const handleFeedChange = useCallback(
-    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo),
-    [pushFilter, category, lang, q, dateFrom, dateTo],
+    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo, unreadOnly),
+    [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly],
   );
 
   const handleQChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, v, dateFrom, dateTo),
-    [pushFilter, category, lang, feedId, dateFrom, dateTo],
+    (v: string) => pushFilter(category, lang, feedId, v, dateFrom, dateTo, unreadOnly),
+    [pushFilter, category, lang, feedId, dateFrom, dateTo, unreadOnly],
   );
 
   const handleDateFromChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, q, v, dateTo),
-    [pushFilter, category, lang, feedId, q, dateTo],
+    (v: string) => pushFilter(category, lang, feedId, q, v, dateTo, unreadOnly),
+    [pushFilter, category, lang, feedId, q, dateTo, unreadOnly],
   );
 
   const handleDateToChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, q, dateFrom, v),
-    [pushFilter, category, lang, feedId, q, dateFrom],
+    (v: string) => pushFilter(category, lang, feedId, q, dateFrom, v, unreadOnly),
+    [pushFilter, category, lang, feedId, q, dateFrom, unreadOnly],
   );
 
-  const handleClear = useCallback(() => pushFilter("", "", "", q, "", ""), [pushFilter, q]);
+  const handleUnreadOnlyChange = useCallback(
+    (v: boolean) => pushFilter(category, lang, feedId, q, dateFrom, dateTo, v),
+    [pushFilter, category, lang, feedId, q, dateFrom, dateTo],
+  );
+
+  const handleClear = useCallback(() => pushFilter("", "", "", q, "", "", false), [pushFilter, q]);
 
   // カード上のバッジ/取得元クリックでフィルタを適用する
   const handleFilterByCategory = useCallback(
-    (c: FeedCategory) => pushFilter(c, lang, "", q, dateFrom, dateTo),
-    [pushFilter, lang, q, dateFrom, dateTo],
+    (c: FeedCategory) => pushFilter(c, lang, "", q, dateFrom, dateTo, unreadOnly),
+    [pushFilter, lang, q, dateFrom, dateTo, unreadOnly],
   );
 
   const handleFilterByFeedId = useCallback(
-    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo),
-    [pushFilter, category, lang, q, dateFrom, dateTo],
+    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo, unreadOnly),
+    [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly],
   );
 
   const query = useMemo(
@@ -168,7 +192,20 @@ export default function App() {
     [category, lang, feedId, q, dateFrom, dateTo],
   );
 
-  const { articles, loading, loadingMore, error, nextCursor, loadMore } = useArticles(query);
+  const {
+    articles: allArticles,
+    loading,
+    loadingMore,
+    error,
+    nextCursor,
+    loadMore,
+  } = useArticles(query);
+
+  // 未読フィルタはクライアントサイドで適用 (サーバー API は既読を知らないため)
+  const articles = useMemo(
+    () => (unreadOnly ? allArticles.filter((a) => !isRead(a.id)) : allArticles),
+    [allArticles, unreadOnly, isRead],
+  );
 
   return (
     <div className="app">
@@ -206,11 +243,13 @@ export default function App() {
           feeds={feeds}
           dateFrom={dateFrom}
           dateTo={dateTo}
+          unreadOnly={unreadOnly}
           onCategoryChange={handleCategoryChange}
           onLangChange={handleLangChange}
           onFeedChange={handleFeedChange}
           onDateFromChange={handleDateFromChange}
           onDateToChange={handleDateToChange}
+          onUnreadOnlyChange={handleUnreadOnlyChange}
           onClear={handleClear}
         />
       </div>

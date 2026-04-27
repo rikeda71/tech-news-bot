@@ -202,11 +202,44 @@ a:hover {
   border-color: var(--accent);
 }
 
+/* 既読カードは全体を薄く表示する */
+.article-card.read {
+  opacity: 0.6;
+}
+
+.article-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .article-card .title {
+  flex: 1;
   font-size: 1.05rem;
   font-weight: 600;
   line-height: 1.35;
   color: var(--fg);
+}
+
+/* hover 時にだけ表示する既読切り替えボタン */
+.read-toggle {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  background: var(--bg-elev-2);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.read-toggle:hover {
+  opacity: 1;
+  color: var(--fg);
+  border-color: var(--accent);
 }
 
 .article-card .meta {
@@ -302,6 +335,24 @@ a:hover {
 .feed-name-clickable:hover {
   color: var(--accent);
   text-decoration: underline;
+}
+
+.unread-only-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.unread-only-label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
 }
 
 .clear-filter {
