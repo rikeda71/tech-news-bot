@@ -1,13 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { env } from "cloudflare:test";
-import { maybeAlert, notifyCollectorFailure, sendAlert } from "../../../worker/collector/alert";
+import {
+  maybeAlert,
+  notifyCollectorFailure,
+  sendAlert,
+  type AlertRunResult,
+} from "../../../worker/collector/alert";
 import {
   getFeedStreaks,
   syncFeeds,
   recordFetchError,
   recordFetchSuccess,
 } from "../../../worker/db/feeds";
-import type { CollectAllResult, CollectResult } from "../../../worker/collector/index";
+import type { CollectResult } from "../../../worker/collector/index";
 import type { Env, FeedConfig } from "../../../worker/types";
 
 const WEBHOOK_URL = "https://hooks.example.com/webhook";
@@ -176,7 +181,7 @@ describe("maybeAlert", () => {
 });
 
 describe("sendAlert", () => {
-  const makeResult = (failed: number, total: number): CollectAllResult => {
+  const makeResult = (failed: number, total: number): AlertRunResult => {
     const results: CollectResult[] = [];
     for (let i = 0; i < failed; i++) {
       results.push(errResult(`feed-${i}`, `HTTP ${500 + i}`));
@@ -184,7 +189,7 @@ describe("sendAlert", () => {
     for (let i = failed; i < total; i++) {
       results.push(okResult(`feed-${i}`));
     }
-    return { total, inserted: total - failed, pruned: 0, results, durationMs: 100 };
+    return { total, results };
   };
 
   it("does not call webhook when COLLECTOR_ALERT_WEBHOOK is not set", async () => {

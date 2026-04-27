@@ -1,9 +1,15 @@
-import type { CollectAllResult, CollectResult } from "./index";
+import type { CollectResult } from "./index";
 import type { Env } from "../types";
 
 export interface AlertSummary {
   failedFeeds: { id: string; error: string }[];
   streakFeeds: { id: string; consecutiveFailures: number }[];
+}
+
+/** sendAlert に渡す run 結果のサブセット */
+export interface AlertRunResult {
+  total: number;
+  results: CollectResult[];
 }
 
 const TOP_ERRORS_MAX = 5;
@@ -60,7 +66,7 @@ export async function notifyCollectorFailure(
  * collectAll の結果から Slack/Discord 互換の blocks 形式で通知する。
  * COLLECTOR_ALERT_WEBHOOK が未設定なら no-op。fetch 失敗は console.error のみ。
  */
-export async function sendAlert(env: Env, result: CollectAllResult): Promise<void> {
+export async function sendAlert(env: Env, result: AlertRunResult): Promise<void> {
   const webhookUrl = env.COLLECTOR_ALERT_WEBHOOK;
   if (!webhookUrl) return;
 
@@ -76,20 +82,18 @@ export async function sendAlert(env: Env, result: CollectAllResult): Promise<voi
     .map((r) => `${r.feedId} (${(r.error ?? "unknown").slice(0, 100)})`)
     .join(", ");
 
-  const mrkdwn =
-    `*Failed:* ${feedsFailed} / ${result.total}\n` +
-    `*Time:* ${now}\n` +
-    `*Top errors:* ${topErrors}`;
+  const mrkdwn = [
+    `*Failed:* ${feedsFailed} / ${result.total}`,
+    `*Time:* ${now}`,
+    `*Top errors:* ${topErrors}`,
+  ].join("\n");
 
   const payload = {
     text: "tech-news-bot collector alert",
     blocks: [
       {
         type: "section",
-        text: {
-          type: "mrkdwn",
-          text: mrkdwn,
-        },
+        text: { type: "mrkdwn", text: mrkdwn },
       },
     ],
   };
