@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { collectAll, collectFeeds } from "../collector";
+import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { setFeedEnabled } from "../db/feeds";
 import { getCronHealth, getFeedFailures, getRun, listRuns, startRun } from "../db/runs";
@@ -27,6 +27,66 @@ function isValidAdminToken(
   if (next && timingSafeEqual(provided, next)) return true;
   return false;
 }
+
+app.post("/feeds/validate", async (c) => {
+  const current = c.env.ADMIN_TOKEN;
+  const next = c.env.ADMIN_TOKEN_NEXT;
+  if (!current) {
+    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
+  }
+  const auth = c.req.header("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token || !isValidAdminToken(token, current, next)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+
+  const rawBody = await c.req.text().catch(() => "");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    return c.json({ error: "invalid JSON body" }, 400);
+  }
+  const body = parsed as Record<string, unknown>;
+  if (!body || typeof body.url !== "string" || !body.url) {
+    return c.json({ error: "url is required" }, 400);
+  }
+
+  // URL 形式チェック (http/https のみ許可)
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(body.url);
+  } catch {
+    return c.json({ error: "invalid url" }, 400);
+  }
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    return c.json({ error: "invalid url: only http/https is allowed" }, 400);
+  }
+
+  // 12s でタイムアウト。fetch 自体は I/O なので CPU には乗らないが安全マージン。
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12_000);
+
+  let validateResult: Awaited<ReturnType<typeof validateFeedUrl>>;
+  try {
+    validateResult = await Promise.race([
+      validateFeedUrl(body.url),
+      new Promise<never>((_, reject) => {
+        controller.signal.addEventListener("abort", () =>
+          reject(new Error("validate timed out after 12s")),
+        );
+      }),
+    ]);
+  } catch (err) {
+    clearTimeout(timer);
+    const msg = err instanceof Error ? err.message : String(err);
+    validateResult = { ok: false, error: msg };
+  }
+  clearTimeout(timer);
+
+  c.header("Cache-Control", "no-store");
+  return c.json(validateResult);
+});
 
 app.post("/collect", async (c) => {
   // READONLY=1 の preview 環境では書き込みを行わない

@@ -1,6 +1,7 @@
 import type { Env, FeedConfig } from "../types";
 import { loadEnabledFeeds } from "../feed-config";
 import { parseFeed } from "./rssParser";
+import { parseXml, pickText, asArray } from "../utils/xml";
 import { buildGuids } from "./deduplicator";
 import { writeCollectorEvent } from "./metrics";
 import { maybeAlert } from "./alert";
@@ -346,6 +347,78 @@ export async function collectFeeds(env: Env, feedIds?: string[]): Promise<Collec
   }
 
   return { total: activeFeeds.length, inserted, pruned, results, durationMs };
+}
+
+export type ValidateFeedResult =
+  | { ok: true; title: string; lang: string | null; item_count: number }
+  | { ok: false; error: string };
+
+/**
+ * URL を fetch + parse して RSS/Atom として有効かどうかを検証する。
+ * feeds.yaml に追記する前の事前確認用。DB アクセスは行わない。
+ * タイムアウトは 10s (admin endpoint 側で 12s でラップする)。
+ */
+export async function validateFeedUrl(url: string): Promise<ValidateFeedResult> {
+  let result: Awaited<ReturnType<typeof fetchFeed>>;
+  try {
+    // retry なし (検証用なので 1 回で判断する)
+    result = await fetchFeed(url, 10_000, 0);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  if (result.notModified || result.xml === null) {
+    // 304 は通常ありえないが念のため
+    return { ok: false, error: "unexpected 304 Not Modified" };
+  }
+
+  const root = parseXml(result.xml) as Record<string, unknown>;
+  if (!root || typeof root !== "object") {
+    return { ok: false, error: "failed to parse XML" };
+  }
+
+  // RSS 2.0 / RDF 1.0
+  const rss = root["rss"] as Record<string, unknown> | undefined;
+  const rdf = root["rdf:RDF"] as Record<string, unknown> | undefined;
+  const atomFeed = root["feed"] as Record<string, unknown> | undefined;
+
+  if (rss) {
+    const channel = rss["channel"] as Record<string, unknown> | undefined;
+    if (!channel) return { ok: false, error: "RSS feed has no <channel>" };
+    const title = pickText(channel["title"]) ?? "";
+    if (!title) return { ok: false, error: "RSS feed has no <title>" };
+    const lang = pickText(channel["language"]) ?? null;
+    const items = asArray(
+      channel["item"] as Record<string, unknown> | Record<string, unknown>[] | undefined,
+    );
+    return { ok: true, title, lang, item_count: items.length };
+  }
+
+  if (rdf) {
+    // RDF 1.0: channel は rdf:RDF/channel
+    const channel = rdf["channel"] as Record<string, unknown> | undefined;
+    const title = pickText(channel?.["title"]) ?? "";
+    if (!title) return { ok: false, error: "RDF feed has no <title>" };
+    const lang = pickText(channel?.["language"]) ?? null;
+    const items = asArray(
+      rdf["item"] as Record<string, unknown> | Record<string, unknown>[] | undefined,
+    );
+    return { ok: true, title, lang, item_count: items.length };
+  }
+
+  if (atomFeed) {
+    const title = pickText(atomFeed["title"]) ?? "";
+    if (!title) return { ok: false, error: "Atom feed has no <title>" };
+    // Atom の言語は xml:lang 属性 (@_xml:lang) で表現されることが多い
+    const lang =
+      pickText(atomFeed["language"]) ?? (atomFeed["@_xml:lang"] as string | undefined) ?? null;
+    const entries = asArray(
+      atomFeed["entry"] as Record<string, unknown> | Record<string, unknown>[] | undefined,
+    );
+    return { ok: true, title, lang, item_count: entries.length };
+  }
+
+  return { ok: false, error: "not a valid RSS or Atom feed" };
 }
 
 export async function collectAll(
