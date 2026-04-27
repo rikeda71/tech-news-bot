@@ -294,3 +294,116 @@ describe("/feeds/category/:cat.xml", () => {
     expect(second.status).toBe(304);
   });
 });
+
+describe("/feed.atom", () => {
+  it("returns 200 with Atom 1.0 feed and entries in desc order", async () => {
+    const res = await SELF.fetch("https://example.com/feed.atom");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    const text = await res.text();
+    expect(text.startsWith("<?xml")).toBe(true);
+    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    // XML エスケープが正しく行われること
+    expect(text).toContain("AI &lt;Article&gt; &amp; friends");
+    // 並び順: 最新が先 (bigtech: 2024-04-04 > jp: 2024-04-03 > ai: 2024-04-02)
+    const bigtech = text.indexOf("g-bigtech");
+    const jp = text.indexOf("g-jp");
+    const ai = text.indexOf("g-ai");
+    expect(bigtech).toBeLessThan(jp);
+    expect(jp).toBeLessThan(ai);
+    // JSON Feed の version 文字列が混入しないこと
+    expect(text).not.toContain("jsonfeed.org");
+  });
+
+  it("filters by category=ai", async () => {
+    const res = await SELF.fetch("https://example.com/feed.atom?category=ai");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("g-ai");
+    expect(text).not.toContain("g-jp");
+    expect(text).not.toContain("g-bigtech");
+  });
+});
+
+describe("/feeds/:id.atom (per-feed Atom)", () => {
+  it("returns 200 with only articles from the specified feed_id", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/openai-blog.atom");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    const text = await res.text();
+    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(text).toContain("g-ai");
+    expect(text).not.toContain("g-jp");
+    // title には feeds.yaml の name が入る
+    expect(text).toContain("<title>OpenAI News</title>");
+    // summary が存在する場合 summary 要素が出力される
+    expect(text).toContain('<summary type="html">');
+  });
+
+  it("returns 404 for unknown feed_id", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/unknown-feed.atom");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 304 on If-None-Match match (ETag round-trip)", async () => {
+    const res1 = await SELF.fetch("https://example.com/feeds/openai-blog.atom");
+    expect(res1.status).toBe(200);
+    const etag = res1.headers.get("ETag")!;
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+
+    const res2 = await SELF.fetch("https://example.com/feeds/openai-blog.atom", {
+      headers: { "If-None-Match": etag },
+    });
+    expect(res2.status).toBe(304);
+    expect(res2.headers.get("ETag")).toBe(etag);
+  });
+
+  it("omits summary element when article has no summary", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/cyberagent-developers.atom");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("g-jp");
+    // summary が null の場合 summary 要素が出力されないこと
+    expect(text).not.toContain("<summary");
+  });
+});
+
+describe("/feeds/category/:cat.atom", () => {
+  it("returns 200 with correct Content-Type for ai category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/ai.atom");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    const text = await res.text();
+    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(text).toContain("<title>Tech News Bot — AI Labs</title>");
+    expect(text).toContain("g-ai");
+    expect(text).not.toContain("g-jp");
+    expect(text).not.toContain("g-bigtech");
+  });
+
+  it("returns 200 and only jp articles for jp category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/jp.atom");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Tech News Bot — 国内エンジニアリング");
+    expect(text).toContain("g-jp");
+    expect(text).not.toContain("g-ai");
+    expect(text).not.toContain("g-bigtech");
+  });
+
+  it("returns 404 for invalid category", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/category/invalid.atom");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 304 on ETag round-trip", async () => {
+    const first = await SELF.fetch("https://example.com/feeds/category/ai.atom");
+    const etag = first.headers.get("ETag");
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+
+    const second = await SELF.fetch("https://example.com/feeds/category/ai.atom", {
+      headers: { "If-None-Match": etag! },
+    });
+    expect(second.status).toBe(304);
+  });
+});
