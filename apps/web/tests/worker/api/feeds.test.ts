@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env, SELF } from "cloudflare:test";
 import { insertArticles } from "../../../worker/db/articles";
 import { syncFeeds } from "../../../worker/db/feeds";
-import type { FeedConfig } from "../../../worker/types";
+import type { Article, FeedConfig } from "../../../worker/types";
 
 const FEEDS: FeedConfig[] = [
   {
@@ -214,5 +214,128 @@ describe("GET /api/feeds - filter by enabled", () => {
   it("returns 400 for invalid enabled value", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds?enabled=yes");
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/feeds/:id", () => {
+  // 11 件挿入して default 10 件上限のテストに使う
+  beforeEach(async () => {
+    await insertArticles(
+      env.DB,
+      Array.from({ length: 9 }, (_, i) => ({
+        guid: `openai-extra-${i + 1}`,
+        feed_id: "openai-blog",
+        title: `OpenAI Extra ${i + 1}`,
+        url: `https://x.test/openai/extra-${i + 1}`,
+        summary: null,
+        author: null,
+        // openai-1 (daysAgo(5)), openai-2 (daysAgo(20)) は beforeEach で投入済み
+        // extra は daysAgo(1) 〜 daysAgo(9) を追加して合計 11 件にする
+        published_at: daysAgo(i + 1),
+        category: "ai" as const,
+        lang: "en" as const,
+      })),
+    );
+  });
+
+  it("returns 404 for unknown id", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/no-such-feed");
+    expect(res.status).toBe(404);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("feed not found");
+  });
+
+  it("returns 200 with feed and recent_articles structure", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ feed: unknown; recent_articles: unknown[] }>();
+    expect(body.feed).toBeDefined();
+    expect(Array.isArray(body.recent_articles)).toBe(true);
+  });
+
+  it("returns correct feed fields", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
+    const body = await res.json<{
+      feed: {
+        id: string;
+        name: string;
+        url: string;
+        category: string;
+        lang: string;
+        enabled: boolean;
+        articles_30d: number;
+        last_published_at: string | null;
+      };
+      recent_articles: unknown[];
+    }>();
+    expect(body.feed.id).toBe("openai-blog");
+    expect(body.feed.name).toBe("OpenAI News");
+    expect(body.feed.category).toBe("ai");
+    expect(body.feed.lang).toBe("en");
+    expect(body.feed.enabled).toBe(true);
+    // openai-1 (5d), openai-2 (20d), extra 1-9 (1-9d) = 11件、openai-3 (31d) は窓外
+    expect(body.feed.articles_30d).toBe(11);
+    expect(body.feed.last_published_at).not.toBeNull();
+  });
+
+  it("returns default 10 recent_articles when recent is not specified", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
+    const body = await res.json<{ feed: unknown; recent_articles: Article[] }>();
+    // 11 件あるが default は 10 件
+    expect(body.recent_articles.length).toBe(10);
+  });
+
+  it("returns recent_articles sorted by published_at descending", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
+    const body = await res.json<{ feed: unknown; recent_articles: Article[] }>();
+    const dates = body.recent_articles.map((a) => a.published_at);
+    for (let i = 0; i < dates.length - 1; i++) {
+      expect(dates[i] >= dates[i + 1]).toBe(true);
+    }
+  });
+
+  it("returns empty recent_articles when recent=0", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog?recent=0");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ feed: unknown; recent_articles: Article[] }>();
+    expect(body.recent_articles).toEqual([]);
+  });
+
+  it("returns 400 when recent=51", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog?recent=51");
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toContain("recent must be an integer");
+  });
+
+  it("returns specified number of recent_articles when recent=3", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog?recent=3");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ feed: unknown; recent_articles: Article[] }>();
+    expect(body.recent_articles.length).toBe(3);
+  });
+
+  it("returns 0 articles_30d and null last_published_at for feed with no articles", async () => {
+    // google-research には 30d 以内の記事が 1 件 (beforeEach で投入済み)
+    // 新しいフィードで確認するため zenn-ai を使う
+    const res = await SELF.fetch("https://example.com/api/feeds/zenn-ai");
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      feed: { articles_30d: number; last_published_at: string | null };
+      recent_articles: Article[];
+    }>();
+    expect(body.feed.articles_30d).toBe(0);
+    expect(body.feed.last_published_at).toBeNull();
+    expect(body.recent_articles).toEqual([]);
+  });
+
+  it("sets Cache-Control: public, max-age=300", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+  });
+
+  it("returns Content-Type application/json", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
+    expect(res.headers.get("Content-Type")).toContain("application/json");
   });
 });
