@@ -107,8 +107,10 @@ export interface FeedStreak {
   consecutive_failures: number;
 }
 
-/** 全フィードの連続失敗カウントを返す。アラート判定に使用する。 */
+/** enabled なフィードの連続失敗カウントを返す。アラート判定に使用する。 */
 export async function getFeedStreaks(db: D1Database): Promise<FeedStreak[]> {
-  const result = await db.prepare(`SELECT id, consecutive_failures FROM feeds`).all<FeedStreak>();
+  const result = await db
+    .prepare(`SELECT id, consecutive_failures FROM feeds WHERE enabled = 1`)
+    .all<FeedStreak>();
   return result.results;
 }

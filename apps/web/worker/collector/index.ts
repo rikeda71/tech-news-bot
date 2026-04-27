@@ -315,15 +315,18 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
     }
   }
 
-  const minFailures = Number(env.ALERT_MIN_FAILURES ?? "3") || 3;
-  const feedStreak = Number(env.ALERT_FEED_STREAK ?? "5") || 5;
-  try {
-    const streaks = await getFeedStreaks(env.DB);
-    await maybeAlert(env.ALERT_WEBHOOK_URL, results, streaks, minFailures, feedStreak);
-  } catch (err) {
-    console.error(
-      `[collector] alert check failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
+  // ALERT_WEBHOOK_URL が未設定なら D1 クエリも含めて全スキップ
+  if (env.ALERT_WEBHOOK_URL) {
+    const minFailures = Number(env.ALERT_MIN_FAILURES ?? "3") || 3;
+    const feedStreak = Number(env.ALERT_FEED_STREAK ?? "5") || 5;
+    try {
+      const streaks = await getFeedStreaks(env.DB);
+      await maybeAlert(env.ALERT_WEBHOOK_URL, results, streaks, minFailures, feedStreak);
+    } catch (err) {
+      console.error(
+        `[collector] alert check failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   return { total: feeds.length, inserted, pruned, results, durationMs };
