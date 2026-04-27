@@ -79,3 +79,13 @@ export interface HealthResponse {
     latest_fetched_at: string | null;
   };
 }
+
+export interface FeedHealth {
+  feed_id: string;
+  feed_name: string;
+  enabled: boolean;
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  consecutive_failures: number;
+  articles_last_7d: number;
+}
