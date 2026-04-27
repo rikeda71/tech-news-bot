@@ -11,6 +11,7 @@ interface Props {
   isSelected?: boolean;
   onFilterByCategory: (c: FeedCategory) => void;
   onFilterByFeedId: (id: string) => void;
+  onNavigateToAuthor?: (author: string) => void;
   q?: string;
 }
 
@@ -47,6 +48,7 @@ export function ArticleCard({
   isSelected,
   onFilterByCategory,
   onFilterByFeedId,
+  onNavigateToAuthor,
   q = "",
 }: Props) {
   const { isRead, markRead, markUnread } = useReadState();
@@ -125,7 +127,20 @@ export function ArticleCard({
         {article.author && (
           <>
             <span>·</span>
-            <span>{article.author}</span>
+            {onNavigateToAuthor ? (
+              <button
+                type="button"
+                className="author-name author-name-clickable"
+                onClick={() => {
+                  if (article.author) onNavigateToAuthor(article.author);
+                }}
+                title={`${article.author} の記事一覧`}
+              >
+                {article.author}
+              </button>
+            ) : (
+              <span className="author-name">{article.author}</span>
+            )}
           </>
         )}
       </div>

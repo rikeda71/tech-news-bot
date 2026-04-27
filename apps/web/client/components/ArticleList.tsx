@@ -6,6 +6,7 @@ interface Props {
   selectedIndex?: number;
   onFilterByCategory: (c: FeedCategory) => void;
   onFilterByFeedId: (id: string) => void;
+  onNavigateToAuthor?: (author: string) => void;
   q?: string;
 }
 
@@ -14,6 +15,7 @@ export function ArticleList({
   selectedIndex = -1,
   onFilterByCategory,
   onFilterByFeedId,
+  onNavigateToAuthor,
   q,
 }: Props) {
   return (
@@ -25,6 +27,7 @@ export function ArticleList({
           isSelected={i === selectedIndex}
           onFilterByCategory={onFilterByCategory}
           onFilterByFeedId={onFilterByFeedId}
+          onNavigateToAuthor={onNavigateToAuthor}
           q={q}
         />
       ))}

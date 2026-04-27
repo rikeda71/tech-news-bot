@@ -1,7 +1,8 @@
 import { useTheme } from "../hooks/useTheme";
 
 // "feed" は /feed/:id のフィード詳細ページで使用。nav タブには載せない
-export type AppView = "articles" | "stats" | "feed";
+// "author" は /author/:name の著者詳細ページで使用。nav タブには載せない
+export type AppView = "articles" | "stats" | "feed" | "author";
 
 interface HeaderProps {
   view?: AppView;
