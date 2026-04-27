@@ -151,11 +151,9 @@ app.get("/by-author/:author", async (c) => {
 
   const result = await getArticlesByAuthor(c.env.DB, author, limitNum, cursor);
 
-  return c.json(
-    { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
-    200,
-    { "Cache-Control": "public, max-age=300" },
-  );
+  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
+    "Cache-Control": "public, max-age=300",
+  });
 });
 
 app.get("/:guid/related", async (c) => {

@@ -768,9 +768,7 @@ describe("GET /api/articles/by-author/:author", () => {
   });
 
   it("returns 200 with empty array when author has no articles", async () => {
-    const res = await SELF.fetch(
-      "https://example.com/api/articles/by-author/NonExistentAuthor",
-    );
+    const res = await SELF.fetch("https://example.com/api/articles/by-author/NonExistentAuthor");
     expect(res.status).toBe(200);
     const body = await res.json<{ articles: unknown[]; next_cursor: string | null }>();
     expect(body.articles).toEqual([]);
@@ -778,27 +776,21 @@ describe("GET /api/articles/by-author/:author", () => {
   });
 
   it("returns 400 when limit=0", async () => {
-    const res = await SELF.fetch(
-      "https://example.com/api/articles/by-author/Author%20A?limit=0",
-    );
+    const res = await SELF.fetch("https://example.com/api/articles/by-author/Author%20A?limit=0");
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
     expect(body.error).toMatch(/limit/);
   });
 
   it("returns 400 when limit=51", async () => {
-    const res = await SELF.fetch(
-      "https://example.com/api/articles/by-author/Author%20A?limit=51",
-    );
+    const res = await SELF.fetch("https://example.com/api/articles/by-author/Author%20A?limit=51");
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
     expect(body.error).toMatch(/limit/);
   });
 
   it("returns 400 when limit is non-numeric", async () => {
-    const res = await SELF.fetch(
-      "https://example.com/api/articles/by-author/Author%20A?limit=abc",
-    );
+    const res = await SELF.fetch("https://example.com/api/articles/by-author/Author%20A?limit=abc");
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
     expect(body.error).toMatch(/limit/);
@@ -872,9 +864,7 @@ describe("GET /api/articles/by-author/:author", () => {
     ]);
 
     // 1 ページ目: limit=2
-    const res1 = await SELF.fetch(
-      "https://example.com/api/articles/by-author/Author%20C?limit=2",
-    );
+    const res1 = await SELF.fetch("https://example.com/api/articles/by-author/Author%20C?limit=2");
     expect(res1.status).toBe(200);
     const body1 = await res1.json<{
       articles: { guid: string }[];
@@ -896,10 +886,7 @@ describe("GET /api/articles/by-author/:author", () => {
     expect(body2.next_cursor).toBeNull();
 
     // 2 ページ合わせて全 guid が揃うことを確認
-    const allGuids = [
-      ...body1.articles.map((a) => a.guid),
-      ...body2.articles.map((a) => a.guid),
-    ];
+    const allGuids = [...body1.articles.map((a) => a.guid), ...body2.articles.map((a) => a.guid)];
     expect(allGuids).toContain("o-ai-2");
     expect(allGuids).toContain("o-ai-11");
     expect(allGuids).toContain("o-ai-12");
