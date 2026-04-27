@@ -35,4 +35,5 @@ export interface FeedSummary {
 
 export interface FeedsResponse {
   feeds: FeedSummary[];
+  nextCursor: string | null;
 }

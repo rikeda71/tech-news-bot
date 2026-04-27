@@ -206,6 +206,63 @@ describe("/api/articles", () => {
   });
 });
 
+describe("/api/feeds", () => {
+  it("returns all feeds with nextCursor null when within limit", async () => {
+    // FEEDS には 3 件あるが、default limit=50 なので全件 + nextCursor=null
+    const res = await SELF.fetch("https://example.com/api/feeds");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      feeds: { id: string }[];
+      nextCursor: string | null;
+    };
+    // feeds.yaml 由来の全フィードが返る (3 件以上)
+    expect(body.feeds.length).toBeGreaterThanOrEqual(3);
+    expect(body.nextCursor).toBeNull();
+  });
+
+  it("paginates via cursor when limit is smaller than total", async () => {
+    // limit=2 で最初のページを取得
+    const page1 = await SELF.fetch("https://example.com/api/feeds?limit=2");
+    expect(page1.status).toBe(200);
+    const body1 = (await page1.json()) as {
+      feeds: { id: string }[];
+      nextCursor: string | null;
+    };
+    expect(body1.feeds.length).toBe(2);
+    // フィードが 3 件以上あるので nextCursor は非 null
+    expect(body1.nextCursor).not.toBeNull();
+
+    // cursor を使って次のページを取得
+    const page2 = await SELF.fetch(
+      `https://example.com/api/feeds?limit=2&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+    );
+    expect(page2.status).toBe(200);
+    const body2 = (await page2.json()) as {
+      feeds: { id: string }[];
+      nextCursor: string | null;
+    };
+    // page1 と page2 で重複がないことを確認
+    const ids1 = body1.feeds.map((f) => f.id);
+    const ids2 = body2.feeds.map((f) => f.id);
+    expect(ids2.some((id) => ids1.includes(id))).toBe(false);
+  });
+
+  it("clamps limit to MAX_LIMIT (100)", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds?limit=9999");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { feeds: unknown[]; nextCursor: string | null };
+    // フィードの合計は 100 未満なので nextCursor=null かつ全件返る
+    expect(body.nextCursor).toBeNull();
+  });
+
+  it("ignores malformed cursor and returns from start", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds?cursor=not-base64!!!");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { feeds: { id: string }[] };
+    expect(body.feeds.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe("/api/stats", () => {
   it("returns aggregated counts", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
