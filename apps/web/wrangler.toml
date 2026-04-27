@@ -28,6 +28,8 @@ SUMMARY_MAX_LENGTH = "500"
 RETENTION_DAYS = "90"
 # カンマ区切りで許可する Origin を列挙。* は非推奨 (明示的 origin で制限する)
 CORS_ALLOWED_ORIGINS = "https://tech-news-bot.rikeda71.workers.dev"
+ALERT_MIN_FAILURES = "3"
+ALERT_FEED_STREAK = "5"
 
 [[analytics_engine_datasets]]
 binding = "COLLECTOR_AE"
@@ -60,3 +62,5 @@ SUMMARY_MAX_LENGTH = "500"
 RETENTION_DAYS = "90"
 READONLY = "1"
 CORS_ALLOWED_ORIGINS = "https://tech-news-bot.rikeda71.workers.dev"
+ALERT_MIN_FAILURES = "3"
+ALERT_FEED_STREAK = "5"

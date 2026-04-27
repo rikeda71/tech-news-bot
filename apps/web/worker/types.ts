@@ -14,6 +14,9 @@ export interface Env {
   READONLY?: string;
   // preview 環境では binding が存在しない場合があるため optional
   COLLECTOR_AE?: AnalyticsEngineDataset;
+  ALERT_WEBHOOK_URL?: string;
+  ALERT_MIN_FAILURES?: string;
+  ALERT_FEED_STREAK?: string;
 }
 
 export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";
