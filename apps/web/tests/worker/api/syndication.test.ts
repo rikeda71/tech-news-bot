@@ -16,7 +16,7 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "mercari-engineering",
+    id: "cyberagent-developers",
     name: "Mercari Engineering Blog",
     url: "https://x.test/m",
     category: "jp",
@@ -41,7 +41,7 @@ beforeEach(async () => {
     },
     {
       guid: "g-jp",
-      feed_id: "mercari-engineering",
+      feed_id: "cyberagent-developers",
       title: "メルカリの記事",
       url: "https://x.test/m/1",
       summary: null,
@@ -173,7 +173,7 @@ describe("/feeds/:id.xml (per-feed RSS)", () => {
 
 describe("/feeds/:id.json (per-feed JSON Feed)", () => {
   it("returns 200 with JSON Feed v1.1 for the specified feed_id", async () => {
-    const res = await SELF.fetch("https://example.com/feeds/mercari-engineering.json");
+    const res = await SELF.fetch("https://example.com/feeds/cyberagent-developers.json");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("application/feed+json");
     const body = (await res.json()) as {
