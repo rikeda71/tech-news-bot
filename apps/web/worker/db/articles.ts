@@ -438,6 +438,91 @@ export async function getByLang30d(db: D1Database): Promise<ByLang30d> {
   return result;
 }
 
+export interface GetArticlesByMonthParams {
+  category?: FeedCategory;
+  lang?: FeedLang;
+  limit?: number;
+}
+
+export async function getArticlesByMonth(
+  db: D1Database,
+  year: number,
+  month: number,
+  opts?: GetArticlesByMonthParams,
+): Promise<Article[]> {
+  const start = new Date(Date.UTC(year, month - 1, 1)).toISOString();
+  const end = new Date(Date.UTC(year, month, 1)).toISOString();
+  const limit = Math.min(Math.max(opts?.limit ?? 200, 1), 500);
+
+  const conds: string[] = [`a.published_at >= ?1`, `a.published_at < ?2`];
+  const binds: unknown[] = [start, end];
+
+  if (opts?.category) {
+    conds.push(`a.category = ?${binds.length + 1}`);
+    binds.push(opts.category);
+  }
+  if (opts?.lang) {
+    conds.push(`a.lang = ?${binds.length + 1}`);
+    binds.push(opts.lang);
+  }
+
+  const where = `WHERE ${conds.join(" AND ")}`;
+  const sql = `
+    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+           a.author, a.published_at, a.fetched_at, a.category, a.lang
+    FROM articles a
+    LEFT JOIN feeds f ON f.id = a.feed_id
+    ${where}
+    ORDER BY a.published_at DESC, a.id DESC
+    LIMIT ?${binds.length + 1}
+  `;
+  binds.push(limit);
+
+  const result = await db
+    .prepare(sql)
+    .bind(...binds)
+    .all<Article>();
+
+  return result.results ?? [];
+}
+
+export interface CountArticlesByMonthParams {
+  category?: FeedCategory;
+  lang?: FeedLang;
+}
+
+export async function countArticlesByMonth(
+  db: D1Database,
+  year: number,
+  month: number,
+  opts?: CountArticlesByMonthParams,
+): Promise<number> {
+  const start = new Date(Date.UTC(year, month - 1, 1)).toISOString();
+  const end = new Date(Date.UTC(year, month, 1)).toISOString();
+
+  const conds: string[] = [`published_at >= ?1`, `published_at < ?2`];
+  const binds: unknown[] = [start, end];
+
+  if (opts?.category) {
+    conds.push(`category = ?${binds.length + 1}`);
+    binds.push(opts.category);
+  }
+  if (opts?.lang) {
+    conds.push(`lang = ?${binds.length + 1}`);
+    binds.push(opts.lang);
+  }
+
+  const where = `WHERE ${conds.join(" AND ")}`;
+  const sql = `SELECT COUNT(*) AS c FROM articles ${where}`;
+
+  const row = await db
+    .prepare(sql)
+    .bind(...binds)
+    .first<{ c: number }>();
+
+  return row?.c ?? 0;
+}
+
 function escapeFtsQuery(input: string): string {
   // FTS5 で安全に扱うため、特殊記号を除去して各単語をフレーズ扱いにする
   const tokens = input
