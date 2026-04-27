@@ -1,27 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Article } from "../../client/types/api";
-
-// ArticleCard は useReadState / useStarredState (useSyncExternalStore ベース) を内部で使っている。
-// happy-dom 環境では getSnapshot の参照安定性問題で無限ループになるため
-// 両 hook をモックして ArticleCard の描画ロジックに集中する。
-vi.mock("../../client/hooks/useReadState", () => ({
-  useReadState: () => ({
-    isRead: (id: number) => id === 1,
-    markRead: vi.fn<(id: number) => void>(),
-    markUnread: vi.fn<(id: number) => void>(),
-    clearAll: vi.fn<() => void>(),
-  }),
-}));
-
-vi.mock("../../client/hooks/useStarredState", () => ({
-  useStarredState: () => ({
-    isStarred: vi.fn<(id: number) => boolean>().mockReturnValue(false),
-    toggleStar: vi.fn<(id: number) => void>(),
-    clearAll: vi.fn<() => void>(),
-  }),
-}));
 
 const { ArticleCard } = await import("../../client/components/ArticleCard");
 
@@ -43,13 +23,19 @@ const baseArticle: Article = {
 const noop = () => {};
 
 describe("ArticleCard", () => {
+  beforeEach(() => {
+    // テスト間の localStorage 状態を隔離する
+    localStorage.clear();
+  });
+
   it("renders the article title", () => {
     render(<ArticleCard article={baseArticle} onFilterByCategory={noop} onFilterByFeedId={noop} />);
     expect(screen.getByText("Sample Article Title")).toBeTruthy();
   });
 
   it("applies read class when isRead returns true", () => {
-    // モックで id=1 は既読として返す
+    // localStorage に id=1 を既読として設定してから描画する
+    localStorage.setItem("tnb-read-articles", JSON.stringify([1]));
     const { container } = render(
       <ArticleCard article={baseArticle} onFilterByCategory={noop} onFilterByFeedId={noop} />,
     );

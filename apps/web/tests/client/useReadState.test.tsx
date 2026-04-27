@@ -1,45 +1,15 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 
-// useSyncExternalStore の getSnapshot は参照同一性を要求するが、
-// useReadState の実装は毎回 JSON.parse した新しい配列を返すため happy-dom 環境で
-// 無限ループが発生する。モジュールをモックして内部ストアを直接制御する。
-vi.mock("../../client/hooks/useReadState", async () => {
-  const { useCallback, useState } = await import("react");
-
-  function useReadState() {
-    const [readIds, setReadIds] = useState<number[]>([]);
-
-    const isRead = useCallback((id: number) => readIds.includes(id), [readIds]);
-    const markRead = useCallback(
-      (id: number) => setReadIds((prev) => (prev.includes(id) ? prev : [id, ...prev])),
-      [],
-    );
-    const markUnread = useCallback(
-      (id: number) => setReadIds((prev) => prev.filter((v) => v !== id)),
-      [],
-    );
-    const clearAll = useCallback(() => setReadIds([]), []);
-
-    return { isRead, markRead, markUnread, clearAll };
-  }
-
-  return { useReadState };
-});
-
-// モックした useReadState を import (vi.mock が先に適用される)
 const { useReadState } = await import("../../client/hooks/useReadState");
 
-describe("useReadState (mock)", () => {
+describe("useReadState", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // テスト間の localStorage 状態を隔離する
+    localStorage.clear();
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("initially returns an empty read list", () => {
+  it("initially returns an empty read set", () => {
     const { result } = renderHook(() => useReadState());
     expect(result.current.isRead(1)).toBe(false);
   });
@@ -68,8 +38,6 @@ describe("useReadState (mock)", () => {
     const { result } = renderHook(() => useReadState());
     act(() => {
       result.current.markRead(1);
-    });
-    act(() => {
       result.current.markRead(2);
     });
     act(() => {
@@ -77,5 +45,13 @@ describe("useReadState (mock)", () => {
     });
     expect(result.current.isRead(1)).toBe(false);
     expect(result.current.isRead(2)).toBe(false);
+  });
+
+  it("returns the same Set reference when raw is unchanged", () => {
+    // raw が変わっていなければ getSnapshot が同じ参照を返すことを確認する
+    localStorage.setItem("tnb-read-articles", JSON.stringify([5, 6]));
+    const { result } = renderHook(() => useReadState());
+    expect(result.current.isRead(5)).toBe(true);
+    expect(result.current.isRead(99)).toBe(false);
   });
 });

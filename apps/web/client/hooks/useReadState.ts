@@ -3,16 +3,14 @@ import { useCallback, useSyncExternalStore } from "react";
 const STORAGE_KEY = "tnb-read-articles";
 const MAX_IDS = 1000;
 
-// localStorage から既読 id 配列を読む (新しい順に保存)
-function readStorage(): number[] {
+function parse(raw: string | null): Set<number> {
+  if (!raw) return new Set();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((v): v is number => typeof v === "number");
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((v): v is number => typeof v === "number"));
   } catch {
-    return [];
+    return new Set();
   }
 }
 
@@ -22,6 +20,19 @@ function writeStorage(ids: number[]): void {
   } catch {
     // localStorage が使えない環境では無視
   }
+}
+
+// useSyncExternalStore の getSnapshot は参照同一性を要求するため
+// raw 文字列をキャッシュキーにして同一内容なら同じ Set 参照を返す
+let cachedRaw: string | null = null;
+let cachedSet: Set<number> = new Set();
+
+function getSnapshot(): Set<number> {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === cachedRaw) return cachedSet;
+  cachedRaw = raw;
+  cachedSet = parse(raw);
+  return cachedSet;
 }
 
 // useSyncExternalStore 用サブスクライバー管理
@@ -47,10 +58,6 @@ function notify(): void {
   for (const l of listeners) l();
 }
 
-function getSnapshot(): number[] {
-  return readStorage();
-}
-
 export interface ReadStateAPI {
   /** 指定 id が既読かどうか */
   isRead: (id: number) => boolean;
@@ -63,28 +70,31 @@ export interface ReadStateAPI {
 }
 
 export function useReadState(): ReadStateAPI {
-  const readIds = useSyncExternalStore(subscribe, getSnapshot, () => []);
+  const readSet = useSyncExternalStore(subscribe, getSnapshot, () => new Set<number>());
 
-  const isRead = useCallback((id: number) => readIds.includes(id), [readIds]);
+  const isRead = useCallback((id: number) => readSet.has(id), [readSet]);
 
   const markRead = useCallback((id: number) => {
-    const current = readStorage();
+    const current = getSnapshot();
     // すでに既読なら先頭に移動して更新 (LRU の定義通り)
-    const without = current.filter((v) => v !== id);
-    const next = [id, ...without].slice(0, MAX_IDS);
-    writeStorage(next);
+    const arr = [id, ...Array.from(current).filter((v) => v !== id)].slice(0, MAX_IDS);
+    writeStorage(arr);
+    // キャッシュを無効化して次の getSnapshot で再読み込みさせる
+    cachedRaw = null;
     notify();
   }, []);
 
   const markUnread = useCallback((id: number) => {
-    const current = readStorage();
-    const next = current.filter((v) => v !== id);
-    writeStorage(next);
+    const current = getSnapshot();
+    const arr = Array.from(current).filter((v) => v !== id);
+    writeStorage(arr);
+    cachedRaw = null;
     notify();
   }, []);
 
   const clearAll = useCallback(() => {
     writeStorage([]);
+    cachedRaw = null;
     notify();
   }, []);
 
