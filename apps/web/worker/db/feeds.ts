@@ -1,4 +1,4 @@
-import type { FeedConfig } from "../types";
+import type { FeedConfig, FeedHealth } from "../types";
 
 export interface FeedHeaders {
   last_etag: string | null;
@@ -75,6 +75,7 @@ export async function recordFetchSuccess(
            last_status = ?2,
            last_error = NULL,
            consecutive_failures = 0,
+           last_success_at = ?1,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?3`,
     )
@@ -119,6 +120,7 @@ export async function recordFetchError(
            last_status = 'error',
            last_error = ?2,
            consecutive_failures = consecutive_failures + 1,
+           last_failure_at = ?1,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?3`,
     )
@@ -137,4 +139,48 @@ export async function getFeedStreaks(db: D1Database): Promise<FeedStreak[]> {
     .prepare(`SELECT id, consecutive_failures FROM feeds WHERE enabled = 1`)
     .all<FeedStreak>();
   return result.results;
+}
+
+/**
+ * feeds テーブルと articles テーブルを JOIN して /api/feeds/health 用の集計を返す。
+ * 1 クエリで完結させ D1 の 50ms CPU 制約に収める。
+ */
+export async function getFeedHealth(db: D1Database, feeds: FeedConfig[]): Promise<FeedHealth[]> {
+  if (feeds.length === 0) return [];
+
+  const rows = await db
+    .prepare(
+      `SELECT f.id,
+              f.last_success_at,
+              f.last_failure_at,
+              f.consecutive_failures,
+              COUNT(a.id) AS articles_last_7d
+       FROM feeds f
+       LEFT JOIN articles a
+         ON a.feed_id = f.id
+        AND a.published_at >= datetime('now', '-7 days')
+       GROUP BY f.id`,
+    )
+    .all<{
+      id: string;
+      last_success_at: string | null;
+      last_failure_at: string | null;
+      consecutive_failures: number;
+      articles_last_7d: number;
+    }>();
+
+  const dbMap = new Map(rows.results.map((r) => [r.id, r]));
+
+  return feeds.map((f) => {
+    const row = dbMap.get(f.id);
+    return {
+      feed_id: f.id,
+      feed_name: f.name,
+      enabled: f.enabled,
+      last_success_at: row?.last_success_at ?? null,
+      last_failure_at: row?.last_failure_at ?? null,
+      consecutive_failures: row?.consecutive_failures ?? 0,
+      articles_last_7d: row?.articles_last_7d ?? 0,
+    };
+  });
 }
