@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { FilterBar } from "./components/FilterBar";
 import { Header } from "./components/Header";
-import { HelpModal } from "./components/HelpModal";
 import { PresetBar } from "./components/PresetBar";
 import { SearchInput } from "./components/SearchInput";
+import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { StatsPanel } from "./components/Stats";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useKeyboardNav } from "./hooks/useKeyboardNav";
 import { usePresets } from "./hooks/usePresets";
 import { useReadState } from "./hooks/useReadState";
 import { useStarredState } from "./hooks/useStarredState";
@@ -84,14 +84,13 @@ export default function App() {
   const [dateTo, setDateTo] = useState<string>(() => readFromUrl().dateTo);
   const [unreadOnly, setUnreadOnly] = useState<boolean>(() => readFromUrl().unreadOnly);
   const [starredOnly, setStarredOnly] = useState<boolean>(() => readFromUrl().starredOnly);
-  const [helpOpen, setHelpOpen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
   const { feeds } = useFeeds();
   const { stats } = useStats();
   const { isRead, markRead, markUnread } = useReadState();
-  const { isStarred } = useStarredState();
+  const { isStarred, toggleStar } = useStarredState();
   const { presets, addPreset, removePreset } = usePresets();
 
   // popstate でブラウザ戻る/進むに追従する
@@ -271,14 +270,6 @@ export default function App() {
     return filtered;
   }, [allArticles, unreadOnly, starredOnly, isRead, isStarred]);
 
-  const handleActivate = useCallback(
-    (id: number, url: string) => {
-      markRead(id);
-      window.open(url, "_blank", "noopener,noreferrer");
-    },
-    [markRead],
-  );
-
   const handleToggleRead = useCallback(
     (id: number) => {
       if (isRead(id)) markUnread(id);
@@ -287,30 +278,16 @@ export default function App() {
     [isRead, markRead, markUnread],
   );
 
-  const handleSearchFocus = useCallback(() => {
-    searchRef.current?.focus();
-  }, []);
-
-  const handleClearAll = useCallback(
-    () => pushFilter("", "", "", "", "", "", false, false),
-    [pushFilter],
-  );
-
-  const handleToggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
-
-  const { focusedId } = useKeyboardShortcuts({
-    items: articles,
-    onActivate: handleActivate,
-    onToggleRead: handleToggleRead,
-    onSearchFocus: handleSearchFocus,
-    onClearAll: handleClearAll,
-    onShowHelp: handleToggleHelp,
+  const { focusedIndex, helpOpen, setHelpOpen } = useKeyboardNav({
+    articles,
+    onMarkRead: handleToggleRead,
+    onToggleStar: toggleStar,
   });
 
   return (
     <div className="app">
       <Header />
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       <header className="header">
         <span className="subtitle">
           {stats ? `${stats.total.toLocaleString()} 記事 · 直近 24h: ${stats.last24h}` : ""}
@@ -375,7 +352,7 @@ export default function App() {
       {articles.length > 0 && (
         <ArticleList
           articles={articles}
-          focusedId={focusedId}
+          focusedId={focusedIndex !== null ? (articles[focusedIndex]?.id ?? null) : null}
           onFilterByCategory={handleFilterByCategory}
           onFilterByFeedId={handleFilterByFeedId}
           q={q}
