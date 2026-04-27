@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReadState } from "../hooks/useReadState";
 import { useStarredState } from "../hooks/useStarredState";
 import type { Article, FeedCategory } from "../types/api";
@@ -8,7 +8,7 @@ import { ShareButtons } from "./ShareButtons";
 
 interface Props {
   article: Article;
-  focused?: boolean;
+  isSelected?: boolean;
   onFilterByCategory: (c: FeedCategory) => void;
   onFilterByFeedId: (id: string) => void;
   q?: string;
@@ -44,7 +44,7 @@ function safeHref(url: string): string {
 
 export function ArticleCard({
   article,
-  focused,
+  isSelected,
   onFilterByCategory,
   onFilterByFeedId,
   q = "",
@@ -54,10 +54,19 @@ export function ArticleCard({
   const [hovered, setHovered] = useState(false);
   const read = isRead(article.id);
   const starred = isStarred(article.id);
+  const ref = useRef<HTMLElement>(null);
+
+  // 選択されたカードをスクロールして表示する
+  useEffect(() => {
+    if (isSelected && ref.current) {
+      ref.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [isSelected]);
 
   return (
     <article
-      className={`article-card${read ? " read" : ""}${focused ? " focused" : ""}`}
+      ref={ref}
+      className={`article-card${read ? " read" : ""}${isSelected ? " is-selected" : ""}`}
       data-article-id={article.id}
       tabIndex={-1}
       onMouseEnter={() => setHovered(true)}

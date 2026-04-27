@@ -18,14 +18,14 @@ describe("ShortcutsHelp", () => {
 
   it("shows all shortcut rows", () => {
     render(<ShortcutsHelp open={true} onClose={vi.fn<() => void>()} />);
-    // j/k, Enter/o, m, s, ?, Esc の各ショートカット説明を確認
+    // j/k, Enter, b, /, ?, g g, G, Esc の各ショートカット説明を確認
     expect(screen.getByText("次の記事に移動")).toBeTruthy();
     expect(screen.getByText("前の記事に移動")).toBeTruthy();
-    expect(screen.getByText("フォーカス中の記事を別タブで開く")).toBeTruthy();
-    expect(screen.getByText("既読 / 未読をトグル")).toBeTruthy();
-    expect(screen.getByText("スターをトグル")).toBeTruthy();
+    expect(screen.getByText("選択中の記事を新規タブで開く")).toBeTruthy();
+    expect(screen.getByText("選択中の記事をブックマーク切り替え")).toBeTruthy();
+    expect(screen.getByText("検索ボックスにフォーカス")).toBeTruthy();
     expect(screen.getByText("このヘルプを開く / 閉じる")).toBeTruthy();
-    expect(screen.getByText("ヘルプを閉じる / 検索バーから離れる")).toBeTruthy();
+    expect(screen.getByText("ヘルプを閉じる / 選択解除")).toBeTruthy();
   });
 
   it("calls onClose when close button is clicked", async () => {

@@ -10,7 +10,7 @@ import { ToastContainer } from "./components/ToastContainer";
 import { useArticles } from "./hooks/useArticles";
 import { useBookmarks } from "./hooks/useBookmarks";
 import { useFeeds } from "./hooks/useFeeds";
-import { useKeyboardNav } from "./hooks/useKeyboardNav";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePresets } from "./hooks/usePresets";
 import { useReadState } from "./hooks/useReadState";
 import { useStarredState } from "./hooks/useStarredState";
@@ -88,14 +88,16 @@ function AppInner() {
   const [unreadOnly, setUnreadOnly] = useState<boolean>(() => readFromUrl().unreadOnly);
   const [starredOnly, setStarredOnly] = useState<boolean>(() => readFromUrl().starredOnly);
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
   const { feeds } = useFeeds();
   const { stats } = useStats();
-  const { isRead, markRead, markUnread } = useReadState();
-  const { isStarred, toggleStar } = useStarredState();
-  const { bookmarks } = useBookmarks();
+  const { isRead } = useReadState();
+  const { isStarred } = useStarredState();
+  const { bookmarks, toggle: toggleBookmark } = useBookmarks();
   const { presets, addPreset, removePreset } = usePresets();
 
   // popstate でブラウザ戻る/進むに追従する
@@ -276,18 +278,57 @@ function AppInner() {
     return filtered;
   }, [allArticles, unreadOnly, starredOnly, bookmarkedOnly, isRead, isStarred, bookmarks]);
 
-  const handleToggleRead = useCallback(
-    (id: number) => {
-      if (isRead(id)) markUnread(id);
-      else markRead(id);
-    },
-    [isRead, markRead, markUnread],
-  );
+  const handleSearchFocus = useCallback(() => {
+    searchRef.current?.focus();
+  }, []);
 
-  const { focusedIndex, helpOpen, setHelpOpen } = useKeyboardNav({
-    articles,
-    onMarkRead: handleToggleRead,
-    onToggleStar: toggleStar,
+  const handleKbNext = useCallback(() => {
+    setSelectedIndex((prev) => Math.min(prev + 1, articles.length - 1));
+  }, [articles.length]);
+
+  const handleKbPrev = useCallback(() => {
+    setSelectedIndex((prev) => (prev <= 0 ? 0 : prev - 1));
+  }, []);
+
+  const handleKbOpen = useCallback(() => {
+    if (selectedIndex < 0 || selectedIndex >= articles.length) return;
+    const article = articles[selectedIndex];
+    window.open(article.url, "_blank", "noopener,noreferrer");
+  }, [selectedIndex, articles]);
+
+  const handleKbBookmark = useCallback(() => {
+    if (selectedIndex < 0 || selectedIndex >= articles.length) return;
+    toggleBookmark(articles[selectedIndex].guid);
+  }, [selectedIndex, articles, toggleBookmark]);
+
+  const handleKbShowHelp = useCallback(() => setHelpOpen(true), []);
+
+  const handleKbClose = useCallback(() => {
+    if (helpOpen) {
+      setHelpOpen(false);
+    } else {
+      setSelectedIndex(-1);
+    }
+  }, [helpOpen]);
+
+  const handleKbTop = useCallback(() => {
+    setSelectedIndex(articles.length > 0 ? 0 : -1);
+  }, [articles.length]);
+
+  const handleKbBottom = useCallback(() => {
+    setSelectedIndex(articles.length > 0 ? articles.length - 1 : -1);
+  }, [articles.length]);
+
+  useKeyboardShortcuts({
+    onNext: handleKbNext,
+    onPrev: handleKbPrev,
+    onOpen: handleKbOpen,
+    onBookmark: handleKbBookmark,
+    onFocusSearch: handleSearchFocus,
+    onShowHelp: handleKbShowHelp,
+    onClose: handleKbClose,
+    onTop: handleKbTop,
+    onBottom: handleKbBottom,
   });
 
   return (
@@ -369,7 +410,7 @@ function AppInner() {
       {articles.length > 0 && (
         <ArticleList
           articles={articles}
-          focusedId={focusedIndex !== null ? (articles[focusedIndex]?.id ?? null) : null}
+          selectedIndex={selectedIndex}
           onFilterByCategory={handleFilterByCategory}
           onFilterByFeedId={handleFilterByFeedId}
           q={q}
