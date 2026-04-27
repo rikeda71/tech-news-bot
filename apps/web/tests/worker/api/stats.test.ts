@@ -104,7 +104,7 @@ describe("GET /api/stats — category_trend_30d", () => {
   it("each entry has date, ai, bigtech, jp, zenn fields", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as {
-      category_trend_30d: Record<string, unknown>[];
+      category_trend_30d: { date: string; ai: number; bigtech: number; jp: number; zenn: number }[];
     };
     const point = body.category_trend_30d[0];
     expect(typeof point.date).toBe("string");
@@ -215,8 +215,8 @@ describe("GET /api/stats — feed_activity", () => {
     expect(google?.last_published_at).not.toBeNull();
   });
 
-  it("returns empty array when no articles in 30d window", async () => {
-    // 31 日前の記事のみ挿入 → 30d 窓外
+  it("30d 窓外の記事は feed_activity に含まれない", async () => {
+    // 31 日前の記事を追加 → 30d 窓外
     await insertArticles(env.DB, [
       {
         guid: "old-1",
@@ -230,15 +230,11 @@ describe("GET /api/stats — feed_activity", () => {
         lang: "en",
       },
     ]);
-    // 上で挿入した 4 件 (30d 内) + この 1 件 (31d 前) → feed_activity は 3 フィード
-    // (beforeEach で挿入済みの記事が 30d 内にあるため 0 にはならない)
-    // このテストは「既存データがない場合」を直接テストできないが、
-    // 30d 外の記事が feed_activity に含まれないことを確認する
+    // beforeEach で挿入した 2 件 (30d 内) は変わらない
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as {
       feed_activity: { feed_id: string; articles_30d: number }[];
     };
-    // old-1 は 31d 前なので合計に含まれない → google-research は beforeEach の 2 件のまま
     const google = body.feed_activity.find((f) => f.feed_id === "google-research");
     expect(google?.articles_30d).toBe(2);
   });
