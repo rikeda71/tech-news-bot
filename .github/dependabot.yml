@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # pnpm workspace 全体の依存を月次で自動 PR
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      types:
+        # @types/* をまとめて 1 PR に
+        patterns:
+          - "@types/*"
+      vite-ecosystem:
+        # vite / vitest / vite-plus 関連をまとめて 1 PR に
+        patterns:
+          - "vite"
+          - "vite-*"
+          - "vitest"
+          - "@vitejs/*"
+          - "vite-plus"
+          - "@voidzero-dev/*"
+      cloudflare:
+        # Cloudflare 系をまとめて 1 PR に
+        patterns:
+          - "@cloudflare/*"
+          - "wrangler"
+
+  # GitHub Actions のバージョンを月次で自動 PR
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
