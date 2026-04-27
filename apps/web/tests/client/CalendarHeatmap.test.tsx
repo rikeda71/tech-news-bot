@@ -13,12 +13,12 @@ function makeCalendarDays(count: number, baseCount = 3) {
   });
 }
 
-function mockFetch(days: ReturnType<typeof makeCalendarDays>) {
+function mockFetch(items: ReturnType<typeof makeCalendarDays>) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ days }),
+      json: () => Promise.resolve({ days: items.length, items }),
     }),
   );
 }
@@ -121,7 +121,7 @@ describe("CalendarHeatmap", () => {
       const data = callCount === 1 ? days90 : days30;
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ days: data }),
+        json: () => Promise.resolve({ days: data.length, items: data }),
       });
     });
 
@@ -149,7 +149,7 @@ describe("CalendarHeatmap", () => {
       const data = callCount === 1 ? days90 : days365;
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ days: data }),
+        json: () => Promise.resolve({ days: data.length, items: data }),
       });
     });
 
