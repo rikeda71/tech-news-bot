@@ -102,7 +102,9 @@ export async function sendAlert(env: Env, result: CollectAllResult): Promise<voi
       signal: controller.signal,
     });
     if (!res.ok) {
-      console.error(`[alert] sendAlert webhook returned non-2xx: ${res.status} ${res.statusText}`);
+      console.error(
+        `[alert] sendAlert webhook returned non-2xx: ${res.status} ${res.statusText}`,
+      );
     }
   } catch (err) {
     console.error(
