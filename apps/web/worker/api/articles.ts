@@ -2,10 +2,12 @@ import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { loadAllFeeds } from "../feed-config";
 import {
+  countArticlesByDay,
   countArticlesByMonth,
   getArticleById,
   getArticlesByAuthor,
   getArticlesByCategory,
+  getArticlesByDay,
   getArticlesByFeed,
   getArticlesCalendar,
   getArticlesByMonth,
@@ -314,6 +316,57 @@ app.get("/archive", async (c) => {
   return c.json({ year, month, items, total }, 200, {
     "Cache-Control": "public, max-age=600",
   });
+});
+
+// YYYY-MM-DD 形式のみ受け付ける。time コンポーネントは不要
+const DATE_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+app.get("/by-day/:date", async (c) => {
+  const dateRaw = c.req.param("date");
+
+  if (!DATE_DAY_RE.test(dateRaw)) {
+    return c.json({ error: "invalid date" }, 400);
+  }
+
+  const year = parseInt(dateRaw.slice(0, 4), 10);
+  if (year < 1900 || year > 2100) {
+    return c.json({ error: "invalid date" }, 400);
+  }
+
+  const limitRaw = c.req.query("limit") ?? "50";
+  const limitNum = Number(limitRaw);
+  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 100) {
+    return c.json({ error: "limit must be an integer between 1 and 100" }, 400);
+  }
+
+  const cursorRaw = c.req.query("cursor");
+  const cursor = decodeCursor(cursorRaw);
+  // cursor が指定されているのに decode に失敗した場合は 400
+  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+
+  // handler 側で UTC の日付境界文字列を計算して DB に渡す
+  const [yStr, mStr, dStr] = dateRaw.split("-");
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10) - 1; // Date.UTC は 0 始まり
+  const d = parseInt(dStr, 10);
+  const startIso = new Date(Date.UTC(y, m, d)).toISOString();
+  const endIso = new Date(Date.UTC(y, m, d + 1)).toISOString();
+
+  const [result, total] = await Promise.all([
+    getArticlesByDay(c.env.DB, startIso, endIso, limitNum, cursor),
+    countArticlesByDay(c.env.DB, startIso, endIso),
+  ]);
+
+  return c.json(
+    {
+      date: dateRaw,
+      articles: result.articles,
+      next_cursor: encodeCursor(result.nextCursor),
+      total,
+    },
+    200,
+    { "Cache-Control": "public, max-age=600" },
+  );
 });
 
 app.get("/:id", async (c) => {

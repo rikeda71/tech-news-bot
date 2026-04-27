@@ -813,6 +813,70 @@ export async function getPopularArticles(
   return { articles, window_days: days, total: articles.length };
 }
 
+export interface GetArticlesByDayResult {
+  articles: Article[];
+  nextCursor: { publishedAt: string; id: number } | null;
+}
+
+/** 指定日 (UTC 00:00:00 〜 翌日 00:00:00) の記事を published_at DESC で取得。cursor は既存と同形式 */
+export async function getArticlesByDay(
+  db: D1Database,
+  startIso: string,
+  endIso: string,
+  limit: number,
+  cursor: { publishedAt: string; id: number } | null,
+): Promise<GetArticlesByDayResult> {
+  const conds: string[] = [`a.published_at >= ?1`, `a.published_at < ?2`];
+  const binds: unknown[] = [startIso, endIso];
+
+  if (cursor) {
+    conds.push(
+      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
+    );
+    binds.push(cursor.publishedAt, cursor.id);
+  }
+
+  const where = `WHERE ${conds.join(" AND ")}`;
+  const sql = `
+    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+           a.author, a.published_at, a.fetched_at, a.category, a.lang
+    FROM articles a
+    LEFT JOIN feeds f ON f.id = a.feed_id
+    ${where}
+    ORDER BY a.published_at DESC, a.id DESC
+    LIMIT ?${binds.length + 1}
+  `;
+  binds.push(limit + 1);
+
+  const result = await db
+    .prepare(sql)
+    .bind(...binds)
+    .all<Article>();
+
+  const rows = result.results ?? [];
+  let nextCursor: { publishedAt: string; id: number } | null = null;
+  let articles = rows;
+  if (rows.length > limit) {
+    articles = rows.slice(0, limit);
+    const last = articles[articles.length - 1];
+    nextCursor = { publishedAt: last.published_at, id: last.id };
+  }
+  return { articles, nextCursor };
+}
+
+/** 指定日 (UTC) の総記事数を返す */
+export async function countArticlesByDay(
+  db: D1Database,
+  startIso: string,
+  endIso: string,
+): Promise<number> {
+  const row = await db
+    .prepare(`SELECT COUNT(*) AS c FROM articles WHERE published_at >= ?1 AND published_at < ?2`)
+    .bind(startIso, endIso)
+    .first<{ c: number }>();
+  return row?.c ?? 0;
+}
+
 function escapeFtsQuery(input: string): string {
   // FTS5 で安全に扱うため、特殊記号を除去して各単語をフレーズ扱いにする
   const tokens = input
