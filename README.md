@@ -6,13 +6,13 @@
 
 完全に Cloudflare 無料枠で動作します。
 
-| レイヤ | サービス |
-|---|---|
-| RSS 収集 | Cloudflare Workers + Cron Triggers (3 時間ごと) |
-| データベース | Cloudflare D1 (SQLite) + FTS5 全文検索 |
-| API | 同 Worker 内で Hono が `/api/*` をハンドリング |
+| レイヤ       | サービス                                          |
+| ------------ | ------------------------------------------------- |
+| RSS 収集     | Cloudflare Workers + Cron Triggers (3 時間ごと)   |
+| データベース | Cloudflare D1 (SQLite) + FTS5 全文検索            |
+| API          | 同 Worker 内で Hono が `/api/*` をハンドリング    |
 | 静的フロント | Worker Static Assets (Vite で React SPA をビルド) |
-| 設定 | `config/feeds.json` を Worker にバンドル |
+| 設定         | `config/feeds.json` を Worker にバンドル          |
 
 ```
 ┌────────────────────────────────────────────────┐
@@ -93,14 +93,14 @@ pnpm deploy
   "version": 1,
   "feeds": [
     {
-      "id": "openai-blog",          // 一意キー
+      "id": "openai-blog", // 一意キー
       "name": "OpenAI Blog",
       "url": "https://openai.com/blog/rss.xml",
-      "category": "ai",             // "bigtech" | "ai" | "jp"
-      "lang": "en",                 // "ja" | "en"
-      "enabled": true
-    }
-  ]
+      "category": "ai", // "bigtech" | "ai" | "jp"
+      "lang": "en", // "ja" | "en"
+      "enabled": true,
+    },
+  ],
 }
 ```
 
@@ -108,25 +108,25 @@ pnpm deploy
 
 ## API
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/articles` | 記事一覧。クエリ `category`, `lang`, `feed_id`, `q`, `limit`, `cursor` |
-| GET | `/api/feeds` | フィード一覧と最終収集状況 |
-| GET | `/api/health` | DB 接続疎通と総記事数 |
-| GET | `/feed.json` | JSON Feed v1.1 (直近 50 件、`category`, `lang` 絞り込み可) |
-| GET | `/feed.xml` | RSS 2.0 (同上) |
+| Method | Path            | Description                                                            |
+| ------ | --------------- | ---------------------------------------------------------------------- |
+| GET    | `/api/articles` | 記事一覧。クエリ `category`, `lang`, `feed_id`, `q`, `limit`, `cursor` |
+| GET    | `/api/feeds`    | フィード一覧と最終収集状況                                             |
+| GET    | `/api/health`   | DB 接続疎通と総記事数                                                  |
+| GET    | `/feed.json`    | JSON Feed v1.1 (直近 50 件、`category`, `lang` 絞り込み可)             |
+| GET    | `/feed.xml`     | RSS 2.0 (同上)                                                         |
 
 ページングは Base64 エンコードされた cursor を `nextCursor` で返します。
 
 ## 無料枠と制約
 
-| 項目 | 無料上限 | 想定使用量 |
-|---|---|---|
-| Workers リクエスト | 10 万/日 | UI 含めて数千 / 日 |
-| Workers CPU | 10ms/req | API は D1 1 クエリで数 ms |
-| Cron wall clock | 15 分 | 38 フィード × 数秒 |
-| D1 ストレージ | 5GB | 1 記事 ≈ 2KB → 10 万件 = 200MB |
-| D1 Reads | 500 万/日 | 余裕 |
+| 項目               | 無料上限  | 想定使用量                     |
+| ------------------ | --------- | ------------------------------ |
+| Workers リクエスト | 10 万/日  | UI 含めて数千 / 日             |
+| Workers CPU        | 10ms/req  | API は D1 1 クエリで数 ms      |
+| Cron wall clock    | 15 分     | 38 フィード × 数秒             |
+| D1 ストレージ      | 5GB       | 1 記事 ≈ 2KB → 10 万件 = 200MB |
+| D1 Reads           | 500 万/日 | 余裕                           |
 
 ## ライセンス
 

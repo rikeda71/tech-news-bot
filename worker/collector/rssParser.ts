@@ -54,10 +54,7 @@ function pickLink(entry: Record<string, unknown>): string | null {
 
 function pickAtomContent(entry: Record<string, unknown>): string | null {
   return (
-    pickText(entry["summary"]) ??
-    pickText(entry["content"]) ??
-    pickText(entry["subtitle"]) ??
-    null
+    pickText(entry["summary"]) ?? pickText(entry["content"]) ?? pickText(entry["subtitle"]) ?? null
   );
 }
 
@@ -128,7 +125,9 @@ export function parseFeed(xml: string, options: ParseOptions = {}): ParsedItem[]
   if (rss) {
     const channel = rss["channel"] as Record<string, unknown> | undefined;
     if (channel) {
-      entries = asArray(channel["item"] as Record<string, unknown> | Record<string, unknown>[] | undefined);
+      entries = asArray(
+        channel["item"] as Record<string, unknown> | Record<string, unknown>[] | undefined,
+      );
     }
     return entries
       .map((e) => parseRssItem(e, fallback, summaryMax))
@@ -136,14 +135,18 @@ export function parseFeed(xml: string, options: ParseOptions = {}): ParsedItem[]
   }
 
   if (rdf) {
-    entries = asArray(rdf["item"] as Record<string, unknown> | Record<string, unknown>[] | undefined);
+    entries = asArray(
+      rdf["item"] as Record<string, unknown> | Record<string, unknown>[] | undefined,
+    );
     return entries
       .map((e) => parseRssItem(e, fallback, summaryMax))
       .filter((x): x is ParsedItem => x !== null);
   }
 
   if (feed) {
-    entries = asArray(feed["entry"] as Record<string, unknown> | Record<string, unknown>[] | undefined);
+    entries = asArray(
+      feed["entry"] as Record<string, unknown> | Record<string, unknown>[] | undefined,
+    );
     return entries
       .map((e) => parseAtomEntry(e, fallback, summaryMax))
       .filter((x): x is ParsedItem => x !== null);

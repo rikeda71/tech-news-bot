@@ -5,8 +5,22 @@ import { syncFeeds } from "../../../worker/db/feeds";
 import type { FeedConfig } from "../../../shared/types";
 
 const FEEDS: FeedConfig[] = [
-  { id: "feed-a", name: "Feed A", url: "https://a.test/rss", category: "bigtech", lang: "en", enabled: true },
-  { id: "feed-b", name: "Feed B", url: "https://b.test/rss", category: "ai", lang: "en", enabled: true },
+  {
+    id: "feed-a",
+    name: "Feed A",
+    url: "https://a.test/rss",
+    category: "bigtech",
+    lang: "en",
+    enabled: true,
+  },
+  {
+    id: "feed-b",
+    name: "Feed B",
+    url: "https://b.test/rss",
+    category: "ai",
+    lang: "en",
+    enabled: true,
+  },
 ];
 
 beforeAll(async () => {

@@ -106,12 +106,7 @@ export default function App() {
       {articles.length > 0 && <ArticleList articles={articles} />}
 
       {nextCursor && (
-        <button
-          type="button"
-          className="load-more"
-          onClick={loadMore}
-          disabled={loadingMore}
-        >
+        <button type="button" className="load-more" onClick={loadMore} disabled={loadingMore}>
           {loadingMore ? "読み込み中…" : "もっと読み込む"}
         </button>
       )}

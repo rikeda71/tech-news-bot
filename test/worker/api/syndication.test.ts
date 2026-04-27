@@ -91,9 +91,9 @@ describe("/feed.xml", () => {
     expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
     const text = await res.text();
     expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain("<rss version=\"2.0\"");
+    expect(text).toContain('<rss version="2.0"');
     expect(text).toContain("AI &lt;Article&gt; &amp; friends");
-    expect(text).toContain("<guid isPermaLink=\"false\">g-ai</guid>");
+    expect(text).toContain('<guid isPermaLink="false">g-ai</guid>');
     // 並び順: 最新が先
     const ai = text.indexOf("g-ai");
     const jp = text.indexOf("g-jp");

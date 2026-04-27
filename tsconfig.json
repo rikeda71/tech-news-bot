@@ -23,6 +23,13 @@
       "@shared/*": ["shared/*"]
     }
   },
-  "include": ["worker/**/*", "src/**/*", "shared/**/*", "test/**/*", "vite.config.ts", "vitest.config.ts"],
+  "include": [
+    "worker/**/*",
+    "src/**/*",
+    "shared/**/*",
+    "test/**/*",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
   "exclude": ["node_modules", "dist", ".wrangler"]
 }

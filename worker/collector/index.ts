@@ -75,9 +75,7 @@ async function collectFeed(
       fallbackPublishedAt: fetchedAt,
     });
 
-    const items = allItems
-      .filter((i) => i.url && isSafeUrl(i.url))
-      .slice(0, MAX_ITEMS_PER_FEED);
+    const items = allItems.filter((i) => i.url && isSafeUrl(i.url)).slice(0, MAX_ITEMS_PER_FEED);
 
     const guids = await buildGuids(
       items.map((i) => ({
@@ -120,7 +118,7 @@ async function runWithConcurrency<T, R>(
   concurrency: number,
   worker: (item: T) => Promise<R>,
 ): Promise<R[]> {
-  const results: R[] = new Array(items.length);
+  const results: R[] = Array.from({ length: items.length });
   let cursor = 0;
   const runners = Array.from({ length: Math.max(1, concurrency) }, async () => {
     while (true) {

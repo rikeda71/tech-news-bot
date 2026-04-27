@@ -12,10 +12,7 @@ export interface InsertableArticle {
   lang: FeedLang;
 }
 
-export async function insertArticles(
-  db: D1Database,
-  rows: InsertableArticle[],
-): Promise<number> {
+export async function insertArticles(db: D1Database, rows: InsertableArticle[]): Promise<number> {
   if (rows.length === 0) return 0;
 
   // FTS トリガの changes() が混入するため、INSERT OR IGNORE の meta.changes は信頼できない。
@@ -100,7 +97,9 @@ export async function listArticles(
 
   let sql: string;
   if (params.q && params.q.trim()) {
-    conds.push(`a.id IN (SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?${binds.length + 1})`);
+    conds.push(
+      `a.id IN (SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?${binds.length + 1})`,
+    );
     binds.push(escapeFtsQuery(params.q.trim()));
   }
 
@@ -132,10 +131,7 @@ export async function listArticles(
   return { articles, nextCursor };
 }
 
-export async function deleteOlderThan(
-  db: D1Database,
-  retentionDays: number,
-): Promise<number> {
+export async function deleteOlderThan(db: D1Database, retentionDays: number): Promise<number> {
   if (!Number.isFinite(retentionDays) || retentionDays <= 0) return 0;
   // SQLite で安全のため整数化、少数日は切り捨て
   const days = Math.floor(retentionDays);

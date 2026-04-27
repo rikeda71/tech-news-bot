@@ -57,8 +57,9 @@ describe("deleteOlderThan", () => {
 
     await deleteOlderThan(env.DB, 90);
 
-    const remaining = await env.DB.prepare("SELECT guid FROM articles ORDER BY guid")
-      .all<{ guid: string }>();
+    const remaining = await env.DB.prepare("SELECT guid FROM articles ORDER BY guid").all<{
+      guid: string;
+    }>();
     expect(remaining.results?.map((r) => r.guid)).toEqual(["g-recent"]);
   });
 

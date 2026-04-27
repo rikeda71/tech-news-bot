@@ -7,8 +7,7 @@ const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp"];
 const VALID_LANGS: FeedLang[] = ["ja", "en"];
 const FEED_LIMIT = 50;
 const SITE_TITLE = "tech-news-bot";
-const SITE_DESCRIPTION =
-  "Big tech / AI / 日本企業の technical blog を集約した RSS / JSON Feed";
+const SITE_DESCRIPTION = "Big tech / AI / 日本企業の technical blog を集約した RSS / JSON Feed";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -20,9 +19,7 @@ function parseFilters(c: { req: { query: (k: string) => string | undefined } }) 
       ? (categoryRaw as FeedCategory)
       : undefined;
   const lang =
-    langRaw && (VALID_LANGS as string[]).includes(langRaw)
-      ? (langRaw as FeedLang)
-      : undefined;
+    langRaw && (VALID_LANGS as string[]).includes(langRaw) ? (langRaw as FeedLang) : undefined;
   return { category, lang };
 }
 
