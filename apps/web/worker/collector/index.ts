@@ -14,6 +14,7 @@ import {
   syncFeeds,
   updateFeedHeaders,
 } from "../db/feeds";
+import { finishRun, recordRunFeed, startRun } from "../db/runs";
 
 const MAX_FEED_BYTES = 4 * 1024 * 1024; // 4MB
 const MAX_ITEMS_PER_FEED = 50;
@@ -349,6 +350,7 @@ export async function collectFeeds(env: Env, feedIds?: string[]): Promise<Collec
 
 export async function collectAll(env: Env): Promise<CollectAllResult> {
   const start = Date.now();
+  const startedAt = new Date(start).toISOString();
   const feeds = loadEnabledFeeds();
   await syncFeeds(env.DB, feeds);
 
@@ -361,12 +363,50 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
   const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
   const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
 
-  const results = await runWithConcurrency(activeFeeds, concurrency, (feed) =>
-    collectFeed(env, feed, summaryMax, timeoutMs, maxRetries),
-  );
+  // run の開始を記録する
+  let runId: number | null = null;
+  try {
+    const { run_id } = await startRun(env.DB, startedAt, activeFeeds.length);
+    runId = run_id;
+  } catch (err) {
+    console.error(
+      `[collector] startRun failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  const results = await runWithConcurrency(activeFeeds, concurrency, async (feed) => {
+    const feedStart = Date.now();
+    const result = await collectFeed(env, feed, summaryMax, timeoutMs, maxRetries);
+    const durationMs = Date.now() - feedStart;
+
+    // 各フィードの結果を記録する。失敗しても collectFeed の結果は返す。
+    if (runId !== null) {
+      const status =
+        result.status === "error" ? "failed" : result.status === "not_modified" ? "skipped" : "ok";
+      try {
+        await recordRunFeed(
+          env.DB,
+          runId,
+          feed.id,
+          status,
+          result.inserted,
+          durationMs,
+          result.error,
+        );
+      } catch (err) {
+        console.error(
+          `[collector] recordRunFeed(${feed.id}) failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    return result;
+  });
 
   const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
   const skipped304 = results.filter((r) => r.status === "not_modified").length;
+  const feedsOk = results.filter((r) => r.status === "ok" || r.status === "not_modified").length;
+  const feedsFailed = results.filter((r) => r.status === "error").length;
 
   const retentionDays = Number(env.RETENTION_DAYS ?? "90") || 90;
   let pruned = 0;
@@ -379,6 +419,19 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
   }
 
   const durationMs = Date.now() - start;
+  const completedAt = new Date(Date.now()).toISOString();
+
+  // run の完了を記録する
+  if (runId !== null) {
+    try {
+      await finishRun(env.DB, runId, completedAt, feedsOk, feedsFailed, inserted);
+    } catch (err) {
+      console.error(
+        `[collector] finishRun failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   console.log(
     `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
   );
