@@ -140,10 +140,41 @@ describe("/api/stats", () => {
       total: number;
       by_category: Record<string, number>;
       by_lang: Record<string, number>;
+      stale_feeds: unknown[];
     };
     expect(body.total).toBe(3);
     expect(body.by_category).toEqual({ bigtech: 1, ai: 1, jp: 1 });
     expect(body.by_lang).toEqual({ en: 2, ja: 1 });
+    // 全フィードは未収集 (last_fetched_at NULL) なので stale 扱い
+    expect(body.stale_feeds.length).toBe(3);
+  });
+
+  it("flags only feeds with errors or no recent fetch", async () => {
+    // 1 件は成功 (今), 1 件は error, 1 件は古い fetched_at
+    const now = new Date().toISOString();
+    const old = new Date(Date.now() - 2 * 86400 * 1000).toISOString();
+    await env.DB.prepare(
+      `UPDATE feeds SET last_fetched_at = ?1, last_status = 'ok:1', last_error = NULL WHERE id = 'google-research'`,
+    )
+      .bind(now)
+      .run();
+    await env.DB.prepare(
+      `UPDATE feeds SET last_fetched_at = ?1, last_status = 'error', last_error = 'HTTP 500' WHERE id = 'openai-blog'`,
+    )
+      .bind(now)
+      .run();
+    await env.DB.prepare(
+      `UPDATE feeds SET last_fetched_at = ?1, last_status = 'ok:0', last_error = NULL WHERE id = 'mercari-engineering'`,
+    )
+      .bind(old)
+      .run();
+
+    const res = await SELF.fetch("https://example.com/api/stats");
+    const body = (await res.json()) as {
+      stale_feeds: { id: string; last_status: string | null }[];
+    };
+    const ids = body.stale_feeds.map((f) => f.id).toSorted();
+    expect(ids).toEqual(["mercari-engineering", "openai-blog"]);
   });
 });
 

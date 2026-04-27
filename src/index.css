@@ -65,6 +65,38 @@ a:hover {
   font-size: 0.85rem;
 }
 
+.stale-warning {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid #c66;
+  border-radius: 6px;
+  background: rgba(200, 50, 50, 0.08);
+  font-size: 0.85rem;
+}
+
+.stale-warning summary {
+  cursor: pointer;
+  color: #c33;
+  font-weight: 600;
+}
+
+.stale-warning ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.stale-warning li {
+  margin-bottom: 4px;
+}
+
+.stale-warning .stale-error {
+  color: var(--fg-muted);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
 .toolbar {
   display: grid;
   grid-template-columns: 1fr;

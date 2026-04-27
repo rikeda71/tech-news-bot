@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
 
+export interface StaleFeed {
+  id: string;
+  name: string;
+  last_status: string | null;
+  last_fetched_at: string | null;
+  last_error: string | null;
+}
+
 export interface Stats {
   total: number;
   last_published_at: string | null;
@@ -7,6 +15,7 @@ export interface Stats {
   last24h: number;
   by_category: Record<string, number>;
   by_lang: Record<string, number>;
+  stale_feeds: StaleFeed[];
 }
 
 export function useStats(refreshSignal: number = 0) {

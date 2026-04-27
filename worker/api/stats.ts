@@ -3,6 +3,19 @@ import type { Env } from "../types";
 
 const app = new Hono<{ Bindings: Env }>();
 
+// 24 時間以上収集成功していない or 直近で error が記録されているフィードを stale と判定
+const STALE_FEEDS_SQL = `
+  SELECT id, name, last_status, last_fetched_at, last_error
+  FROM feeds
+  WHERE enabled = 1
+    AND (
+      last_status = 'error'
+      OR last_fetched_at IS NULL
+      OR last_fetched_at < datetime('now', '-1 day')
+    )
+  ORDER BY last_fetched_at IS NULL DESC, last_fetched_at ASC
+`;
+
 app.get("/", async (c) => {
   const totalRow = await c.env.DB.prepare(
     "SELECT COUNT(*) AS n, MAX(published_at) AS last_published, MAX(fetched_at) AS last_fetched FROM articles",
@@ -20,6 +33,14 @@ app.get("/", async (c) => {
     `SELECT COUNT(*) AS n FROM articles WHERE published_at >= datetime('now', '-1 day')`,
   ).first<{ n: number }>();
 
+  const staleRows = await c.env.DB.prepare(STALE_FEEDS_SQL).all<{
+    id: string;
+    name: string;
+    last_status: string | null;
+    last_fetched_at: string | null;
+    last_error: string | null;
+  }>();
+
   return c.json({
     total: totalRow?.n ?? 0,
     last_published_at: totalRow?.last_published ?? null,
@@ -27,6 +48,7 @@ app.get("/", async (c) => {
     last24h: recent?.n ?? 0,
     by_category: Object.fromEntries((byCategory.results ?? []).map((r) => [r.category, r.n])),
     by_lang: Object.fromEntries((byLang.results ?? []).map((r) => [r.lang, r.n])),
+    stale_feeds: staleRows.results ?? [],
   });
 });
 

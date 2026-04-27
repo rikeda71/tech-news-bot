@@ -76,6 +76,21 @@ export default function App() {
           {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
           {stats?.last_fetched_at ? ` · 最終更新 ${formatRelative(stats.last_fetched_at)}` : ""}
         </span>
+        {stats && stats.stale_feeds.length > 0 && (
+          <details className="stale-warning">
+            <summary>⚠ {stats.stale_feeds.length} 件の収集に問題があります</summary>
+            <ul>
+              {stats.stale_feeds.map((f) => (
+                <li key={f.id}>
+                  <strong>{f.name}</strong>
+                  {f.last_status === "error" ? " · error" : " · stale"}
+                  {f.last_fetched_at ? ` · ${formatRelative(f.last_fetched_at)}` : " · 未取得"}
+                  {f.last_error && <div className="stale-error">{f.last_error}</div>}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </header>
 
       <div className="toolbar">
