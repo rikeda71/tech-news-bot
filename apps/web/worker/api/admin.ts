@@ -3,7 +3,7 @@ import type { Env } from "../types";
 import { collectAll, collectFeeds } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { setFeedEnabled } from "../db/feeds";
-import { getRun, listRuns } from "../db/runs";
+import { getRun, listRuns, startRun } from "../db/runs";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -43,8 +43,53 @@ app.post("/collect", async (c) => {
   if (!token || !isValidAdminToken(token, current, next)) {
     return c.json({ error: "unauthorized" }, 401);
   }
-  const result = await collectAll(c.env);
-  return c.json(result);
+
+  // body は任意。不正 JSON は 400 を返す。
+  const rawBody = await c.req.text().catch(() => "");
+  let feedIds: readonly string[] | undefined;
+  if (rawBody.trim() !== "") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawBody);
+    } catch {
+      return c.json({ error: "invalid JSON body" }, 400);
+    }
+    const body = parsed as Record<string, unknown>;
+    if ("feed_id" in body) {
+      if (typeof body.feed_id !== "string") {
+        return c.json({ error: "feed_id must be a string" }, 400);
+      }
+      const feedId = body.feed_id;
+      // feeds.yaml に存在し enabled なフィードかチェックする
+      const allFeeds = loadAllFeeds();
+      const matched = allFeeds.find((f) => f.id === feedId && f.enabled);
+      if (!matched) {
+        return c.json({ error: `feed not found: ${feedId}` }, 404);
+      }
+      feedIds = [feedId];
+    }
+  }
+
+  // startRun を先に実行して run_id を即時返す。収集は waitUntil で非同期に実行する。
+  const startedAt = new Date().toISOString();
+  let runId: number;
+  try {
+    const feedCount = feedIds ? feedIds.length : loadAllFeeds().filter((f) => f.enabled).length;
+    const { run_id } = await startRun(c.env.DB, startedAt, feedCount);
+    runId = run_id;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[admin/collect] startRun failed: ${msg}`);
+    return c.json({ error: "failed to start run" }, 500);
+  }
+
+  c.executionCtx.waitUntil(
+    collectAll(c.env, { runId, feedIds }).catch((err) => {
+      console.error("[admin/collect] collectAll failed", err);
+    }),
+  );
+
+  return c.json({ ok: true, run_id: runId, async: true });
 });
 
 app.post("/collector/run", async (c) => {

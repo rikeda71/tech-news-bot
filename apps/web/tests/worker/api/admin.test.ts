@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env, SELF } from "cloudflare:test";
 import { syncFeeds } from "../../../worker/db/feeds";
-import { finishRun, recordRunFeed, startRun } from "../../../worker/db/runs";
+import { finishRun, listRuns, recordRunFeed, startRun } from "../../../worker/db/runs";
 import type { FeedConfig } from "../../../worker/types";
 
 const TEST_FEED: FeedConfig = {
@@ -166,6 +166,106 @@ describe("POST /api/admin/collector/run", () => {
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("feed_ids must be an array");
   });
+});
+
+describe("POST /api/admin/collect", () => {
+  it("401: トークンなし → 401", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("401: 不正トークン → 401", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { authorization: "Bearer wrong-token" },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("400: 不正 JSON → 400", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { ...AUTH_HEADER, "content-type": "application/json" },
+      body: "{ invalid json",
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("invalid JSON body");
+  });
+
+  it("404: 存在しない feed_id → 404", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { ...AUTH_HEADER, "content-type": "application/json" },
+      body: JSON.stringify({ feed_id: "no-such-feed-xyz" }),
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/feed not found/);
+  });
+
+  it("200: body なし (全件) → ok=true と run_id と async=true を返す", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { ...AUTH_HEADER },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; run_id: number; async: boolean };
+    expect(body.ok).toBe(true);
+    expect(typeof body.run_id).toBe("number");
+    expect(body.async).toBe(true);
+
+    // waitUntil の完了 (completed_at が設定される) を待ち、collector_runs に行が作られていることを確認する。
+    // 完了を待つことで次テストの beforeEach(reset) との競合を防ぐ。
+    const runId = body.run_id;
+    const deadline = Date.now() + 25_000;
+    let runs: Awaited<ReturnType<typeof listRuns>> = [];
+    while (Date.now() < deadline) {
+      await new Promise<void>((r) => setTimeout(r, 500));
+      runs = await listRuns(env.DB, 10);
+      const created = runs.find((r) => r.id === runId);
+      if (created?.completed_at) break;
+    }
+    expect(runs.length).toBeGreaterThan(0);
+    const created = runs.find((r) => r.id === runId);
+    expect(created).toBeDefined();
+    expect(created?.completed_at).toBeTruthy();
+  }, 30_000);
+
+  it("200: feed_id 指定 → ok=true と run_id を返し collector_run_feeds に該当 feed のみ記録される", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collect", {
+      method: "POST",
+      headers: { ...AUTH_HEADER, "content-type": "application/json" },
+      body: JSON.stringify({ feed_id: REAL_FEED_ID }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; run_id: number; async: boolean };
+    expect(body.ok).toBe(true);
+    expect(typeof body.run_id).toBe("number");
+    expect(body.async).toBe(true);
+
+    // waitUntil が完了するまでポーリングして collector_run_feeds を確認する。
+    // テスト環境では waitUntil は外部 fetch のタイムアウト後に完了する。
+    const runId = body.run_id;
+    const deadline = Date.now() + 25_000;
+    let detail: { results: { feed_id: string }[] } | null = null;
+    while (Date.now() < deadline) {
+      await new Promise<void>((r) => setTimeout(r, 500));
+      detail = await env.DB.prepare("SELECT * FROM collector_run_feeds WHERE run_id = ?1")
+        .bind(runId)
+        .all<{ feed_id: string }>();
+      if (detail.results.length > 0) break;
+    }
+    // 指定した feed_id の記録が存在し、他の feed は含まれていないことを確認する
+    expect(detail?.results.length).toBeGreaterThanOrEqual(1);
+    const feedIds = detail?.results.map((r) => r.feed_id) ?? [];
+    expect(feedIds).toContain(REAL_FEED_ID);
+    // feedIds フィルタが有効であれば REAL_FEED_ID 以外は記録されない
+    const unexpected = feedIds.filter((id) => id !== REAL_FEED_ID);
+    expect(unexpected).toHaveLength(0);
+  }, 30_000);
 });
 
 describe("GET /api/admin/runs", () => {
