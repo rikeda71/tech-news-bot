@@ -59,6 +59,8 @@ export interface ListArticlesParams {
   lang?: FeedLang;
   feedId?: string;
   q?: string;
+  dateFrom?: string;
+  dateTo?: string;
   limit: number;
   cursor?: { publishedAt: string; id: number } | null;
 }
@@ -87,6 +89,14 @@ export async function listArticles(
   if (params.feedId) {
     conds.push(`a.feed_id = ?${binds.length + 1}`);
     binds.push(params.feedId);
+  }
+  if (params.dateFrom) {
+    conds.push(`a.published_at >= ?${binds.length + 1}`);
+    binds.push(params.dateFrom);
+  }
+  if (params.dateTo) {
+    conds.push(`a.published_at <= ?${binds.length + 1}`);
+    binds.push(params.dateTo);
   }
   if (params.cursor) {
     conds.push(

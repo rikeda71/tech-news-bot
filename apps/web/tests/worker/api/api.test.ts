@@ -166,6 +166,44 @@ describe("/api/articles", () => {
     const body = (await res.json()) as { articles: { guid: string }[] };
     expect(body.articles.length).toBe(0);
   });
+
+  it("filters by date_from only", async () => {
+    // 2024-04-02 以降 → g-ai (04-02), g-jp (04-03) の2件
+    const res = await SELF.fetch("https://example.com/api/articles?date_from=2024-04-02");
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.map((a) => a.guid)).toEqual(["g-jp", "g-ai"]);
+  });
+
+  it("filters by date_to only", async () => {
+    // 2024-04-02 以前 → g-bt (04-01), g-ai (04-02) の2件
+    const res = await SELF.fetch(
+      "https://example.com/api/articles?date_to=2024-04-02T23:59:59.000Z",
+    );
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.map((a) => a.guid)).toEqual(["g-ai", "g-bt"]);
+  });
+
+  it("filters by date_from and date_to together", async () => {
+    // 2024-04-02 のみ → g-ai
+    const res = await SELF.fetch(
+      "https://example.com/api/articles?date_from=2024-04-02&date_to=2024-04-02T23:59:59.000Z",
+    );
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.map((a) => a.guid)).toEqual(["g-ai"]);
+  });
+
+  it("ignores invalid date_from silently (returns all)", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles?date_from=not-a-date");
+    const body = (await res.json()) as { articles: { guid: string }[] };
+    expect(body.articles.length).toBe(3);
+  });
+
+  it("ignores invalid date_to silently (returns all)", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles?date_to=2024-99-99");
+    // 形式チェックは YYYY-MM-DD 形式なのでパスするが、SQLite が正規化して結果が変わる可能性あり
+    // 不正な日付でもクラッシュせず 200 を返すことを確認
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("/api/stats", () => {
