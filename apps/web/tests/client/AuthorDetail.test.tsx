@@ -48,7 +48,14 @@ describe("AuthorDetail", () => {
 
   it("ローディング表示", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
-    render(<AuthorDetail author="Author A" onBack={noop} onFilterByCategory={noop} onFilterByFeedId={noop} />);
+    render(
+      <AuthorDetail
+        author="Author A"
+        onBack={noop}
+        onFilterByCategory={noop}
+        onFilterByFeedId={noop}
+      />,
+    );
     expect(screen.getByText(/読み込み中/)).toBeTruthy();
   });
 
@@ -57,7 +64,14 @@ describe("AuthorDetail", () => {
       makeArticle({ id: i + 1, guid: `guid-${i + 1}`, title: `記事 ${i + 1}` }),
     );
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeArticlesResponse(articles)));
-    render(<AuthorDetail author="Author A" onBack={noop} onFilterByCategory={noop} onFilterByFeedId={noop} />);
+    render(
+      <AuthorDetail
+        author="Author A"
+        onBack={noop}
+        onFilterByCategory={noop}
+        onFilterByFeedId={noop}
+      />,
+    );
     // h1 に著者名
     expect(screen.getByRole("heading", { level: 1, name: "Author A" })).toBeTruthy();
     // 記事タイトルが全て表示される
@@ -70,17 +84,28 @@ describe("AuthorDetail", () => {
 
   it("0 件で「記事がありません」が表示される", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeArticlesResponse([])));
-    render(<AuthorDetail author="Author A" onBack={noop} onFilterByCategory={noop} onFilterByFeedId={noop} />);
+    render(
+      <AuthorDetail
+        author="Author A"
+        onBack={noop}
+        onFilterByCategory={noop}
+        onFilterByFeedId={noop}
+      />,
+    );
     const empty = await screen.findByText("記事がありません");
     expect(empty).toBeTruthy();
   });
 
   it("エラー (500) 時にエラーメッセージを表示する", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: false, status: 500 }),
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    render(
+      <AuthorDetail
+        author="Author A"
+        onBack={noop}
+        onFilterByCategory={noop}
+        onFilterByFeedId={noop}
+      />,
     );
-    render(<AuthorDetail author="Author A" onBack={noop} onFilterByCategory={noop} onFilterByFeedId={noop} />);
     const err = await screen.findByText(/取得エラー/);
     expect(err).toBeTruthy();
   });
@@ -89,7 +114,14 @@ describe("AuthorDetail", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeArticlesResponse([])));
     const onBack = vi.fn();
     const user = userEvent.setup();
-    render(<AuthorDetail author="Author A" onBack={onBack} onFilterByCategory={noop} onFilterByFeedId={noop} />);
+    render(
+      <AuthorDetail
+        author="Author A"
+        onBack={onBack}
+        onFilterByCategory={noop}
+        onFilterByFeedId={noop}
+      />,
+    );
     // ボタンが出るまで待つ
     const backBtn = screen.getByRole("button", { name: /一覧に戻る/ });
     await user.click(backBtn);
@@ -99,7 +131,14 @@ describe("AuthorDetail", () => {
   it("fetch の URL に著者名が URL エンコードされて含まれる", async () => {
     const mockFetch = vi.fn().mockResolvedValue(makeArticlesResponse([]));
     vi.stubGlobal("fetch", mockFetch);
-    render(<AuthorDetail author="Author A" onBack={noop} onFilterByCategory={noop} onFilterByFeedId={noop} />);
+    render(
+      <AuthorDetail
+        author="Author A"
+        onBack={noop}
+        onFilterByCategory={noop}
+        onFilterByFeedId={noop}
+      />,
+    );
     await screen.findByText("記事がありません");
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/articles/by-author/Author%20A"),

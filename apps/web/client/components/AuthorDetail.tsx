@@ -10,8 +10,7 @@ interface Props {
 }
 
 export function AuthorDetail({ author, onBack, onFilterByCategory, onFilterByFeedId }: Props) {
-  const { articles, isLoading, error, hasMore, loadMore, loadingMore } =
-    useAuthorArticles(author);
+  const { articles, isLoading, error, hasMore, loadMore, loadingMore } = useAuthorArticles(author);
 
   return (
     <div className="author-detail">
@@ -20,9 +19,7 @@ export function AuthorDetail({ author, onBack, onFilterByCategory, onFilterByFee
           ← 一覧に戻る
         </button>
         <h1 className="author-detail-name">{author}</h1>
-        {!isLoading && !error && (
-          <span className="author-detail-count">{articles.length} 件</span>
-        )}
+        {!isLoading && !error && <span className="author-detail-count">{articles.length} 件</span>}
       </div>
 
       {isLoading && <div className="loader">読み込み中…</div>}
