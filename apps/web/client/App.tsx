@@ -25,6 +25,8 @@ function readFromUrl(): {
   lang: FeedLang | "";
   feedId: string;
   q: string;
+  dateFrom: string;
+  dateTo: string;
 } {
   const params = new URLSearchParams(window.location.search);
   return {
@@ -32,6 +34,8 @@ function readFromUrl(): {
     lang: (params.get("lang") as FeedLang | null) ?? "",
     feedId: params.get("feed_id") ?? "",
     q: params.get("q") ?? "",
+    dateFrom: params.get("date_from") ?? "",
+    dateTo: params.get("date_to") ?? "",
   };
 }
 
@@ -40,12 +44,16 @@ function buildSearch(
   lang: FeedLang | "",
   feedId: string,
   q: string,
+  dateFrom: string,
+  dateTo: string,
 ): string {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
   if (lang) params.set("lang", lang);
   if (feedId) params.set("feed_id", feedId);
   if (q) params.set("q", q);
+  if (dateFrom) params.set("date_from", dateFrom);
+  if (dateTo) params.set("date_to", dateTo);
   const s = params.toString();
   return s ? `?${s}` : window.location.pathname;
 }
@@ -55,6 +63,8 @@ export default function App() {
   const [lang, setLang] = useState<FeedLang | "">(() => readFromUrl().lang);
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
   const [q, setQ] = useState<string>(() => readFromUrl().q);
+  const [dateFrom, setDateFrom] = useState<string>(() => readFromUrl().dateFrom);
+  const [dateTo, setDateTo] = useState<string>(() => readFromUrl().dateTo);
 
   const { feeds } = useFeeds();
   const { stats } = useStats();
@@ -67,6 +77,8 @@ export default function App() {
       setLang(next.lang);
       setFeedId(next.feedId);
       setQ(next.q);
+      setDateFrom(next.dateFrom);
+      setDateTo(next.dateTo);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -79,9 +91,11 @@ export default function App() {
       nextLang: FeedLang | "",
       nextFeedId: string,
       nextQ: string,
+      nextDateFrom: string,
+      nextDateTo: string,
     ) => {
-      const next = buildSearch(nextCategory, nextLang, nextFeedId, nextQ);
-      const current = buildSearch(category, lang, feedId, q);
+      const next = buildSearch(nextCategory, nextLang, nextFeedId, nextQ, nextDateFrom, nextDateTo);
+      const current = buildSearch(category, lang, feedId, q, dateFrom, dateTo);
       // 同じ URL なら重複履歴を作らない
       if (next !== current) {
         window.history.pushState(null, "", next);
@@ -90,41 +104,53 @@ export default function App() {
       setLang(nextLang);
       setFeedId(nextFeedId);
       setQ(nextQ);
+      setDateFrom(nextDateFrom);
+      setDateTo(nextDateTo);
     },
-    [category, lang, feedId, q],
+    [category, lang, feedId, q, dateFrom, dateTo],
   );
 
   const handleCategoryChange = useCallback(
-    (v: FeedCategory | "") => pushFilter(v, lang, v ? feedId : "", q),
-    [pushFilter, lang, feedId, q],
+    (v: FeedCategory | "") => pushFilter(v, lang, v ? feedId : "", q, dateFrom, dateTo),
+    [pushFilter, lang, feedId, q, dateFrom, dateTo],
   );
 
   const handleLangChange = useCallback(
-    (v: FeedLang | "") => pushFilter(category, v, v ? feedId : "", q),
-    [pushFilter, category, feedId, q],
+    (v: FeedLang | "") => pushFilter(category, v, v ? feedId : "", q, dateFrom, dateTo),
+    [pushFilter, category, feedId, q, dateFrom, dateTo],
   );
 
   const handleFeedChange = useCallback(
-    (id: string) => pushFilter(category, lang, id, q),
-    [pushFilter, category, lang, q],
+    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo),
+    [pushFilter, category, lang, q, dateFrom, dateTo],
   );
 
   const handleQChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, v),
-    [pushFilter, category, lang, feedId],
+    (v: string) => pushFilter(category, lang, feedId, v, dateFrom, dateTo),
+    [pushFilter, category, lang, feedId, dateFrom, dateTo],
   );
 
-  const handleClear = useCallback(() => pushFilter("", "", "", q), [pushFilter, q]);
+  const handleDateFromChange = useCallback(
+    (v: string) => pushFilter(category, lang, feedId, q, v, dateTo),
+    [pushFilter, category, lang, feedId, q, dateTo],
+  );
+
+  const handleDateToChange = useCallback(
+    (v: string) => pushFilter(category, lang, feedId, q, dateFrom, v),
+    [pushFilter, category, lang, feedId, q, dateFrom],
+  );
+
+  const handleClear = useCallback(() => pushFilter("", "", "", q, "", ""), [pushFilter, q]);
 
   // カード上のバッジ/取得元クリックでフィルタを適用する
   const handleFilterByCategory = useCallback(
-    (c: FeedCategory) => pushFilter(c, lang, "", q),
-    [pushFilter, lang, q],
+    (c: FeedCategory) => pushFilter(c, lang, "", q, dateFrom, dateTo),
+    [pushFilter, lang, q, dateFrom, dateTo],
   );
 
   const handleFilterByFeedId = useCallback(
-    (id: string) => pushFilter(category, lang, id, q),
-    [pushFilter, category, lang, q],
+    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo),
+    [pushFilter, category, lang, q, dateFrom, dateTo],
   );
 
   const query = useMemo(
@@ -133,8 +159,10 @@ export default function App() {
       lang: lang || undefined,
       feedId: feedId || undefined,
       q: q || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     }),
-    [category, lang, feedId, q],
+    [category, lang, feedId, q, dateFrom, dateTo],
   );
 
   const { articles, loading, loadingMore, error, nextCursor, loadMore } = useArticles(query);
@@ -172,9 +200,13 @@ export default function App() {
           lang={lang}
           feedId={feedId}
           feeds={feeds}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
           onCategoryChange={handleCategoryChange}
           onLangChange={handleLangChange}
           onFeedChange={handleFeedChange}
+          onDateFromChange={handleDateFromChange}
+          onDateToChange={handleDateToChange}
           onClear={handleClear}
         />
       </div>
