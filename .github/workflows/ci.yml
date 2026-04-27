@@ -23,3 +23,28 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+
+  # Vite+ (https://viteplus.dev/) parallel verification.
+  # Uses `vp` CLI which wraps Vite/Vitest/Oxc/Rolldown. Informational; deploy.yml uses pnpm path.
+  viteplus:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm cf-typegen
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: "24"
+          cache: true
+      - name: vp check (lint + format + typecheck)
+        run: vp check
+      - name: vp build
+        run: vp run build
+      - name: vp test
+        run: vp run test
