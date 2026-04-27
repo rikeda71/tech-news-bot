@@ -109,14 +109,10 @@ export async function sendAlert(env: Env, result: AlertRunResult): Promise<void>
       signal: controller.signal,
     });
     if (!res.ok) {
-      console.error(
-        `[alert] sendAlert webhook returned non-2xx: ${res.status} ${res.statusText}`,
-      );
+      console.error(`[alert] sendAlert webhook returned non-2xx: ${res.status} ${res.statusText}`);
     }
   } catch (err) {
-    console.error(
-      `[alert] sendAlert failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    console.error(`[alert] sendAlert failed: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     clearTimeout(timer);
   }
