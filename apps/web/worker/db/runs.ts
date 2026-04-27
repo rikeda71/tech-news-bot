@@ -1,25 +1,28 @@
-import type {
-  CollectorRunDbRow,
-  CollectorRunFeedDbRow,
-  CronHealthDbRow,
-  FeedFailureDbRow,
-  FeedHealthRunDbRow,
-} from "./types";
+export interface RunRow {
+  id: number;
+  started_at: string;
+  completed_at: string | null;
+  feeds_total: number | null;
+  feeds_ok: number | null;
+  feeds_failed: number | null;
+  articles_inserted: number | null;
+  error: string | null;
+}
 
-/** collector_runs の公開型エイリアス */
-export type RunRow = CollectorRunDbRow;
-
-/** collector_run_feeds の公開型エイリアス */
-export type RunFeedRow = CollectorRunFeedDbRow;
-
-/** getFeedHealth (runs) の公開型エイリアス */
-export type FeedHealthRow = FeedHealthRunDbRow;
+export interface RunFeedRow {
+  run_id: number;
+  feed_id: string;
+  status: "ok" | "failed" | "skipped";
+  articles_inserted: number;
+  duration_ms: number;
+  error: string | null;
+}
 
 export async function startRun(
   db: D1Database,
   started_at: string,
   feeds_total: number,
-): Promise<{ run_id: number }> {
+): Promise<{ run_id: number; d1Meta: D1Result["meta"] }> {
   const result = await db
     .prepare(
       `INSERT INTO collector_runs (started_at, feeds_total)
@@ -28,7 +31,7 @@ export async function startRun(
     .bind(started_at, feeds_total)
     .run();
   const run_id = result.meta.last_row_id as number;
-  return { run_id };
+  return { run_id, d1Meta: result.meta };
 }
 
 export async function recordRunFeed(
@@ -39,16 +42,17 @@ export async function recordRunFeed(
   articles_inserted: number,
   duration_ms: number,
   error?: string,
-): Promise<void> {
+): Promise<D1Result["meta"]> {
   // 200 文字で切り詰め。長いスタックトレースを D1 に書かないため。
   const errorTruncated = error ? error.slice(0, 200) : null;
-  await db
+  const result = await db
     .prepare(
       `INSERT INTO collector_run_feeds (run_id, feed_id, status, articles_inserted, duration_ms, error)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
     )
     .bind(run_id, feed_id, status, articles_inserted, duration_ms, errorTruncated)
     .run();
+  return result.meta;
 }
 
 export async function finishRun(
@@ -59,9 +63,9 @@ export async function finishRun(
   feeds_failed: number,
   articles_inserted: number,
   error?: string,
-): Promise<void> {
+): Promise<D1Result["meta"]> {
   const errorTruncated = error ? error.slice(0, 200) : null;
-  await db
+  const result = await db
     .prepare(
       `UPDATE collector_runs
        SET completed_at = ?1,
@@ -73,6 +77,7 @@ export async function finishRun(
     )
     .bind(completed_at, feeds_ok, feeds_failed, articles_inserted, errorTruncated, run_id)
     .run();
+  return result.meta;
 }
 
 export async function getLatestCompletedRun(db: D1Database): Promise<RunRow | null> {
@@ -102,6 +107,22 @@ export async function listRuns(db: D1Database, limit = 20): Promise<RunRow[]> {
     .bind(safeLimit)
     .all<RunRow>();
   return result.results ?? [];
+}
+
+interface CronHealthRow {
+  runs_total: number;
+  runs_succeeded: number;
+  runs_failed: number;
+  avg_run_ms: number | null;
+  articles_collected: number;
+}
+
+interface FeedFailureRow {
+  feed_id: string;
+  failures: number;
+  successes: number;
+  last_error: string | null;
+  last_attempted_at: string | null;
 }
 
 // collector_runs を集計して運用メトリクスを返す。1 クエリで完結させ D1 CPU を節約する。
@@ -134,7 +155,7 @@ export async function getCronHealth(
        WHERE started_at >= ?1`,
     )
     .bind(since)
-    .first<CronHealthDbRow>();
+    .first<CronHealthRow>();
 
   return {
     window_days: days,
@@ -151,7 +172,7 @@ export async function getFeedFailures(
   db: D1Database,
   days: 7 | 30,
   limit: number,
-): Promise<FeedFailureDbRow[]> {
+): Promise<FeedFailureRow[]> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   const safeLimit = Math.min(Math.max(limit, 1), 100);
   const result = await db
@@ -171,8 +192,20 @@ export async function getFeedFailures(
        LIMIT ?2`,
     )
     .bind(since, safeLimit)
-    .all<FeedFailureDbRow>();
+    .all<FeedFailureRow>();
   return result.results ?? [];
+}
+
+export interface FeedHealthRow {
+  total_runs: number;
+  successful_runs: number;
+  failed_runs: number;
+  last_run_at: string | null;
+  last_run_status: string | null;
+  last_error_at: string | null;
+  last_error_message: string | null;
+  avg_duration_ms: number | null;
+  articles_inserted_total: number;
 }
 
 /**

@@ -6,12 +6,6 @@ import type {
   FeedHealth,
   FeedLang,
 } from "../types";
-import type {
-  CategorySummaryDbRow,
-  FeedDiagnosticDbRow,
-  FeedHealthFeedsDbRow,
-  FeedWithStatsDbRow,
-} from "./types";
 
 export interface FeedHeaders {
   last_etag: string | null;
@@ -234,7 +228,16 @@ export async function listFeedsWithStats(
   const rows = await db
     .prepare(sql)
     .bind(...binds)
-    .all<FeedWithStatsDbRow>();
+    .all<{
+      id: string;
+      name: string;
+      url: string;
+      category: string;
+      lang: string;
+      enabled: number;
+      articles_30d: number;
+      last_published_at: string | null;
+    }>();
 
   return (rows.results ?? []).map((r) => ({
     id: r.id,
@@ -266,7 +269,16 @@ export async function findFeedWithStats(db: D1Database, id: string): Promise<Fee
        GROUP BY f.id, f.name, f.url, f.category, f.lang, f.enabled`,
     )
     .bind(id, threshold)
-    .first<FeedWithStatsDbRow>();
+    .first<{
+      id: string;
+      name: string;
+      url: string;
+      category: string;
+      lang: string;
+      enabled: number;
+      articles_30d: number;
+      last_published_at: string | null;
+    }>();
 
   if (!row) return null;
 
@@ -320,7 +332,12 @@ export async function getCategoriesSummary(db: D1Database): Promise<CategorySumm
        GROUP BY f.category`,
     )
     .bind(threshold)
-    .all<CategorySummaryDbRow>();
+    .all<{
+      category: string;
+      feeds_count: number;
+      articles_30d: number;
+      last_published_at: string | null;
+    }>();
 
   const dbMap = new Map(
     (rows.results ?? []).map((r) => {
@@ -384,7 +401,23 @@ export async function getFeedsDiagnostics(db: D1Database): Promise<FeedDiagnosti
        ORDER BY f.id ASC`,
     )
     .bind(threshold)
-    .all<FeedDiagnosticDbRow>();
+    .all<{
+      id: string;
+      name: string;
+      url: string;
+      category: string;
+      lang: string;
+      enabled: number;
+      last_fetched_at: string | null;
+      last_status: string | null;
+      last_error: string | null;
+      last_etag: string | null;
+      last_modified: string | null;
+      fetch_error_count: number;
+      articles_total: number;
+      articles_30d: number;
+      last_published_at: string | null;
+    }>();
 
   return (rows.results ?? []).map((r) => ({
     id: r.id,
@@ -450,7 +483,13 @@ export async function getFeedHealth(db: D1Database, feeds: FeedConfig[]): Promis
         AND a.published_at >= datetime('now', '-7 days')
        GROUP BY f.id`,
     )
-    .all<FeedHealthFeedsDbRow>();
+    .all<{
+      id: string;
+      last_success_at: string | null;
+      last_failure_at: string | null;
+      consecutive_failures: number;
+      articles_last_7d: number;
+    }>();
 
   const dbMap = new Map(rows.results.map((r) => [r.id, r]));
 
