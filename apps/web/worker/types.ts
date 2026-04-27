@@ -120,3 +120,21 @@ export interface FeedFailure {
   last_error: string | null;
   last_attempted_at: string | null;
 }
+
+export interface FeedDiagnostic {
+  id: string;
+  name: string;
+  url: string;
+  category: FeedCategory;
+  lang: FeedLang;
+  enabled: boolean;
+  last_fetched_at: string | null;
+  last_status: string | null;
+  last_error: string | null;
+  last_etag: string | null;
+  last_modified: string | null;
+  fetch_error_count: number;
+  articles_total: number;
+  articles_30d: number;
+  last_published_at: string | null;
+}
