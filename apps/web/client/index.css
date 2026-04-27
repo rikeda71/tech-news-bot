@@ -1245,3 +1245,73 @@ kbd {
   padding: 16px;
   margin-top: 0;
 }
+
+/* Categories overview */
+
+.categories-overview {
+  padding: 16px 0;
+}
+
+.categories-overview-title {
+  font-size: 1.1rem;
+  margin: 0 0 16px;
+}
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 720px) {
+  .categories-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.category-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--fg);
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+
+.category-card:hover {
+  background: var(--bg-elev-2);
+}
+
+.category-card-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.category-card-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.category-card-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.category-card-stat-label {
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+}
+
+.category-card-stat-value {
+  font-weight: 600;
+}

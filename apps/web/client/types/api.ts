@@ -62,3 +62,15 @@ export interface CalendarDay {
 export interface CalendarResponse {
   days: CalendarDay[];
 }
+
+export interface CategorySummary {
+  id: FeedCategory;
+  label: string;
+  feeds_count: number;
+  articles_30d: number;
+  last_published_at: string | null;
+}
+
+export interface CategoriesResponse {
+  categories: CategorySummary[];
+}
