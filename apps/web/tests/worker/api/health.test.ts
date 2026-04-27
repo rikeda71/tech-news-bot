@@ -2,7 +2,8 @@ import { describe, expect, it } from "vite-plus/test";
 import { env, SELF } from "cloudflare:test";
 import { insertArticles } from "../../../worker/db/articles";
 import { syncFeeds, recordFetchSuccess, recordFetchError } from "../../../worker/db/feeds";
-import type { FeedConfig, FeedHealth } from "../../../worker/types";
+import { startRun, finishRun } from "../../../worker/db/runs";
+import type { FeedConfig, FeedHealth, HealthResponse } from "../../../worker/types";
 
 const FEED: FeedConfig = {
   id: "health-test-feed",
@@ -13,80 +14,134 @@ const FEED: FeedConfig = {
   enabled: true,
 };
 
-describe("/api/health enriched response", () => {
-  it("returns 200 with correct shape when db is empty", async () => {
+const DISABLED_FEED: FeedConfig = {
+  id: "health-disabled-feed",
+  name: "Health Disabled Feed",
+  url: "https://x.test/health-disabled",
+  category: "bigtech",
+  lang: "en",
+  enabled: false,
+};
+
+describe("/api/health", () => {
+  it("returns 200 with ok: true", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      status: string;
-      now: string;
-      db: {
-        articles_total: number;
-        feeds_total: number;
-        feeds_enabled: number;
-        latest_published_at: string | null;
-        latest_fetched_at: string | null;
-      };
-    };
-    expect(body.status).toBe("ok");
-    expect(typeof body.now).toBe("string");
-    // empty db: latest_* must be null
-    expect(body.db.articles_total).toBe(0);
-    expect(body.db.latest_published_at).toBeNull();
-    expect(body.db.latest_fetched_at).toBeNull();
+    const body = (await res.json()) as HealthResponse;
+    expect(body.ok).toBe(true);
   });
 
-  it("reflects inserted article and feed counts", async () => {
+  it("now is ISO 8601 format", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.now).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("version is present", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.version).toBe("0.1");
+  });
+
+  it("feeds.total and feeds.enabled are 0 when db is empty", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.feeds.total).toBe(0);
+    expect(body.feeds.enabled).toBe(0);
+  });
+
+  it("articles.total and articles.last_24h are 0 when db is empty", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.articles.total).toBe(0);
+    expect(body.articles.last_24h).toBe(0);
+  });
+
+  it("last_cron_run is null when no runs exist", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.last_cron_run).toBeNull();
+  });
+
+  it("reflects feeds.total and feeds.enabled with fixture data", async () => {
+    await syncFeeds(env.DB, [FEED, DISABLED_FEED]);
+
+    const res = await SELF.fetch("https://example.com/api/health");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.feeds.total).toBe(2);
+    expect(body.feeds.enabled).toBe(1);
+  });
+
+  it("reflects articles.total and articles.last_24h with fixture data", async () => {
     await syncFeeds(env.DB, [FEED]);
+    const recentAt = new Date(Date.now() - 1000 * 60 * 60).toISOString(); // 1 hour ago
+    const oldAt = new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(); // 48 hours ago
     await insertArticles(env.DB, [
       {
         guid: "health-a1",
-        feed_id: "health-test-feed",
-        title: "Health Article",
+        feed_id: FEED.id,
+        title: "Recent Article",
         url: "https://x.test/health/1",
         summary: null,
         author: null,
-        published_at: "2026-04-28T10:00:00.000Z",
+        published_at: recentAt,
+        category: "bigtech",
+        lang: "en",
+      },
+      {
+        guid: "health-a2",
+        feed_id: FEED.id,
+        title: "Old Article",
+        url: "https://x.test/health/2",
+        summary: null,
+        author: null,
+        published_at: oldAt,
         category: "bigtech",
         lang: "en",
       },
     ]);
 
     const res = await SELF.fetch("https://example.com/api/health");
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      status: string;
-      now: string;
-      db: {
-        articles_total: number;
-        feeds_total: number;
-        feeds_enabled: number;
-        latest_published_at: string | null;
-        latest_fetched_at: string | null;
-      };
-    };
-    expect(body.status).toBe("ok");
-    expect(body.db.articles_total).toBe(1);
-    expect(body.db.feeds_total).toBe(1);
-    expect(body.db.feeds_enabled).toBe(1);
-    expect(body.db.latest_published_at).toBe("2026-04-28T10:00:00.000Z");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.articles.total).toBe(2);
+    expect(body.articles.last_24h).toBe(1);
   });
 
-  it("counts disabled feeds separately", async () => {
-    const disabledFeed: FeedConfig = { ...FEED, id: "health-disabled-feed", enabled: false };
-    await syncFeeds(env.DB, [FEED, disabledFeed]);
+  it("last_cron_run returns most recent completed run when 2 runs exist", async () => {
+    const run1StartedAt = "2026-04-28T06:00:00.000Z";
+    const run1CompletedAt = "2026-04-28T06:01:00.000Z";
+    const run2StartedAt = "2026-04-28T09:00:00.000Z";
+    const run2CompletedAt = "2026-04-28T09:01:30.000Z";
+
+    const { run_id: id1 } = await startRun(env.DB, run1StartedAt, 40);
+    await finishRun(env.DB, id1, run1CompletedAt, 38, 2, 10);
+
+    const { run_id: id2 } = await startRun(env.DB, run2StartedAt, 41);
+    await finishRun(env.DB, id2, run2CompletedAt, 39, 2, 15);
 
     const res = await SELF.fetch("https://example.com/api/health");
-    const body = (await res.json()) as {
-      db: { feeds_total: number; feeds_enabled: number };
-    };
-    expect(body.db.feeds_total).toBe(2);
-    expect(body.db.feeds_enabled).toBe(1);
+    const body = (await res.json()) as HealthResponse;
+
+    expect(body.last_cron_run).not.toBeNull();
+    expect(body.last_cron_run?.completed_at).toBe(run2CompletedAt);
+    expect(body.last_cron_run?.feeds_total).toBe(41);
+    expect(body.last_cron_run?.feeds_ok).toBe(39);
+    expect(body.last_cron_run?.feeds_failed).toBe(2);
+    expect(body.last_cron_run?.articles_inserted).toBe(15);
   });
 
-  it("sets Cache-Control: public, max-age=10", async () => {
+  it("last_cron_run is null when only incomplete runs exist", async () => {
+    // 完了していない run (completed_at = NULL) だけ入れる
+    await startRun(env.DB, "2026-04-28T09:00:00.000Z", 41);
+
     const res = await SELF.fetch("https://example.com/api/health");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=10");
+    const body = (await res.json()) as HealthResponse;
+    expect(body.last_cron_run).toBeNull();
+  });
+
+  it("sets Cache-Control: no-cache", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    expect(res.headers.get("Cache-Control")).toBe("no-cache");
   });
 });
 

@@ -203,6 +203,19 @@ export async function getArticleById(db: D1Database, id: number): Promise<Articl
   return result ?? null;
 }
 
+export async function countAllArticles(db: D1Database): Promise<number> {
+  const row = await db.prepare(`SELECT COUNT(*) AS c FROM articles`).first<{ c: number }>();
+  return row?.c ?? 0;
+}
+
+export async function countArticlesSince(db: D1Database, isoDate: string): Promise<number> {
+  const row = await db
+    .prepare(`SELECT COUNT(*) AS c FROM articles WHERE published_at >= ?1`)
+    .bind(isoDate)
+    .first<{ c: number }>();
+  return row?.c ?? 0;
+}
+
 export async function deleteOlderThan(db: D1Database, retentionDays: number): Promise<number> {
   if (!Number.isFinite(retentionDays) || retentionDays <= 0) return 0;
   // SQLite で安全のため整数化、少数日は切り捨て

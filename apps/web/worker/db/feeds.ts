@@ -101,6 +101,18 @@ export async function setFeedEnabled(
   return { found: (result.meta.changes ?? 0) > 0 };
 }
 
+export async function countFeeds(db: D1Database, opts?: { enabled?: boolean }): Promise<number> {
+  if (opts?.enabled === undefined) {
+    const row = await db.prepare(`SELECT COUNT(*) AS c FROM feeds`).first<{ c: number }>();
+    return row?.c ?? 0;
+  }
+  const row = await db
+    .prepare(`SELECT COUNT(*) AS c FROM feeds WHERE enabled = ?1`)
+    .bind(opts.enabled ? 1 : 0)
+    .first<{ c: number }>();
+  return row?.c ?? 0;
+}
+
 /** D1 で enabled=1 の feed id を Set で返す。collector での in-memory check 用。 */
 export async function getEnabledFeedIds(db: D1Database): Promise<Set<string>> {
   const rows = await db.prepare(`SELECT id FROM feeds WHERE enabled = 1`).all<{ id: string }>();
