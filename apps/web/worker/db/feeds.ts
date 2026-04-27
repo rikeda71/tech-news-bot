@@ -1,4 +1,4 @@
-import type { FeedConfig, FeedHealth } from "../types";
+import type { FeedCategory, FeedConfig, FeedHealth, FeedLang } from "../types";
 
 export interface FeedHeaders {
   last_etag: string | null;
@@ -151,6 +151,97 @@ export async function getFeedStreaks(db: D1Database): Promise<FeedStreak[]> {
     .prepare(`SELECT id, consecutive_failures FROM feeds WHERE enabled = 1`)
     .all<FeedStreak>();
   return result.results;
+}
+
+export interface FeedWithStats {
+  id: string;
+  name: string;
+  url: string;
+  category: FeedCategory;
+  lang: FeedLang;
+  enabled: boolean;
+  articles_30d: number;
+  last_published_at: string | null;
+}
+
+export interface ListFeedsWithStatsOpts {
+  category?: FeedCategory;
+  lang?: FeedLang;
+  enabled?: boolean;
+}
+
+/**
+ * feeds テーブルに articles の 30d 集計を JOIN して返す。
+ * フィルタ条件は opts で渡し、WHERE 句を動的に構築する。
+ * 並び順は id ASC で統一 (管理 UI や API の一貫性のため)。
+ */
+export async function listFeedsWithStats(
+  db: D1Database,
+  opts?: ListFeedsWithStatsOpts,
+): Promise<FeedWithStats[]> {
+  const conds: string[] = [];
+  const binds: unknown[] = [];
+
+  if (opts?.category !== undefined) {
+    binds.push(opts.category);
+    conds.push(`f.category = ?${binds.length}`);
+  }
+  if (opts?.lang !== undefined) {
+    binds.push(opts.lang);
+    conds.push(`f.lang = ?${binds.length}`);
+  }
+  if (opts?.enabled !== undefined) {
+    binds.push(opts.enabled ? 1 : 0);
+    conds.push(`f.enabled = ?${binds.length}`);
+  }
+
+  // 30d 境界を SQLite の datetime 関数で計算し bind する
+  const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  binds.push(threshold);
+  const thresholdIdx = binds.length;
+
+  const where = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
+
+  const sql = `
+    SELECT f.id,
+           f.name,
+           f.url,
+           f.category,
+           f.lang,
+           f.enabled,
+           COUNT(CASE WHEN a.published_at >= ?${thresholdIdx} THEN 1 END) AS articles_30d,
+           MAX(a.published_at) AS last_published_at
+    FROM feeds f
+    LEFT JOIN articles a ON a.feed_id = f.id
+    ${where}
+    GROUP BY f.id, f.name, f.url, f.category, f.lang, f.enabled
+    ORDER BY f.id ASC
+  `;
+
+  const rows = await db
+    .prepare(sql)
+    .bind(...binds)
+    .all<{
+      id: string;
+      name: string;
+      url: string;
+      category: string;
+      lang: string;
+      enabled: number;
+      articles_30d: number;
+      last_published_at: string | null;
+    }>();
+
+  return (rows.results ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    url: r.url,
+    category: r.category as FeedCategory,
+    lang: r.lang as FeedLang,
+    enabled: r.enabled === 1,
+    articles_30d: r.articles_30d,
+    last_published_at: r.last_published_at,
+  }));
 }
 
 /**
