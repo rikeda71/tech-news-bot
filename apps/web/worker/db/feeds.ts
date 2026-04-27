@@ -248,10 +248,7 @@ export async function listFeedsWithStats(
  * 1 件のフィードを articles 集計付きで返す。
  * id が存在しない場合は null。
  */
-export async function findFeedWithStats(
-  db: D1Database,
-  id: string,
-): Promise<FeedWithStats | null> {
+export async function findFeedWithStats(db: D1Database, id: string): Promise<FeedWithStats | null> {
   const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const row = await db
