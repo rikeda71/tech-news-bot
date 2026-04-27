@@ -516,6 +516,43 @@ a:hover {
   opacity: 1;
 }
 
+/* シェアボタン */
+.share-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: var(--bg-elev-2);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+  transition:
+    color 0.1s ease,
+    border-color 0.1s ease;
+}
+
+.share-button:hover {
+  color: var(--fg);
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
+.share-button-copied {
+  color: var(--badge-jp);
+  border-color: var(--badge-jp);
+}
+
 /* キーボードショートカット ヘルプモーダル */
 .help-overlay {
   position: fixed;
