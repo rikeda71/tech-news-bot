@@ -624,6 +624,47 @@ export async function getArticlesByAuthor(
   return { articles, nextCursor };
 }
 
+export interface CalendarItem {
+  date: string;
+  count: number;
+}
+
+/** 指定日数分の日別記事数を返す。0 件の日は含まない */
+export async function getArticlesCalendar(
+  db: D1Database,
+  days: number,
+  lang?: FeedLang | null,
+  category?: FeedCategory | null,
+): Promise<CalendarItem[]> {
+  const conds: string[] = [`published_at >= datetime('now', ?1)`];
+  const binds: unknown[] = [`-${days} days`];
+
+  if (lang) {
+    conds.push(`lang = ?${binds.length + 1}`);
+    binds.push(lang);
+  }
+  if (category) {
+    conds.push(`category = ?${binds.length + 1}`);
+    binds.push(category);
+  }
+
+  const where = `WHERE ${conds.join(" AND ")}`;
+  const sql = `
+    SELECT strftime('%Y-%m-%d', published_at) AS date, COUNT(*) AS count
+    FROM articles
+    ${where}
+    GROUP BY strftime('%Y-%m-%d', published_at)
+    ORDER BY date ASC
+  `;
+
+  const result = await db
+    .prepare(sql)
+    .bind(...binds)
+    .all<CalendarItem>();
+
+  return result.results ?? [];
+}
+
 function escapeFtsQuery(input: string): string {
   // FTS5 で安全に扱うため、特殊記号を除去して各単語をフレーズ扱いにする
   const tokens = input
