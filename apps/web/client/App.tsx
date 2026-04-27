@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
 import { FilterBar } from "./components/FilterBar";
 import { SearchInput } from "./components/SearchInput";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
 import { useStats } from "./hooks/useStats";
+import { useTheme } from "./hooks/useTheme";
 import type { FeedCategory, FeedLang } from "./types/api";
 
 function formatRelative(iso: string): string {
@@ -56,6 +58,7 @@ export default function App() {
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
   const [q, setQ] = useState<string>(() => readFromUrl().q);
 
+  const { theme, toggleTheme } = useTheme();
   const { feeds } = useFeeds();
   const { stats } = useStats();
 
@@ -143,6 +146,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <h1>Tech News Bot</h1>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         <span className="subtitle">
           {stats ? `${stats.total.toLocaleString()} 記事 · 直近 24h: ${stats.last24h}` : ""}
           {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
