@@ -141,6 +141,21 @@ export async function listArticles(
   return { articles, nextCursor };
 }
 
+export async function getArticleById(db: D1Database, id: number): Promise<Article | null> {
+  const result = await db
+    .prepare(
+      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+              a.author, a.published_at, a.fetched_at, a.category, a.lang
+       FROM articles a
+       LEFT JOIN feeds f ON f.id = a.feed_id
+       WHERE a.id = ?1
+       LIMIT 1`,
+    )
+    .bind(id)
+    .first<Article>();
+  return result ?? null;
+}
+
 export async function deleteOlderThan(db: D1Database, retentionDays: number): Promise<number> {
   if (!Number.isFinite(retentionDays) || retentionDays <= 0) return 0;
   // SQLite で安全のため整数化、少数日は切り捨て

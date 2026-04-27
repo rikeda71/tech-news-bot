@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { loadAllFeeds } from "../feed-config";
-import { listArticles } from "../db/articles";
+import { getArticleById, listArticles } from "../db/articles";
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
 import type { FeedsFile } from "../types";
@@ -102,6 +102,17 @@ app.get("/", async (c) => {
     articles: result.articles,
     nextCursor: encodeCursor(result.nextCursor),
   });
+});
+
+app.get("/:id", async (c) => {
+  const idStr = c.req.param("id");
+  const id = Number(idStr);
+  if (!Number.isInteger(id) || id <= 0) return c.json({ error: "invalid id" }, 400);
+  const article = await getArticleById(c.env.DB, id);
+  if (!article) return c.json({ error: "not found" }, 404);
+  const etag = `W/"${article.id}-${article.fetched_at}"`;
+  if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
+  return c.json(article, 200, { ETag: etag, "Cache-Control": "public, max-age=60" });
 });
 
 export default app;
