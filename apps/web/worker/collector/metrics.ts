@@ -34,7 +34,9 @@ export class D1CostAccumulator {
   durationTotalMs = 0;
 
   /** D1Result.meta オブジェクトを受け取り統計に加算する */
-  add(meta: { rows_read?: number; rows_written?: number; duration?: number } | null | undefined): void {
+  add(
+    meta: { rows_read?: number; rows_written?: number; duration?: number } | null | undefined,
+  ): void {
     if (!meta) return;
     this.rowsRead += meta.rows_read ?? 0;
     this.rowsWritten += meta.rows_written ?? 0;

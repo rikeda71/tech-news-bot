@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { D1CostAccumulator, writeCollectorEvent, writeD1CostEvent } from "../../../worker/collector/metrics";
+import {
+  D1CostAccumulator,
+  writeCollectorEvent,
+  writeD1CostEvent,
+} from "../../../worker/collector/metrics";
 import type { Env } from "../../../worker/types";
 
 function makeEnv(writeDataPoint?: ReturnType<typeof vi.fn>): Env {
