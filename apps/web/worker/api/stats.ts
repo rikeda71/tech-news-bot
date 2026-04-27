@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { getCategoryTrend30d, getFeedActivity30d } from "../db/articles";
 import type { Env } from "../types";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -45,6 +46,11 @@ app.get("/", async (c) => {
     last_error: string | null;
   }>();
 
+  const [categoryTrend30d, feedActivity] = await Promise.all([
+    getCategoryTrend30d(c.env.DB),
+    getFeedActivity30d(c.env.DB),
+  ]);
+
   return c.json({
     total: totalRow?.n ?? 0,
     last_published_at: totalRow?.last_published ?? null,
@@ -53,6 +59,8 @@ app.get("/", async (c) => {
     by_category: Object.fromEntries((byCategory.results ?? []).map((r) => [r.category, r.n])),
     by_lang: Object.fromEntries((byLang.results ?? []).map((r) => [r.lang, r.n])),
     stale_feeds: staleRows.results ?? [],
+    category_trend_30d: categoryTrend30d,
+    feed_activity: feedActivity,
   });
 });
 

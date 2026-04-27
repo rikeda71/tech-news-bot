@@ -8,6 +8,21 @@ export interface StaleFeed {
   last_error: string | null;
 }
 
+export interface TrendPoint {
+  date: string;
+  ai: number;
+  bigtech: number;
+  jp: number;
+  zenn: number;
+}
+
+export interface FeedActivity {
+  feed_id: string;
+  feed_name: string;
+  articles_30d: number;
+  last_published_at: string | null;
+}
+
 export interface Stats {
   total: number;
   last_published_at: string | null;
@@ -16,6 +31,8 @@ export interface Stats {
   by_category: Record<string, number>;
   by_lang: Record<string, number>;
   stale_feeds: StaleFeed[];
+  category_trend_30d: TrendPoint[];
+  feed_activity: FeedActivity[];
 }
 
 export function useStats(refreshSignal: number = 0) {

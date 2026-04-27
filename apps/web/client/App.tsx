@@ -5,6 +5,7 @@ import { Header } from "./components/Header";
 import { HelpModal } from "./components/HelpModal";
 import { PresetBar } from "./components/PresetBar";
 import { SearchInput } from "./components/SearchInput";
+import { StatsPanel } from "./components/Stats";
 import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -332,6 +333,8 @@ export default function App() {
           </details>
         )}
       </header>
+
+      {stats && <StatsPanel stats={stats} />}
 
       <PresetBar
         presets={presets}
