@@ -7,6 +7,7 @@ import feeds from "./feeds";
 import health from "./health";
 import stats from "./stats";
 import admin from "./admin";
+import docs from "./docs";
 
 const api = new Hono<{ Bindings: Env }>();
 
@@ -32,5 +33,6 @@ api.route("/feeds", feeds);
 api.route("/health", health);
 api.route("/stats", stats);
 api.route("/admin", admin);
+api.route("/", docs);
 
 export default api;
