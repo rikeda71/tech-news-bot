@@ -1,5 +1,29 @@
+/* デフォルト (= ライトテーマ) の CSS 変数 */
 :root {
   color-scheme: light dark;
+  --bg: #ffffff;
+  --bg-elev: #f6f8fa;
+  --bg-elev-2: #eaeef2;
+  --border: #d0d7de;
+  --fg: #1f2328;
+  --fg-muted: #656d76;
+  --accent: #0969da;
+  --accent-soft: rgba(9, 105, 218, 0.1);
+  /* ライト背景でも十分なコントラストを確保した色 */
+  --badge-bigtech: #0550ae;
+  --badge-ai: #7d4e00;
+  --badge-jp: #1a7f37;
+  --badge-zenn: #0550ae;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Roboto,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ダークテーマ変数: data-theme="dark" を html に付与したとき有効 */
+[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0d1117;
   --bg-elev: #161b22;
   --bg-elev-2: #21262d;
@@ -12,12 +36,10 @@
   --badge-ai: #d29922;
   --badge-jp: #3fb950;
   --badge-zenn: #3ea8ff;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Roboto,
-    sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
 }
+
+/* OS 設定がダークのとき、かつ localStorage で明示指定されていないときは
+   html に data-theme="dark" を付けて対応する (useTheme.ts 側で制御) */
 
 * {
   box-sizing: border-box;
@@ -50,7 +72,7 @@ a:hover {
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
@@ -59,6 +81,26 @@ a:hover {
 .header h1 {
   font-size: 1.4rem;
   margin: 0;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--bg-elev);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  color: var(--fg);
+  border-color: var(--accent);
 }
 
 .header .subtitle {
@@ -205,24 +247,42 @@ a:hover {
   opacity: 0.8;
 }
 
+/* ライトモード: より濃い文字色に対し薄い背景で視認性を確保 */
 .badge.cat-bigtech {
-  background: rgba(68, 147, 248, 0.15);
+  background: rgba(5, 80, 174, 0.1);
   color: var(--badge-bigtech);
 }
 
 .badge.cat-ai {
-  background: rgba(210, 153, 34, 0.15);
+  background: rgba(125, 78, 0, 0.1);
   color: var(--badge-ai);
 }
 
 .badge.cat-jp {
-  background: rgba(63, 185, 80, 0.15);
+  background: rgba(26, 127, 55, 0.1);
   color: var(--badge-jp);
 }
 
 .badge.cat-zenn {
-  background: rgba(62, 168, 255, 0.15);
+  background: rgba(5, 80, 174, 0.1);
   color: var(--badge-zenn);
+}
+
+/* ダークモード: 明るい文字色に対してより濃い不透明度の背景 */
+[data-theme="dark"] .badge.cat-bigtech {
+  background: rgba(68, 147, 248, 0.15);
+}
+
+[data-theme="dark"] .badge.cat-ai {
+  background: rgba(210, 153, 34, 0.15);
+}
+
+[data-theme="dark"] .badge.cat-jp {
+  background: rgba(63, 185, 80, 0.15);
+}
+
+[data-theme="dark"] .badge.cat-zenn {
+  background: rgba(62, 168, 255, 0.15);
 }
 
 .feed-name {
