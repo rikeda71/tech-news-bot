@@ -21,6 +21,7 @@ export interface ArticlesResponse {
   nextCursor: string | null;
 }
 
+/** /api/feeds が返す FeedWithStats と shape を一致させること */
 export interface FeedSummary {
   id: string;
   name: string;
@@ -28,14 +29,12 @@ export interface FeedSummary {
   category: FeedCategory;
   lang: FeedLang;
   enabled: boolean;
-  last_fetched_at: string | null;
-  last_status: string | null;
-  article_count: number;
+  articles_30d: number;
+  last_published_at: string | null;
 }
 
 export interface FeedsResponse {
   feeds: FeedSummary[];
-  nextCursor: string | null;
 }
 
 export interface FeedDetail {
@@ -54,13 +53,16 @@ export interface FeedDetailResponse {
   recent_articles: Article[];
 }
 
+/** /api/articles/calendar の 1 日分エントリ (/api/articles の CalendarItem と同形) */
 export interface CalendarDay {
   date: string;
   count: number;
 }
 
+/** /api/articles/calendar レスポンス shape */
 export interface CalendarResponse {
-  days: CalendarDay[];
+  days: number;
+  items: CalendarDay[];
 }
 
 export interface CategorySummary {
