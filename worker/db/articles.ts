@@ -132,6 +132,21 @@ export async function listArticles(
   return { articles, nextCursor };
 }
 
+export async function deleteOlderThan(
+  db: D1Database,
+  retentionDays: number,
+): Promise<number> {
+  if (!Number.isFinite(retentionDays) || retentionDays <= 0) return 0;
+  // SQLite で安全のため整数化、少数日は切り捨て
+  const days = Math.floor(retentionDays);
+  const result = await db
+    .prepare(`DELETE FROM articles WHERE published_at < datetime('now', ?1)`)
+    .bind(`-${days} days`)
+    .run();
+  // FTS トリガで複数 changes が返るため、count(*) との差分は取らずに meta は参考値
+  return result.meta?.changes ?? 0;
+}
+
 function escapeFtsQuery(input: string): string {
   // FTS5 で安全に扱うため、特殊記号を除去して各単語をフレーズ扱いにする
   const tokens = input

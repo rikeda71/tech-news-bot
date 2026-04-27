@@ -3,7 +3,7 @@ import type { FeedConfig } from "../../shared/types";
 import { loadEnabledFeeds } from "./feedLoader";
 import { parseFeed } from "./rssParser";
 import { buildGuids } from "./deduplicator";
-import { insertArticles, type InsertableArticle } from "../db/articles";
+import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
 import { recordFetchError, recordFetchSuccess, syncFeeds } from "../db/feeds";
 
 const MAX_FEED_BYTES = 4 * 1024 * 1024; // 4MB
@@ -21,6 +21,7 @@ export interface CollectResult {
 export interface CollectAllResult {
   total: number;
   inserted: number;
+  pruned: number;
   results: CollectResult[];
   durationMs: number;
 }
@@ -146,14 +147,23 @@ export async function collectAll(env: Env): Promise<CollectAllResult> {
   );
 
   const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
+
+  const retentionDays = Number(env.RETENTION_DAYS ?? "90") || 90;
+  let pruned = 0;
+  try {
+    pruned = await deleteOlderThan(env.DB, retentionDays);
+  } catch (err) {
+    console.warn(`[collector] retention prune failed: ${err instanceof Error ? err.message : err}`);
+  }
+
   const durationMs = Date.now() - start;
   console.log(
-    `[collector] feeds=${feeds.length} inserted=${inserted} duration=${durationMs}ms`,
+    `[collector] feeds=${feeds.length} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
   );
   for (const r of results) {
     if (r.status === "error") {
       console.warn(`[collector] ${r.feedId} ERROR: ${r.error}`);
     }
   }
-  return { total: feeds.length, inserted, results, durationMs };
+  return { total: feeds.length, inserted, pruned, results, durationMs };
 }
