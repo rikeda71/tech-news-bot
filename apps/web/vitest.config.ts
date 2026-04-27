@@ -13,6 +13,11 @@ export default defineConfig(async () => {
         miniflare: {
           bindings: {
             TEST_MIGRATIONS: migrations,
+            // テスト用トークン (本番では wrangler secret put で登録)
+            ADMIN_TOKEN: "test-admin-token",
+            ADMIN_TOKEN_NEXT: "test-admin-token-next",
+            // フィード収集テストで外部 fetch が失敗するため短くしてタイムアウトを速める
+            COLLECTOR_TIMEOUT_MS: "500",
           },
         },
       }),
