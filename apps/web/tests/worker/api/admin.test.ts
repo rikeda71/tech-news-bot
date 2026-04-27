@@ -164,7 +164,7 @@ describe("POST /api/admin/collector/run", () => {
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("feed_ids must be an array");
+    expect(body.error).toBe("feed_ids must be an array of strings");
   });
 });
 
