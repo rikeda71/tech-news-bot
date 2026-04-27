@@ -227,6 +227,25 @@ a:hover {
   color: var(--fg);
 }
 
+.star-button {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  background: none;
+  color: var(--fg-muted);
+  border: none;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.star-button:hover,
+.star-button[aria-pressed="true"] {
+  opacity: 1;
+  color: #d29922;
+}
+
 /* hover 時にだけ表示する既読切り替えボタン */
 .read-toggle {
   flex-shrink: 0;

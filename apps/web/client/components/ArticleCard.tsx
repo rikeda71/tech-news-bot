@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useReadState } from "../hooks/useReadState";
+import { useStarredState } from "../hooks/useStarredState";
 import type { Article, FeedCategory } from "../types/api";
 
 interface Props {
@@ -39,8 +40,10 @@ function safeHref(url: string): string {
 
 export function ArticleCard({ article, focused, onFilterByCategory, onFilterByFeedId }: Props) {
   const { isRead, markRead, markUnread } = useReadState();
+  const { isStarred, toggleStar } = useStarredState();
   const [hovered, setHovered] = useState(false);
   const read = isRead(article.id);
+  const starred = isStarred(article.id);
 
   return (
     <article
@@ -60,6 +63,15 @@ export function ArticleCard({ article, focused, onFilterByCategory, onFilterByFe
         >
           {article.title}
         </a>
+        <button
+          type="button"
+          className="star-button"
+          onClick={() => toggleStar(article.id)}
+          aria-label={starred ? "スターを外す" : "スターを付ける"}
+          aria-pressed={starred}
+        >
+          {starred ? "★" : "☆"}
+        </button>
         {/* hover 時に既読 / 未読切り替えボタンを薄く表示 */}
         {hovered && (
           <button

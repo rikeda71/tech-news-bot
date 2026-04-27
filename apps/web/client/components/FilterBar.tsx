@@ -8,12 +8,14 @@ interface Props {
   dateFrom: string;
   dateTo: string;
   unreadOnly: boolean;
+  starredOnly: boolean;
   onCategoryChange: (c: FeedCategory | "") => void;
   onLangChange: (l: FeedLang | "") => void;
   onFeedChange: (id: string) => void;
   onDateFromChange: (v: string) => void;
   onDateToChange: (v: string) => void;
   onUnreadOnlyChange: (v: boolean) => void;
+  onStarredOnlyChange: (v: boolean) => void;
   onClear: () => void;
 }
 
@@ -25,12 +27,14 @@ export function FilterBar({
   dateFrom,
   dateTo,
   unreadOnly,
+  starredOnly,
   onCategoryChange,
   onLangChange,
   onFeedChange,
   onDateFromChange,
   onDateToChange,
   onUnreadOnlyChange,
+  onStarredOnlyChange,
   onClear,
 }: Props) {
   const visibleFeeds = feeds
@@ -43,7 +47,8 @@ export function FilterBar({
     feedId !== "" ||
     dateFrom !== "" ||
     dateTo !== "" ||
-    unreadOnly;
+    unreadOnly ||
+    starredOnly;
 
   return (
     <>
@@ -101,6 +106,15 @@ export function FilterBar({
           onChange={(e) => onUnreadOnlyChange(e.target.checked)}
         />
         未読のみ
+      </label>
+
+      <label className="unread-only-label">
+        <input
+          type="checkbox"
+          checked={starredOnly}
+          onChange={(e) => onStarredOnlyChange(e.target.checked)}
+        />
+        ★のみ
       </label>
 
       {hasFilter && (

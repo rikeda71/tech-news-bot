@@ -8,6 +8,7 @@ import { useArticles } from "./hooks/useArticles";
 import { useFeeds } from "./hooks/useFeeds";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useReadState } from "./hooks/useReadState";
+import { useStarredState } from "./hooks/useStarredState";
 import { useStats } from "./hooks/useStats";
 import { useTheme } from "./hooks/useTheme";
 import type { FeedCategory, FeedLang } from "./types/api";
@@ -33,6 +34,7 @@ function readFromUrl(): {
   dateFrom: string;
   dateTo: string;
   unreadOnly: boolean;
+  starredOnly: boolean;
 } {
   const params = new URLSearchParams(window.location.search);
   return {
@@ -43,6 +45,7 @@ function readFromUrl(): {
     dateFrom: params.get("date_from") ?? "",
     dateTo: params.get("date_to") ?? "",
     unreadOnly: params.get("unread") === "1",
+    starredOnly: params.get("starred") === "1",
   };
 }
 
@@ -54,6 +57,7 @@ function buildSearch(
   dateFrom: string,
   dateTo: string,
   unreadOnly: boolean,
+  starredOnly: boolean,
 ): string {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
@@ -64,6 +68,7 @@ function buildSearch(
   if (dateTo) params.set("date_to", dateTo);
   // true のときだけ付ける
   if (unreadOnly) params.set("unread", "1");
+  if (starredOnly) params.set("starred", "1");
   const s = params.toString();
   return s ? `?${s}` : window.location.pathname;
 }
@@ -76,6 +81,7 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState<string>(() => readFromUrl().dateFrom);
   const [dateTo, setDateTo] = useState<string>(() => readFromUrl().dateTo);
   const [unreadOnly, setUnreadOnly] = useState<boolean>(() => readFromUrl().unreadOnly);
+  const [starredOnly, setStarredOnly] = useState<boolean>(() => readFromUrl().starredOnly);
   const [helpOpen, setHelpOpen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
@@ -84,6 +90,7 @@ export default function App() {
   const { feeds } = useFeeds();
   const { stats } = useStats();
   const { isRead, markRead, markUnread } = useReadState();
+  const { isStarred } = useStarredState();
 
   // popstate でブラウザ戻る/進むに追従する
   useEffect(() => {
@@ -96,6 +103,7 @@ export default function App() {
       setDateFrom(next.dateFrom);
       setDateTo(next.dateTo);
       setUnreadOnly(next.unreadOnly);
+      setStarredOnly(next.starredOnly);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -111,6 +119,7 @@ export default function App() {
       nextDateFrom: string,
       nextDateTo: string,
       nextUnreadOnly: boolean,
+      nextStarredOnly: boolean,
     ) => {
       const next = buildSearch(
         nextCategory,
@@ -120,8 +129,18 @@ export default function App() {
         nextDateFrom,
         nextDateTo,
         nextUnreadOnly,
+        nextStarredOnly,
       );
-      const current = buildSearch(category, lang, feedId, q, dateFrom, dateTo, unreadOnly);
+      const current = buildSearch(
+        category,
+        lang,
+        feedId,
+        q,
+        dateFrom,
+        dateTo,
+        unreadOnly,
+        starredOnly,
+      );
       // 同じ URL なら重複履歴を作らない
       if (next !== current) {
         window.history.pushState(null, "", next);
@@ -133,56 +152,67 @@ export default function App() {
       setDateFrom(nextDateFrom);
       setDateTo(nextDateTo);
       setUnreadOnly(nextUnreadOnly);
+      setStarredOnly(nextStarredOnly);
     },
-    [category, lang, feedId, q, dateFrom, dateTo, unreadOnly],
+    [category, lang, feedId, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
   const handleCategoryChange = useCallback(
-    (v: FeedCategory | "") => pushFilter(v, lang, v ? feedId : "", q, dateFrom, dateTo, unreadOnly),
-    [pushFilter, lang, feedId, q, dateFrom, dateTo, unreadOnly],
+    (v: FeedCategory | "") =>
+      pushFilter(v, lang, v ? feedId : "", q, dateFrom, dateTo, unreadOnly, starredOnly),
+    [pushFilter, lang, feedId, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
   const handleLangChange = useCallback(
-    (v: FeedLang | "") => pushFilter(category, v, v ? feedId : "", q, dateFrom, dateTo, unreadOnly),
-    [pushFilter, category, feedId, q, dateFrom, dateTo, unreadOnly],
+    (v: FeedLang | "") =>
+      pushFilter(category, v, v ? feedId : "", q, dateFrom, dateTo, unreadOnly, starredOnly),
+    [pushFilter, category, feedId, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
   const handleFeedChange = useCallback(
-    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo, unreadOnly),
-    [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly],
+    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo, unreadOnly, starredOnly),
+    [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
   const handleQChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, v, dateFrom, dateTo, unreadOnly),
-    [pushFilter, category, lang, feedId, dateFrom, dateTo, unreadOnly],
+    (v: string) => pushFilter(category, lang, feedId, v, dateFrom, dateTo, unreadOnly, starredOnly),
+    [pushFilter, category, lang, feedId, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
   const handleDateFromChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, q, v, dateTo, unreadOnly),
-    [pushFilter, category, lang, feedId, q, dateTo, unreadOnly],
+    (v: string) => pushFilter(category, lang, feedId, q, v, dateTo, unreadOnly, starredOnly),
+    [pushFilter, category, lang, feedId, q, dateTo, unreadOnly, starredOnly],
   );
 
   const handleDateToChange = useCallback(
-    (v: string) => pushFilter(category, lang, feedId, q, dateFrom, v, unreadOnly),
-    [pushFilter, category, lang, feedId, q, dateFrom, unreadOnly],
+    (v: string) => pushFilter(category, lang, feedId, q, dateFrom, v, unreadOnly, starredOnly),
+    [pushFilter, category, lang, feedId, q, dateFrom, unreadOnly, starredOnly],
   );
 
   const handleUnreadOnlyChange = useCallback(
-    (v: boolean) => pushFilter(category, lang, feedId, q, dateFrom, dateTo, v),
-    [pushFilter, category, lang, feedId, q, dateFrom, dateTo],
+    (v: boolean) => pushFilter(category, lang, feedId, q, dateFrom, dateTo, v, starredOnly),
+    [pushFilter, category, lang, feedId, q, dateFrom, dateTo, starredOnly],
   );
 
-  const handleClear = useCallback(() => pushFilter("", "", "", q, "", "", false), [pushFilter, q]);
+  const handleStarredOnlyChange = useCallback(
+    (v: boolean) => pushFilter(category, lang, feedId, q, dateFrom, dateTo, unreadOnly, v),
+    [pushFilter, category, lang, feedId, q, dateFrom, dateTo, unreadOnly],
+  );
+
+  const handleClear = useCallback(
+    () => pushFilter("", "", "", q, "", "", false, false),
+    [pushFilter, q],
+  );
 
   // カード上のバッジ/取得元クリックでフィルタを適用する
   const handleFilterByCategory = useCallback(
-    (c: FeedCategory) => pushFilter(c, lang, "", q, dateFrom, dateTo, unreadOnly),
-    [pushFilter, lang, q, dateFrom, dateTo, unreadOnly],
+    (c: FeedCategory) => pushFilter(c, lang, "", q, dateFrom, dateTo, unreadOnly, starredOnly),
+    [pushFilter, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
   const handleFilterByFeedId = useCallback(
-    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo, unreadOnly),
-    [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly],
+    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo, unreadOnly, starredOnly),
+    [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
   const query = useMemo(
@@ -206,11 +236,13 @@ export default function App() {
     loadMore,
   } = useArticles(query);
 
-  // 未読フィルタはクライアントサイドで適用 (サーバー API は既読を知らないため)
-  const articles = useMemo(
-    () => (unreadOnly ? allArticles.filter((a) => !isRead(a.id)) : allArticles),
-    [allArticles, unreadOnly, isRead],
-  );
+  // 未読・スターフィルタはクライアントサイドで適用 (サーバー API は既読/スターを知らないため)
+  const articles = useMemo(() => {
+    let filtered = allArticles;
+    if (unreadOnly) filtered = filtered.filter((a) => !isRead(a.id));
+    if (starredOnly) filtered = filtered.filter((a) => isStarred(a.id));
+    return filtered;
+  }, [allArticles, unreadOnly, starredOnly, isRead, isStarred]);
 
   const handleActivate = useCallback(
     (id: number, url: string) => {
@@ -232,7 +264,10 @@ export default function App() {
     searchRef.current?.focus();
   }, []);
 
-  const handleClearAll = useCallback(() => pushFilter("", "", "", "", "", "", false), [pushFilter]);
+  const handleClearAll = useCallback(
+    () => pushFilter("", "", "", "", "", "", false, false),
+    [pushFilter],
+  );
 
   const handleToggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
 
@@ -283,12 +318,14 @@ export default function App() {
           dateFrom={dateFrom}
           dateTo={dateTo}
           unreadOnly={unreadOnly}
+          starredOnly={starredOnly}
           onCategoryChange={handleCategoryChange}
           onLangChange={handleLangChange}
           onFeedChange={handleFeedChange}
           onDateFromChange={handleDateFromChange}
           onDateToChange={handleDateToChange}
           onUnreadOnlyChange={handleUnreadOnlyChange}
+          onStarredOnlyChange={handleStarredOnlyChange}
           onClear={handleClear}
         />
       </div>
