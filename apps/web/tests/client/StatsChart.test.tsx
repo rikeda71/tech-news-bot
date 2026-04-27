@@ -63,9 +63,7 @@ describe("StatsChart", () => {
   });
 
   it("renders title elements with date/category/count inside rects", () => {
-    const singleData: TrendPoint[] = [
-      { date: "2026-04-01", bigtech: 5, ai: 3, jp: 1, zenn: 2 },
-    ];
+    const singleData: TrendPoint[] = [{ date: "2026-04-01", bigtech: 5, ai: 3, jp: 1, zenn: 2 }];
     const { container } = render(<StatsChart data={singleData} categories={CATEGORIES} />);
     const titles = container.querySelectorAll("title");
     const titleTexts = Array.from(titles).map((t) => t.textContent ?? "");

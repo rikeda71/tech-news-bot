@@ -163,7 +163,12 @@ describe("GET /api/stats — feed_activity", () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      feed_activity: { feed_id: string; feed_name: string; articles_30d: number; last_published_at: string | null }[];
+      feed_activity: {
+        feed_id: string;
+        feed_name: string;
+        articles_30d: number;
+        last_published_at: string | null;
+      }[];
     };
     expect(Array.isArray(body.feed_activity)).toBe(true);
   });

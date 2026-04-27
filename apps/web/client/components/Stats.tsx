@@ -10,7 +10,12 @@ const TREND_CATEGORIES: Array<keyof Omit<TrendPoint, "date">> = ["bigtech", "ai"
 function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("ja-JP", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function FeedActivityTable({ rows }: { rows: FeedActivity[] }) {
