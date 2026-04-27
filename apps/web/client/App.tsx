@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleList } from "./components/ArticleList";
+import { FeedDetail } from "./components/FeedDetail";
 import { FilterBar } from "./components/FilterBar";
 import { type AppView, Header } from "./components/Header";
 import { PresetBar } from "./components/PresetBar";
@@ -78,12 +79,21 @@ function buildSearch(
   return s ? `?${s}` : window.location.pathname;
 }
 
+/** /feed/<id> パスを解析してフィード詳細ページの feedId を返す。それ以外は null。*/
+function readFeedDetailFromPath(): string | null {
+  const m = window.location.pathname.match(/^\/feed\/(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 function readViewFromUrl(): AppView {
-  return window.location.pathname === "/stats" ? "stats" : "articles";
+  if (window.location.pathname === "/stats") return "stats";
+  if (readFeedDetailFromPath() !== null) return "feed";
+  return "articles";
 }
 
 function AppInner() {
   const [view, setView] = useState<AppView>(readViewFromUrl);
+  const [feedDetailId, setFeedDetailId] = useState<string>(() => readFeedDetailFromPath() ?? "");
   const [urlFilters, setUrlFilters] = useUrlState();
   const { q, category, lang, bookmarksOnly: bookmarkedOnly } = urlFilters;
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
@@ -108,6 +118,7 @@ function AppInner() {
 
   const handleViewChange = useCallback((next: AppView) => {
     setView(next);
+    setFeedDetailId("");
     const path = next === "stats" ? "/stats" : "/";
     if (window.location.pathname !== path) {
       window.history.pushState(null, "", path);
@@ -118,13 +129,19 @@ function AppInner() {
   // feedId/dateFrom/dateTo/unreadOnly/starredOnly はこちらで処理)
   useEffect(() => {
     const onPop = () => {
+      const nextView = readViewFromUrl();
+      setView(nextView);
+      if (nextView === "feed") {
+        setFeedDetailId(readFeedDetailFromPath() ?? "");
+        return;
+      }
+      setFeedDetailId("");
       const next = readFromUrl();
       setFeedId(next.feedId);
       setDateFrom(next.dateFrom);
       setDateTo(next.dateTo);
       setUnreadOnly(next.unreadOnly);
       setStarredOnly(next.starredOnly);
-      setView(readViewFromUrl());
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -300,10 +317,19 @@ function AppInner() {
     [pushFilter, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
   );
 
-  const handleFilterByFeedId = useCallback(
-    (id: string) => pushFilter(category, lang, id, q, dateFrom, dateTo, unreadOnly, starredOnly),
-    [pushFilter, category, lang, q, dateFrom, dateTo, unreadOnly, starredOnly],
-  );
+  // 記事カードの取得元クリックでフィード詳細へ drill-down する
+  const handleGoToFeedDetail = useCallback((id: string) => {
+    window.history.pushState(null, "", `/feed/${encodeURIComponent(id)}`);
+    setView("feed");
+    setFeedDetailId(id);
+  }, []);
+
+  const handleBackFromFeedDetail = useCallback(() => {
+    window.history.pushState(null, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    setView("articles");
+    setFeedDetailId("");
+  }, []);
 
   const query = useMemo(
     () => ({
@@ -395,6 +421,13 @@ function AppInner() {
 
       {view === "stats" ? (
         <StatsDashboard />
+      ) : view === "feed" && feedDetailId ? (
+        <FeedDetail
+          feedId={feedDetailId}
+          onBack={handleBackFromFeedDetail}
+          onFilterByFeedId={handleGoToFeedDetail}
+          onFilterByCategory={handleFilterByCategory}
+        />
       ) : (
         <>
           <header className="header">
@@ -498,7 +531,7 @@ function AppInner() {
               articles={articles}
               selectedIndex={selectedIndex}
               onFilterByCategory={handleFilterByCategory}
-              onFilterByFeedId={handleFilterByFeedId}
+              onFilterByFeedId={handleGoToFeedDetail}
               q={q}
             />
           )}
