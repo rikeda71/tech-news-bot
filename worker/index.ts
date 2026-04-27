@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "./types";
 import api from "./api/router";
+import syndication from "./api/syndication";
 import { collectAll } from "./collector";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -27,6 +28,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/api", api);
+app.route("/", syndication);
 
 // 静的アセットへのフォールバック (Cloudflare Static Assets binding)
 app.all("*", async (c) => {

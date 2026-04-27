@@ -113,6 +113,8 @@ pnpm deploy
 | GET | `/api/articles` | 記事一覧。クエリ `category`, `lang`, `feed_id`, `q`, `limit`, `cursor` |
 | GET | `/api/feeds` | フィード一覧と最終収集状況 |
 | GET | `/api/health` | DB 接続疎通と総記事数 |
+| GET | `/feed.json` | JSON Feed v1.1 (直近 50 件、`category`, `lang` 絞り込み可) |
+| GET | `/feed.xml` | RSS 2.0 (同上) |
 
 ページングは Base64 エンコードされた cursor を `nextCursor` で返します。
 
