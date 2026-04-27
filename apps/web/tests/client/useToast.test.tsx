@@ -8,11 +8,7 @@ function ToastTestBed({ msg, kind }: { msg: string; kind?: ToastKind }) {
   const state = useToastState();
   return (
     <ToastContext.Provider value={state}>
-      <button
-        type="button"
-        onClick={() => state.show(msg, kind)}
-        data-testid="trigger"
-      >
+      <button type="button" onClick={() => state.show(msg, kind)} data-testid="trigger">
         show
       </button>
       <ToastContainer />
