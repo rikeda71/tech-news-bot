@@ -16,6 +16,7 @@ import {
   getRandomArticles,
   getRelatedArticles,
   listArticles,
+  searchArticles,
 } from "../db/articles";
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
@@ -256,6 +257,49 @@ app.get("/popular", async (c) => {
   return c.json(result, 200, {
     "Cache-Control": "public, max-age=600",
   });
+});
+
+const MAX_SEARCH_TOKENS = 5;
+const MAX_TOKEN_LEN = 50;
+
+app.get("/search", async (c) => {
+  const qRaw = c.req.query("q");
+  if (!qRaw || !qRaw.trim()) return c.json({ error: "missing q" }, 400);
+
+  // lower-case + trim してトークン分割
+  const tokens = qRaw.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+  if (tokens.length === 0 || tokens.length > MAX_SEARCH_TOKENS) {
+    return c.json({ error: `q must have 1 to ${MAX_SEARCH_TOKENS} tokens` }, 400);
+  }
+  for (const token of tokens) {
+    if (token.length < 1 || token.length > MAX_TOKEN_LEN) {
+      return c.json({ error: `each token must be 1 to ${MAX_TOKEN_LEN} characters` }, 400);
+    }
+  }
+
+  const limitRaw = c.req.query("limit") ?? "50";
+  const limitNum = Number(limitRaw);
+  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 100) {
+    return c.json({ error: "limit must be an integer between 1 and 100" }, 400);
+  }
+
+  const cursorRaw = c.req.query("cursor");
+  const cursor = decodeCursor(cursorRaw);
+  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+
+  const result = await searchArticles(c.env.DB, tokens, limitNum, cursor);
+
+  return c.json(
+    {
+      query: tokens.join(" "),
+      tokens,
+      articles: result.articles,
+      next_cursor: encodeCursor(result.nextCursor),
+    },
+    200,
+    { "Cache-Control": "public, max-age=120" },
+  );
 });
 
 app.get("/:guid/related", async (c) => {
