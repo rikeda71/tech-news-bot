@@ -6,7 +6,10 @@ export interface Env {
   COLLECTOR_RETRIES: string;
   SUMMARY_MAX_LENGTH: string;
   RETENTION_DAYS: string;
+  CORS_ALLOWED_ORIGINS: string;
   ADMIN_TOKEN?: string;
+  // ローテーション中に新旧両方のトークンを受け入れるための次世代 secret
+  ADMIN_TOKEN_NEXT?: string;
   // preview 環境では "1" をセット。admin/collector を no-op にする。
   READONLY?: string;
 }
