@@ -1,3 +1,4 @@
+import { useFeedArticles } from "../hooks/useFeedArticles";
 import { useFeedDetail } from "../hooks/useFeedDetail";
 import type { FeedCategory } from "../types/api";
 import { ArticleCard } from "./ArticleCard";
@@ -17,7 +18,20 @@ interface Props {
 }
 
 export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategory }: Props) {
-  const { feed, articles, isLoading, error } = useFeedDetail(feedId);
+  // feed メタ (name, url, category, lang, articles_30d) のみ useFeedDetail で取得
+  const { feed, isLoading: metaLoading, error: metaError } = useFeedDetail(feedId);
+  // 記事一覧は cursor pagination 対応の hook で管理
+  const {
+    articles,
+    isLoading: articlesLoading,
+    error: articlesError,
+    hasMore,
+    loadMore,
+    loadingMore,
+  } = useFeedArticles(feedId);
+
+  const isLoading = metaLoading || articlesLoading;
+  const error = metaError;
 
   if (isLoading) {
     return <div className="loader">読み込み中…</div>;
@@ -72,7 +86,8 @@ export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategor
 
       <section className="feed-detail-articles">
         <h3 className="feed-detail-articles-title">直近の記事</h3>
-        {articles.length === 0 ? (
+        {articlesError && <div className="error">取得エラー: {articlesError}</div>}
+        {!articlesError && articles.length === 0 ? (
           <div className="empty">記事がありません</div>
         ) : (
           <div className="article-list">
@@ -85,6 +100,11 @@ export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategor
               />
             ))}
           </div>
+        )}
+        {hasMore && (
+          <button type="button" className="load-more" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? "読み込み中…" : "もっと見る"}
+          </button>
         )}
       </section>
     </div>
