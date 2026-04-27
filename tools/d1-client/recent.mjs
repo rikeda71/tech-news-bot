@@ -4,7 +4,7 @@
 //
 // Usage:
 //   node tools/d1-client/recent.mjs --since=today [--target=local|remote]
-//                                   [--category=ai|bigtech|jp] [--lang=ja|en]
+//                                   [--category=ai|bigtech|jp|zenn] [--lang=ja|en]
 //                                   [--limit=200]
 //
 // Output (stdout): JSON object as documented in SKILL.md
@@ -93,147 +93,6 @@ function execWrangler(sql, target) {
   return parsed[0]?.results ?? [];
 }
 
-const STOPWORDS = new Set([
-  // english
-  "the",
-  "a",
-  "an",
-  "and",
-  "or",
-  "but",
-  "of",
-  "in",
-  "to",
-  "is",
-  "are",
-  "was",
-  "were",
-  "be",
-  "by",
-  "for",
-  "on",
-  "at",
-  "with",
-  "as",
-  "this",
-  "that",
-  "it",
-  "its",
-  "from",
-  "not",
-  "we",
-  "you",
-  "your",
-  "i",
-  "he",
-  "she",
-  "they",
-  "them",
-  "their",
-  "our",
-  "my",
-  "me",
-  "us",
-  "do",
-  "does",
-  "did",
-  "have",
-  "has",
-  "had",
-  "can",
-  "could",
-  "should",
-  "would",
-  "will",
-  "may",
-  "might",
-  "also",
-  "more",
-  "most",
-  "than",
-  "then",
-  "there",
-  "here",
-  "into",
-  "over",
-  "about",
-  "via",
-  "new",
-  "using",
-  "use",
-  "used",
-  "how",
-  "why",
-  "what",
-  "when",
-  "where",
-  "which",
-  "who",
-  "whom",
-  // ja (very rough)
-  "の",
-  "は",
-  "に",
-  "を",
-  "が",
-  "と",
-  "で",
-  "から",
-  "へ",
-  "まで",
-  "です",
-  "ます",
-  "する",
-  "した",
-  "して",
-  "ある",
-  "いる",
-  "これ",
-  "それ",
-  "あれ",
-  "この",
-  "その",
-  "あの",
-  "ため",
-  "こと",
-  "もの",
-  "よう",
-  "また",
-  "しかし",
-  "そして",
-  "または",
-  "これら",
-  "それら",
-  "について",
-  "による",
-  "により",
-  "として",
-  "という",
-  "です",
-]);
-
-function tokenize(text) {
-  if (!text) return [];
-  return text
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9ぁ-んァ-ヶ一-龠]+/giu, " ")
-    .split(/\s+/u)
-    .filter((w) => w.length >= 2 && !STOPWORDS.has(w));
-}
-
-function topTerms(articles, n = 15) {
-  const counts = new Map();
-  for (const a of articles) {
-    for (const t of tokenize(`${a.title} ${a.summary ?? ""}`)) {
-      counts.set(t, (counts.get(t) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .filter(([, c]) => c >= 2)
-    .toSorted((a, b) => b[1] - a[1])
-    .slice(0, n);
-}
-
 function aggregate(articles, key) {
   const out = {};
   for (const a of articles) {
@@ -270,7 +129,6 @@ function main() {
     by_category: aggregate(articles, "category"),
     by_feed: aggregate(articles, "feed_id"),
     by_lang: aggregate(articles, "lang"),
-    top_terms: topTerms(articles, 15),
   };
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }

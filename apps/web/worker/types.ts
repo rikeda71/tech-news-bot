@@ -8,7 +8,7 @@ export interface Env {
   ADMIN_TOKEN?: string;
 }
 
-export type FeedCategory = "bigtech" | "ai" | "jp";
+export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";
 export type FeedLang = "ja" | "en";
 
 export interface FeedConfig {

@@ -8,6 +8,7 @@ interface Props {
   onCategoryChange: (c: FeedCategory | "") => void;
   onLangChange: (l: FeedLang | "") => void;
   onFeedChange: (id: string) => void;
+  onClear: () => void;
 }
 
 export function FilterBar({
@@ -18,10 +19,13 @@ export function FilterBar({
   onCategoryChange,
   onLangChange,
   onFeedChange,
+  onClear,
 }: Props) {
   const visibleFeeds = feeds
     .filter((f) => (category ? f.category === category : true))
     .filter((f) => (lang ? f.lang === lang : true));
+
+  const hasFilter = category !== "" || lang !== "" || feedId !== "";
 
   return (
     <>
@@ -34,6 +38,7 @@ export function FilterBar({
         <option value="bigtech">Big Tech</option>
         <option value="ai">AI</option>
         <option value="jp">日本企業</option>
+        <option value="zenn">Zenn</option>
       </select>
 
       <select
@@ -54,6 +59,12 @@ export function FilterBar({
           </option>
         ))}
       </select>
+
+      {hasFilter && (
+        <button type="button" className="clear-filter" onClick={onClear}>
+          ✕ 解除
+        </button>
+      )}
     </>
   );
 }
