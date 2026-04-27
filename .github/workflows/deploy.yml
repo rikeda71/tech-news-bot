@@ -34,7 +34,18 @@ jobs:
         run: vp run build
       - name: Apply D1 migrations
         working-directory: apps/web
-        run: pnpm exec wrangler d1 migrations apply tech-news-bot-db --remote
+        # D1 が一時的に SQLITE_LOCKED を返すことがあるため、最大 3 回リトライする
+        run: |
+          for i in 1 2 3; do
+            pnpm exec wrangler d1 migrations apply tech-news-bot-db --remote && break
+            if [ $i -lt 3 ]; then
+              echo "Migration attempt $i failed, retrying in 10s..."
+              sleep 10
+            else
+              echo "Migration failed after 3 attempts"
+              exit 1
+            fi
+          done
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
