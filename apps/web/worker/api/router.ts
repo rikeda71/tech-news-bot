@@ -9,6 +9,7 @@ import health from "./health";
 import stats from "./stats";
 import admin from "./admin";
 import docs from "./docs";
+import { catalogHandler } from "./catalog";
 
 const api = new Hono<{ Bindings: Env }>();
 
@@ -28,6 +29,9 @@ const PUBLIC_PATHS = ["/articles/*", "/categories/*", "/feeds/*", "/stats/*", "/
 for (const path of PUBLIC_PATHS) {
   api.use(path, allowedOriginsCors);
 }
+
+// /api catalog — 他のルートより前に登録して確実に /api で捕捉する
+api.get("/", catalogHandler);
 
 api.route("/articles", articles);
 api.route("/categories", categories);
