@@ -299,6 +299,78 @@ export async function getFeedActivity30d(db: D1Database): Promise<FeedActivityRo
   return rows.results ?? [];
 }
 
+export interface TopAuthorRow {
+  author: string;
+  count: number;
+}
+
+export interface TopPublisherRow {
+  feed_id: string;
+  feed_name: string;
+  count: number;
+}
+
+export interface ByLang30d {
+  ja: number;
+  en: number;
+}
+
+/** 過去 30 日の author 別記事数 TOP 10 (null / 空文字除外) */
+export async function getTopAuthors30d(db: D1Database): Promise<TopAuthorRow[]> {
+  const rows = await db
+    .prepare(
+      `SELECT author, COUNT(*) AS count
+       FROM articles
+       WHERE author IS NOT NULL
+         AND author != ''
+         AND published_at >= datetime('now', '-30 days')
+       GROUP BY author
+       ORDER BY count DESC
+       LIMIT 10`,
+    )
+    .all<TopAuthorRow>();
+
+  return rows.results ?? [];
+}
+
+/** 過去 30 日のフィード別記事数 TOP 10 (feed_name は feeds テーブル JOIN) */
+export async function getTopPublishers30d(db: D1Database): Promise<TopPublisherRow[]> {
+  const rows = await db
+    .prepare(
+      `SELECT a.feed_id,
+              COALESCE(f.name, a.feed_id) AS feed_name,
+              COUNT(*) AS count
+       FROM articles a
+       LEFT JOIN feeds f ON f.id = a.feed_id
+       WHERE a.published_at >= datetime('now', '-30 days')
+       GROUP BY a.feed_id
+       ORDER BY count DESC
+       LIMIT 10`,
+    )
+    .all<TopPublisherRow>();
+
+  return rows.results ?? [];
+}
+
+/** 過去 30 日の言語別記事数 (ja / en 両方を常に返す) */
+export async function getByLang30d(db: D1Database): Promise<ByLang30d> {
+  const rows = await db
+    .prepare(
+      `SELECT lang, COUNT(*) AS count
+       FROM articles
+       WHERE published_at >= datetime('now', '-30 days')
+       GROUP BY lang`,
+    )
+    .all<{ lang: string; count: number }>();
+
+  const result: ByLang30d = { ja: 0, en: 0 };
+  for (const row of rows.results ?? []) {
+    if (row.lang === "ja") result.ja = row.count;
+    else if (row.lang === "en") result.en = row.count;
+  }
+  return result;
+}
+
 function escapeFtsQuery(input: string): string {
   // FTS5 で安全に扱うため、特殊記号を除去して各単語をフレーズ扱いにする
   const tokens = input
