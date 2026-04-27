@@ -5,11 +5,14 @@ import { listArticles } from "../db/articles";
 import { computeSyndicationEtag } from "../utils/etag";
 import { loadAllFeeds } from "../feed-config";
 import feedsYaml from "../feeds.yaml";
+import { makeOneOf } from "../utils/types";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
-const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
-const VALID_LANGS: FeedLang[] = ["ja", "en"];
+const VALID_CATEGORIES = ["bigtech", "ai", "jp", "zenn"] as const satisfies readonly FeedCategory[];
+const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
+const isCategory = makeOneOf<FeedCategory>(VALID_CATEGORIES);
+const isLang = makeOneOf<FeedLang>(VALID_LANGS);
 const FEED_LIMIT = 50;
 const SITE_TITLE = "Tech News Bot";
 const SITE_DESCRIPTION = "Big tech / AI / 日本企業の technical blog を集約した RSS / JSON Feed";
@@ -33,12 +36,8 @@ const app = new Hono<{ Bindings: Env }>();
 function parseFilters(c: { req: { query: (k: string) => string | undefined } }) {
   const categoryRaw = c.req.query("category");
   const langRaw = c.req.query("lang");
-  const category =
-    categoryRaw && (VALID_CATEGORIES as string[]).includes(categoryRaw)
-      ? (categoryRaw as FeedCategory)
-      : undefined;
-  const lang =
-    langRaw && (VALID_LANGS as string[]).includes(langRaw) ? (langRaw as FeedLang) : undefined;
+  const category = isCategory(categoryRaw) ? categoryRaw : undefined;
+  const lang = isLang(langRaw) ? langRaw : undefined;
   return { category, lang };
 }
 
@@ -274,25 +273,25 @@ app.get("/feeds/category/*", async (c) => {
   const pathname = new URL(c.req.url).pathname;
   const basename = pathname.replace(/^.*\/feeds\/category\//, "");
 
-  let cat: FeedCategory;
+  let rawCat: string;
   let format: "json" | "xml" | "atom";
-
   if (basename.endsWith(".json")) {
-    cat = basename.slice(0, -5) as FeedCategory;
+    rawCat = basename.slice(0, -5);
     format = "json";
   } else if (basename.endsWith(".xml")) {
-    cat = basename.slice(0, -4) as FeedCategory;
+    rawCat = basename.slice(0, -4);
     format = "xml";
   } else if (basename.endsWith(".atom")) {
-    cat = basename.slice(0, -5) as FeedCategory;
+    rawCat = basename.slice(0, -5);
     format = "atom";
   } else {
     return c.json({ error: "Not Found" }, 404);
   }
 
-  if (!(VALID_CATEGORIES as string[]).includes(cat)) {
+  if (!isCategory(rawCat)) {
     return c.json({ error: "Not Found" }, 404);
   }
+  const cat = rawCat;
 
   const titleOverride = `${SITE_TITLE} — ${CATEGORY_DISPLAY_NAMES[cat]}`;
 
@@ -520,25 +519,25 @@ app.get("/feeds/lang/*", async (c) => {
   const pathname = new URL(c.req.url).pathname;
   const basename = pathname.replace(/^.*\/feeds\/lang\//, "");
 
-  let lang: FeedLang;
+  let rawLang: string;
   let format: "json" | "xml" | "atom";
-
   if (basename.endsWith(".json")) {
-    lang = basename.slice(0, -5) as FeedLang;
+    rawLang = basename.slice(0, -5);
     format = "json";
   } else if (basename.endsWith(".xml")) {
-    lang = basename.slice(0, -4) as FeedLang;
+    rawLang = basename.slice(0, -4);
     format = "xml";
   } else if (basename.endsWith(".atom")) {
-    lang = basename.slice(0, -5) as FeedLang;
+    rawLang = basename.slice(0, -5);
     format = "atom";
   } else {
     return c.json({ error: "Not Found" }, 404);
   }
 
-  if (!(VALID_LANGS as string[]).includes(lang)) {
+  if (!isLang(rawLang)) {
     return c.json({ error: "Not Found" }, 404);
   }
+  const lang = rawLang;
 
   const titleOverride = LANG_DISPLAY_NAMES[lang];
 

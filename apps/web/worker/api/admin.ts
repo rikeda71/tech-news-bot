@@ -4,6 +4,15 @@ import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { getFeedsDiagnostics, setFeedEnabled } from "../db/feeds";
 import { getCronHealth, getFeedFailures, getRun, listRuns, startRun } from "../db/runs";
+import type {
+  AdminCollectResponse,
+  AdminCollectorRunResponse,
+  AdminCronHealthResponse,
+  AdminFeedEnabledResponse,
+  AdminFeedsDiagnosticsResponse,
+  AdminRunDetailResponse,
+  AdminRunListResponse,
+} from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -149,7 +158,7 @@ app.post("/collect", async (c) => {
     }),
   );
 
-  return c.json({ ok: true, run_id: runId, async: true });
+  return c.json<AdminCollectResponse>({ ok: true, run_id: runId, async: true });
 });
 
 app.post("/collector/run", async (c) => {
@@ -179,10 +188,11 @@ app.post("/collector/run", async (c) => {
     }
     const body = parsed as Record<string, unknown>;
     if ("feed_ids" in body) {
-      if (!Array.isArray(body.feed_ids)) {
-        return c.json({ error: "feed_ids must be an array" }, 400);
+      const rawFeedIds = body.feed_ids;
+      if (!Array.isArray(rawFeedIds) || !rawFeedIds.every((v) => typeof v === "string")) {
+        return c.json({ error: "feed_ids must be an array of strings" }, 400);
       }
-      feedIds = body.feed_ids as string[];
+      feedIds = rawFeedIds;
       // 存在しない feed_id が含まれていれば 400
       const allIds = new Set(loadAllFeeds().map((f) => f.id));
       const unknown = feedIds.filter((id) => !allIds.has(id));
@@ -223,10 +233,14 @@ app.post("/collector/run", async (c) => {
     feed_id: r.feedId,
     status: r.status,
     new_articles: r.inserted,
-    ...(r.error !== undefined ? { error: r.error } : {}),
+    ...(r.status === "error" ? { error: r.error } : {}),
   }));
 
-  return c.json({ started_at: startedAt, finished_at: finishedAt, results });
+  return c.json<AdminCollectorRunResponse>({
+    started_at: startedAt,
+    finished_at: finishedAt,
+    results,
+  });
 });
 
 app.post("/feeds/:id/enabled", async (c) => {
@@ -255,7 +269,7 @@ app.post("/feeds/:id/enabled", async (c) => {
   if (!found) {
     return c.json({ error: "feed not found" }, 404);
   }
-  return c.json({ id, enabled });
+  return c.json<AdminFeedEnabledResponse>({ id, enabled });
 });
 
 app.get("/runs", async (c) => {
@@ -273,7 +287,7 @@ app.get("/runs", async (c) => {
   const limitParam = Number(c.req.query("limit") ?? "20");
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
   const runs = await listRuns(c.env.DB, limit);
-  return c.json({ runs });
+  return c.json<AdminRunListResponse>({ runs });
 });
 
 app.get("/runs/:id", async (c) => {
@@ -305,7 +319,7 @@ app.get("/runs/:id", async (c) => {
       : null;
 
   c.header("Cache-Control", "private, max-age=30");
-  return c.json({ run: { ...run, duration_ms }, feeds });
+  return c.json<AdminRunDetailResponse>({ run: { ...run, duration_ms }, feeds });
 });
 
 app.get("/feeds/diagnostics", async (c) => {
@@ -322,7 +336,7 @@ app.get("/feeds/diagnostics", async (c) => {
 
   const feeds = await getFeedsDiagnostics(c.env.DB);
   c.header("Cache-Control", "private, max-age=30");
-  return c.json({ feeds, count: feeds.length });
+  return c.json<AdminFeedsDiagnosticsResponse>({ feeds, count: feeds.length });
 });
 
 app.get("/cron-health", async (c) => {
@@ -350,7 +364,7 @@ app.get("/cron-health", async (c) => {
   ]);
 
   c.header("Cache-Control", "private, max-age=60");
-  return c.json({ ...health, top_failing_feeds: topFailingFeeds });
+  return c.json<AdminCronHealthResponse>({ ...health, top_failing_feeds: topFailingFeeds });
 });
 
 export default app;

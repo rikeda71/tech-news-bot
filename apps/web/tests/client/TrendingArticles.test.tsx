@@ -118,7 +118,7 @@ describe("TrendingArticles", () => {
   });
 
   it("14 日ボタンをクリックすると aria-pressed=true に変わる", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(makePopularResponse([]));
+    const mockFetch = vi.fn<() => Promise<unknown>>().mockResolvedValue(makePopularResponse([]));
     vi.stubGlobal("fetch", mockFetch);
 
     const user = userEvent.setup();

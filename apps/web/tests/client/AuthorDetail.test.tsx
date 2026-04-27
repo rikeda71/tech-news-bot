@@ -111,8 +111,11 @@ describe("AuthorDetail", () => {
   });
 
   it("「← 一覧に戻る」ボタン click で onBack が呼ばれる", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeArticlesResponse([])));
-    const onBack = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<() => Promise<unknown>>().mockResolvedValue(makeArticlesResponse([])),
+    );
+    const onBack = vi.fn<() => void>();
     const user = userEvent.setup();
     render(
       <AuthorDetail
@@ -129,7 +132,7 @@ describe("AuthorDetail", () => {
   });
 
   it("fetch の URL に著者名が URL エンコードされて含まれる", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(makeArticlesResponse([]));
+    const mockFetch = vi.fn<() => Promise<unknown>>().mockResolvedValue(makeArticlesResponse([]));
     vi.stubGlobal("fetch", mockFetch);
     render(
       <AuthorDetail

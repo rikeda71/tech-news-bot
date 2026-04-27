@@ -21,14 +21,32 @@ import {
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
 import type { FeedsFile } from "../types";
+import type {
+  ArticleArchiveResponse,
+  ArticleByAuthorResponse,
+  ArticleByCategoryResponse,
+  ArticleByDayResponse,
+  ArticleByFeedResponse,
+  ArticleCalendarResponse,
+  ArticleListResponse,
+  ArticleNeighborsResponse,
+  ArticlePopularResponse,
+  ArticleRandomResponse,
+  ArticleRelatedResponse,
+  ArticleSearchResponse,
+} from "./types";
+import { makeOneOf } from "../utils/types";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
 const app = new Hono<{ Bindings: Env }>();
 
-const VALID_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
-const VALID_LANGS: FeedLang[] = ["ja", "en"];
+const VALID_CATEGORIES = ["bigtech", "ai", "jp", "zenn"] as const satisfies readonly FeedCategory[];
+const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
 const VALID_FEED_IDS = new Set(loadAllFeeds().map((f) => f.id));
+
+const isCategory = makeOneOf<FeedCategory>(VALID_CATEGORIES);
+const isLang = makeOneOf<FeedLang>(VALID_LANGS);
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 // YYYY-MM-DD または YYYY-MM-DDTHH:MM:SS 形式を受け付ける
@@ -71,12 +89,8 @@ app.get("/", async (c) => {
   const limitRaw = req.query("limit");
   const cursorRaw = req.query("cursor");
 
-  const category =
-    categoryRaw && (VALID_CATEGORIES as string[]).includes(categoryRaw)
-      ? (categoryRaw as FeedCategory)
-      : undefined;
-  const lang =
-    langRaw && (VALID_LANGS as string[]).includes(langRaw) ? (langRaw as FeedLang) : undefined;
+  const category = isCategory(categoryRaw) ? categoryRaw : undefined;
+  const lang = isLang(langRaw) ? langRaw : undefined;
 
   const limit = Math.min(Math.max(Number(limitRaw ?? "20") || 20, 1), 100);
 
@@ -114,7 +128,7 @@ app.get("/", async (c) => {
 
   c.header("ETag", etag);
   c.header("Cache-Control", "public, max-age=60");
-  return c.json({
+  return c.json<ArticleListResponse>({
     articles: result.articles,
     nextCursor: encodeCursor(result.nextCursor),
   });
@@ -128,16 +142,12 @@ app.get("/random", async (c) => {
   const langRaw = c.req.query("lang");
   const feedIdRaw = c.req.query("feed_id") ?? undefined;
 
-  const category =
-    categoryRaw && (VALID_CATEGORIES as string[]).includes(categoryRaw)
-      ? (categoryRaw as FeedCategory)
-      : undefined;
-  const lang =
-    langRaw && (VALID_LANGS as string[]).includes(langRaw) ? (langRaw as FeedLang) : undefined;
+  const category = isCategory(categoryRaw) ? categoryRaw : undefined;
+  const lang = isLang(langRaw) ? langRaw : undefined;
   const feedId = feedIdRaw && VALID_FEED_IDS.has(feedIdRaw) ? feedIdRaw : undefined;
 
   const articles = await getRandomArticles(c.env.DB, { n, category, lang, feedId });
-  return c.json({ articles }, 200, { "Cache-Control": "no-store" });
+  return c.json<ArticleRandomResponse>({ articles }, 200, { "Cache-Control": "no-store" });
 });
 
 app.get("/by-author/:author", async (c) => {
@@ -158,9 +168,11 @@ app.get("/by-author/:author", async (c) => {
 
   const result = await getArticlesByAuthor(c.env.DB, author, limitNum, cursor);
 
-  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
-    "Cache-Control": "public, max-age=300",
-  });
+  return c.json<ArticleByAuthorResponse>(
+    { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
+    200,
+    { "Cache-Control": "public, max-age=300" },
+  );
 });
 
 app.get("/by-feed/:feedId", async (c) => {
@@ -181,17 +193,19 @@ app.get("/by-feed/:feedId", async (c) => {
 
   const result = await getArticlesByFeed(c.env.DB, feedId, limitNum, cursor);
 
-  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
-    "Cache-Control": "public, max-age=300",
-  });
+  return c.json<ArticleByFeedResponse>(
+    { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
+    200,
+    { "Cache-Control": "public, max-age=300" },
+  );
 });
 
 app.get("/by-category/:cat", async (c) => {
   const catRaw = c.req.param("cat");
-  if (!(VALID_CATEGORIES as string[]).includes(catRaw)) {
+  if (!isCategory(catRaw)) {
     return c.json({ error: "invalid category: must be one of bigtech, ai, jp, zenn" }, 400);
   }
-  const category = catRaw as FeedCategory;
+  const category = catRaw;
 
   const limitRaw = c.req.query("limit") ?? "20";
   const limitNum = Number(limitRaw);
@@ -206,9 +220,11 @@ app.get("/by-category/:cat", async (c) => {
 
   const result = await getArticlesByCategory(c.env.DB, category, limitNum, cursor);
 
-  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
-    "Cache-Control": "public, max-age=300",
-  });
+  return c.json<ArticleByCategoryResponse>(
+    { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
+    200,
+    { "Cache-Control": "public, max-age=300" },
+  );
 });
 
 const VALID_CALENDAR_DAYS = [7, 30, 90, 365] as const;
@@ -221,20 +237,20 @@ app.get("/calendar", async (c) => {
   }
 
   const categoryRaw = c.req.query("category");
-  if (categoryRaw !== undefined && !(VALID_CATEGORIES as string[]).includes(categoryRaw)) {
+  if (categoryRaw !== undefined && !isCategory(categoryRaw)) {
     return c.json({ error: "invalid category" }, 400);
   }
-  const category = categoryRaw as FeedCategory | undefined;
+  const category = isCategory(categoryRaw) ? categoryRaw : undefined;
 
   const langRaw = c.req.query("lang");
-  if (langRaw !== undefined && !(VALID_LANGS as string[]).includes(langRaw)) {
+  if (langRaw !== undefined && !isLang(langRaw)) {
     return c.json({ error: "invalid lang" }, 400);
   }
-  const lang = langRaw as FeedLang | undefined;
+  const lang = isLang(langRaw) ? langRaw : undefined;
 
   const items = await getArticlesCalendar(c.env.DB, days, lang, category);
 
-  return c.json({ days, items }, 200, {
+  return c.json<ArticleCalendarResponse>({ days, items }, 200, {
     "Cache-Control": "public, max-age=600",
   });
 });
@@ -254,7 +270,7 @@ app.get("/popular", async (c) => {
 
   const result = await getPopularArticles(c.env.DB, days, limit);
 
-  return c.json(result, 200, {
+  return c.json<ArticlePopularResponse>(result, 200, {
     "Cache-Control": "public, max-age=600",
   });
 });
@@ -290,7 +306,7 @@ app.get("/search", async (c) => {
 
   const result = await searchArticles(c.env.DB, tokens, limitNum, cursor);
 
-  return c.json(
+  return c.json<ArticleSearchResponse>(
     {
       query: tokens.join(" "),
       tokens,
@@ -310,14 +326,16 @@ app.get("/:guid/related", async (c) => {
 
   const items = await getRelatedArticles(c.env.DB, guid, n);
   if (items === null) return c.json({ error: "not found" }, 404);
-  return c.json({ items }, 200, { "Cache-Control": "public, max-age=300" });
+  return c.json<ArticleRelatedResponse>({ items }, 200, { "Cache-Control": "public, max-age=300" });
 });
 
 app.get("/:guid/neighbors", async (c) => {
   const guid = c.req.param("guid");
   const neighbors = await getNeighbors(c.env.DB, guid);
   if (neighbors === null) return c.json({ error: "not found" }, 404);
-  return c.json(neighbors, 200, { "Cache-Control": "public, max-age=300" });
+  return c.json<ArticleNeighborsResponse>(neighbors, 200, {
+    "Cache-Control": "public, max-age=300",
+  });
 });
 
 app.get("/archive", async (c) => {
@@ -335,16 +353,16 @@ app.get("/archive", async (c) => {
   }
 
   const categoryRaw = c.req.query("category");
-  if (categoryRaw !== undefined && !(VALID_CATEGORIES as string[]).includes(categoryRaw)) {
+  if (categoryRaw !== undefined && !isCategory(categoryRaw)) {
     return c.json({ error: "invalid category" }, 400);
   }
-  const category = categoryRaw as FeedCategory | undefined;
+  const category = isCategory(categoryRaw) ? categoryRaw : undefined;
 
   const langRaw = c.req.query("lang");
-  if (langRaw !== undefined && !(VALID_LANGS as string[]).includes(langRaw)) {
+  if (langRaw !== undefined && !isLang(langRaw)) {
     return c.json({ error: "invalid lang" }, 400);
   }
-  const lang = langRaw as FeedLang | undefined;
+  const lang = isLang(langRaw) ? langRaw : undefined;
 
   const limitRaw = c.req.query("limit") ?? "200";
   const limit = parseInt(limitRaw, 10);
@@ -357,7 +375,7 @@ app.get("/archive", async (c) => {
     countArticlesByMonth(c.env.DB, year, month, { category, lang }),
   ]);
 
-  return c.json({ year, month, items, total }, 200, {
+  return c.json<ArticleArchiveResponse>({ year, month, items, total }, 200, {
     "Cache-Control": "public, max-age=600",
   });
 });
@@ -401,7 +419,7 @@ app.get("/by-day/:date", async (c) => {
     countArticlesByDay(c.env.DB, startIso, endIso),
   ]);
 
-  return c.json(
+  return c.json<ArticleByDayResponse>(
     {
       date: dateRaw,
       articles: result.articles,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CalendarDay } from "../types/api";
+import type { CalendarDay, CalendarResponse } from "../types/api";
 
 export function useArticlesCalendar(days: 30 | 90 | 365 = 90) {
   const [items, setItems] = useState<CalendarDay[]>([]);
@@ -14,9 +14,9 @@ export function useArticlesCalendar(days: 30 | 90 | 365 = 90) {
       try {
         const res = await fetch(`/api/articles/calendar?days=${days}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { days: CalendarDay[] };
+        const data = (await res.json()) as CalendarResponse;
         if (alive) {
-          setItems(data.days ?? []);
+          setItems(data.items ?? []);
           setIsLoading(false);
         }
       } catch (err) {

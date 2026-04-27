@@ -7,6 +7,7 @@ import {
   getTopPublishers30d,
 } from "../db/articles";
 import type { Env } from "../types";
+import type { StatsResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -61,7 +62,7 @@ app.get("/", async (c) => {
       getByLang30d(c.env.DB),
     ]);
 
-  return c.json({
+  return c.json<StatsResponse>({
     total: totalRow?.n ?? 0,
     last_published_at: totalRow?.last_published ?? null,
     last_fetched_at: totalRow?.last_fetched ?? null,
