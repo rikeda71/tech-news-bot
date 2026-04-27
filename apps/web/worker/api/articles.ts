@@ -2,6 +2,11 @@ import { Hono } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { loadAllFeeds } from "../feed-config";
 import { listArticles } from "../db/articles";
+import { computeArticlesEtag } from "../utils/etag";
+import feedsYaml from "../feeds.yaml";
+import type { FeedsFile } from "../types";
+
+const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -65,6 +70,21 @@ app.get("/", async (c) => {
   const dateFrom = dateFromRaw && DATE_RANGE_RE.test(dateFromRaw) ? dateFromRaw : undefined;
   const dateTo = dateToRaw && DATE_RANGE_RE.test(dateToRaw) ? dateToRaw : undefined;
 
+  const etag = await computeArticlesEtag(c.env.DB, FEEDS_VERSION, {
+    category,
+    lang,
+    feedId,
+    q,
+    limit,
+    cursor: cursorRaw ?? null,
+  });
+
+  if (req.header("If-None-Match") === etag) {
+    c.header("ETag", etag);
+    c.header("Cache-Control", "public, max-age=60");
+    return c.body(null, 304);
+  }
+
   const result = await listArticles(c.env.DB, {
     category,
     lang,
@@ -76,6 +96,8 @@ app.get("/", async (c) => {
     cursor: decodeCursor(cursorRaw ?? undefined),
   });
 
+  c.header("ETag", etag);
+  c.header("Cache-Control", "public, max-age=60");
   return c.json({
     articles: result.articles,
     nextCursor: encodeCursor(result.nextCursor),
