@@ -9,5 +9,11 @@
   "bracketSpacing": true,
   "arrowParens": "always",
   "endOfLine": "lf",
-  "ignorePatterns": ["dist/**", ".wrangler/**", "node_modules/**", "pnpm-lock.yaml", "**/*.d.ts"]
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/.wrangler/**",
+    "**/node_modules/**",
+    "pnpm-lock.yaml",
+    "**/*.d.ts"
+  ]
 }

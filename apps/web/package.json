@@ -1,0 +1,40 @@
+{
+  "name": "@tnb/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate:local": "wrangler d1 migrations apply tech-news-bot-db --local",
+    "migrate:prod": "wrangler d1 migrations apply tech-news-bot-db --remote",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@tnb/feed-config": "workspace:*",
+    "@tnb/shared-types": "workspace:*",
+    "fast-xml-parser": "^4.5.0",
+    "hono": "^4.6.14",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.33.2",
+    "@cloudflare/vitest-pool-workers": "^0.15.0",
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "@modyfi/vite-plugin-yaml": "^1.1.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^5.7.2",
+    "vite": "^7.3.2",
+    "vitest": "^4.1.5",
+    "wrangler": "^4.85.0"
+  }
+}

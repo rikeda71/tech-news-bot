@@ -1,0 +1,12 @@
+import type { FeedConfig, FeedsFile } from "@tnb/shared-types";
+import feedsYaml from "../feeds.yaml";
+
+const file = feedsYaml as FeedsFile;
+
+export function loadAllFeeds(): FeedConfig[] {
+  return file.feeds;
+}
+
+export function loadEnabledFeeds(): FeedConfig[] {
+  return file.feeds.filter((f) => f.enabled);
+}

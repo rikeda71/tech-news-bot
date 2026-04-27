@@ -5,14 +5,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "worker/**"
-      - "src/**"
-      - "shared/**"
-      - "config/**"
+      - "apps/**"
+      - "packages/**"
       - "migrations/**"
-      - "wrangler.toml"
       - "package.json"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
 
 jobs:
   deploy:
@@ -25,17 +23,19 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm cf-typegen
       - run: pnpm build
       - name: Apply D1 migrations
+        working-directory: apps/web
         run: pnpm exec wrangler d1 migrations apply tech-news-bot-db --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy worker
+        working-directory: apps/web
         run: pnpm exec wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

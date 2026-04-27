@@ -19,9 +19,15 @@
   },
   "overrides": [
     {
-      "files": ["test/**/*.ts", "test/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
+      "files": ["**/tests/**/*.ts", "**/tests/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
       "plugins": ["vitest"]
     }
   ],
-  "ignorePatterns": ["dist", "node_modules", ".wrangler", "**/*.d.ts", "worker-configuration.d.ts"]
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/.wrangler/**",
+    "**/*.d.ts",
+    "**/worker-configuration.d.ts"
+  ]
 }

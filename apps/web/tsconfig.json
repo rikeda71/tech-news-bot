@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "./worker-configuration.d.ts"],
+    "baseUrl": ".",
+    "paths": {
+      "@tnb/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@tnb/feed-config": ["../../packages/feed-config/src/index.ts"]
+    }
+  },
+  "include": [
+    "client/**/*",
+    "worker/**/*",
+    "tests/**/*",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "worker-configuration.d.ts",
+    "yaml-modules.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".wrangler"]
+}
