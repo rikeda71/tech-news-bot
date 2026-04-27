@@ -76,7 +76,10 @@ export async function sendAlert(env: Env, result: CollectAllResult): Promise<voi
     .map((r) => `${r.feedId} (${(r.error ?? "unknown").slice(0, 100)})`)
     .join(", ");
 
-  const mrkdwn = `*Failed:* ${feedsFailed} / ${result.total}\n*Time:* ${now}\n*Top errors:* ${topErrors}`;
+  const mrkdwn =
+    `*Failed:* ${feedsFailed} / ${result.total}\n` +
+    `*Time:* ${now}\n` +
+    `*Top errors:* ${topErrors}`;
 
   const payload = {
     text: "tech-news-bot collector alert",
