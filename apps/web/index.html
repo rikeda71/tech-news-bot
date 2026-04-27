@@ -12,6 +12,22 @@
     />
     <link rel="alternate" type="application/rss+xml" title="Tech News Bot (RSS)" href="/feed.xml" />
     <title>Tech News Bot</title>
+    <!-- FOUC 防止: React マウント前に data-theme を確定させる -->
+    <script>
+      (function () {
+        var v = "system";
+        try {
+          v = localStorage.getItem("tnb:theme") || "system";
+        } catch (_) {}
+        var resolved =
+          v === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : v;
+        document.documentElement.setAttribute("data-theme", resolved);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

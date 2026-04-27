@@ -107,24 +107,41 @@ a:hover {
   margin-bottom: 16px;
 }
 
-.theme-toggle {
+.theme-toggle-group {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: var(--bg-elev);
-  color: var(--fg-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
-  cursor: pointer;
+  overflow: hidden;
   flex-shrink: 0;
 }
 
-.theme-toggle:hover {
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--bg-elev);
+  color: var(--fg-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.theme-toggle-btn:last-child {
+  border-right: none;
+}
+
+.theme-toggle-btn:hover {
   color: var(--fg);
-  border-color: var(--accent);
+  background: var(--bg-elev-2);
+}
+
+.theme-toggle-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .header .subtitle {
