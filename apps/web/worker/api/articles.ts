@@ -5,6 +5,7 @@ import {
   countArticlesByMonth,
   getArticleById,
   getArticlesByAuthor,
+  getArticlesCalendar,
   getArticlesByMonth,
   getNeighbors,
   getRandomArticles,
@@ -153,6 +154,34 @@ app.get("/by-author/:author", async (c) => {
 
   return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
     "Cache-Control": "public, max-age=300",
+  });
+});
+
+const VALID_CALENDAR_DAYS = [7, 30, 90, 365] as const;
+
+app.get("/calendar", async (c) => {
+  const daysRaw = c.req.query("days") ?? "30";
+  const days = parseInt(daysRaw, 10);
+  if (isNaN(days) || !(VALID_CALENDAR_DAYS as readonly number[]).includes(days)) {
+    return c.json({ error: "days must be one of 7, 30, 90, 365" }, 400);
+  }
+
+  const categoryRaw = c.req.query("category");
+  if (categoryRaw !== undefined && !(VALID_CATEGORIES as string[]).includes(categoryRaw)) {
+    return c.json({ error: "invalid category" }, 400);
+  }
+  const category = categoryRaw as FeedCategory | undefined;
+
+  const langRaw = c.req.query("lang");
+  if (langRaw !== undefined && !(VALID_LANGS as string[]).includes(langRaw)) {
+    return c.json({ error: "invalid lang" }, 400);
+  }
+  const lang = langRaw as FeedLang | undefined;
+
+  const items = await getArticlesCalendar(c.env.DB, days, lang, category);
+
+  return c.json({ days, items }, 200, {
+    "Cache-Control": "public, max-age=600",
   });
 });
 
