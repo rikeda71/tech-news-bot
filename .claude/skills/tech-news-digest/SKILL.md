@@ -1,23 +1,25 @@
 ---
 name: tech-news-digest
-description: D1 に蓄積された tech blog の記事を「今日 / 今週 / 任意期間」の粒度でさらい、日本語で要約してトレンドを抽出する。ユーザーが「今日のニュースまとめて」「週次サマリ作って」「最近のトレンド何？」のような問い合わせをした時に必ずこのスキルを起動する。
+description: D1 に蓄積された tech blog の記事を「今日 / 今週 / 任意期間」の粒度で抽出し、Stage 1〜4 (収集 → 選定 → WebFetch で本文取得 → トレンド分析) で日本語ダイジェストを生成する。"今日のニュースまとめて" "週次サマリ作って" "最近のトレンド何？" のような問い合わせで起動する。要約品質を本文ベースで保つため、デフォルトで WebFetch を使う deep モードで動作する。
 ---
 
 # tech-news-digest
 
 ## やること
 
-D1 に保存された記事 (`articles` table) を期間指定で抽出し、以下を生成:
+D1 (`articles` テーブル) から期間指定で記事メタデータを取得し、4 ステージで日本語ダイジェストを生成する。要約・トレンド分析は Claude が担い、Worker 側の変更や外部 LLM 呼び出しは不要。
 
-1. **記事リスト**: タイトル / フィード元 / category / 公開日時
-2. **日本語要約**: 記事ごとに 1〜2 文の要約。元記事が英語なら翻訳しつつ日本語で書く
-3. **トレンド検出**: タイトル・要約の頻出キーワードと category 分布から「今 hot な領域」を抽出
+## モード
 
-## 使い方
+| Mode             | カバー範囲 | 用途                                      |
+| ---------------- | ---------- | ----------------------------------------- |
+| `quick`          | Stage 1+2  | `summary` 抜粋 (≤500 字) だけで軽量に要約 |
+| `deep` (default) | Stage 1〜4 | URL を WebFetch で取得して本文ベース要約  |
+| `trend`          | Stage 1+4  | 本文要らず、傾向解析だけ                  |
 
-ユーザーが期間を明示しない場合は **今日 (UTC 24h 以内)** をデフォルトとする。
+期間もモードも指定がない場合のデフォルトは **`since=today` / `mode=deep`**。「ざっくり」「軽く」と指示されたら `quick`、「トレンドだけ」「最近の傾向」なら `trend` を選ぶ。
 
-許容される期間指定:
+## 対象期間
 
 | 入力              | 範囲                                        |
 | ----------------- | ------------------------------------------- |
@@ -26,11 +28,13 @@ D1 に保存された記事 (`articles` table) を期間指定で抽出し、以
 | 月次 / this month | 過去 30 日                                  |
 | 過去 N 日         | `published_at > datetime('now', '-N days')` |
 
-## 手順 (Claude が踏むステップ)
+## 手順
 
-### 1. D1 に対するクエリ実行
+### Stage 1: Collect — D1 から記事メタを取得
 
-`tools/d1-client/recent.mjs` を Node から呼ぶ。引数:
+`tools/d1-client/recent.mjs` を Node から実行する。
+
+引数:
 
 - `--since=<today|week|month|N>` (必須)
 - `--target=<local|remote>` (省略時 `local`)
@@ -45,12 +49,13 @@ node tools/d1-client/recent.mjs --since=today --target=remote
 node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
 ```
 
-出力は JSON で次の形:
+stdout に出る JSON 形式:
 
 ```json
 {
   "since": "2026-04-26T05:00:00.000Z",
   "target": "remote",
+  "filters": { "category": null, "lang": null },
   "total": 42,
   "articles": [
     {
@@ -60,37 +65,70 @@ node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
       "feed_name": "OpenAI News",
       "title": "...",
       "url": "https://...",
-      "summary": "...",
+      "summary": "<= 500 char excerpt>",
+      "author": "...",
       "published_at": "2026-04-27T...",
       "category": "ai",
       "lang": "en"
     }
   ],
   "by_category": { "ai": 12, "bigtech": 18, "jp": 12 },
-  "by_feed": { "openai-blog": 3, "...": ... },
-  "top_terms": [ ["llm", 8], ["mcp", 5], ... ]
+  "by_feed": { "openai-blog": 3 },
+  "by_lang": { "en": 30, "ja": 12 }
 }
 ```
 
-`top_terms` は title + summary を低コストに tokenize して頻度 top-N を返す簡易トレンド指標。
+エラーは stderr + exit 1。`--target=remote` で 401/403 が返ったら `pnpm --filter @tnb/web exec wrangler login` を案内する。`--target=local` で記事 0 件なら、まず `pnpm migrate:local` と `pnpm dev` でローカル収集を 1 回回すよう案内する。
 
-### 2. 出力フォーマット (Claude が生成する)
+### Stage 2: Triage — 重要記事を選定 (quick / deep)
 
-Markdown で次の構造で返す:
+`articles[].summary` (≤500 字抜粋) を読み、次の基準で **重要記事 5〜10 件**を選定する:
+
+- 大きなプロダクト / モデルローンチ (GA、GPT-N、Claude N、新フレームワーク等)
+- 既存技術の breaking change / EOL / 重大な脆弱性公表
+- 業界の方針転換 / 体制変更 (買収、CTO 交代、組織再編など)
+- 公開時刻が新しい方を残す (同一トピックが複数記事ある場合)
+
+選定理由を 1 行内部メモして次ステージに渡す。`total > 50` のときは category ごとに 3〜5 件まで絞る。
+
+### Stage 3: Deep read — 本文を WebFetch で取得 (deep のみ)
+
+Stage 2 で選定した記事の `url` を 1 件ずつ `WebFetch` で取得し、本文を読んだうえで日本語 1〜2 文の要約を生成する。
+
+注意:
+
+- WebFetch が失敗した記事は `summary` (≤500 字) から要約を生成し、末尾に `(summary based)` を付ける
+- 同一ホストへ連続 fetch しない (rate limit 配慮、間に他ホストを挟む)
+- 動画 / pdf / login wall は WebFetch せず `summary` だけで処理 (`(summary based)` 注記)
+
+### Stage 4: Synthesize — トレンド分析 (deep / trend)
+
+Stage 1 の全記事 (`articles`) を見渡し、タイトル + summary + (deep なら Stage 3 の本文要約) からトレンドを **意味的に** 解釈する:
+
+- 複数記事に共通する **テーマ / プロダクト / 概念** を抽出 (頻度より関連性を優先)
+- カテゴリ間 (bigtech / ai / jp) の温度差
+- 一過性のニュースか継続的なトレンドか
+- 各トレンド項目に関連記事のリンクを 2〜3 件添える
+
+頻度トークン (`"llm" 5 件`、`"mcp" 3 件`…) を列挙する出力はしない。意味を読まずに語彙だけ並べる行為を禁止する。
+
+## 出力フォーマット
+
+Markdown で次の構造で返す。`mode` に応じて該当しない節は省略する。
 
 ```md
-# Tech News Digest — <期間ラベル>
+# Tech News Digest — <期間ラベル> (<mode>)
 
-期間: <ISO start> 〜 <ISO end> / 総件数: <total>
+期間: <ISO start> 〜 <ISO end> / 総件数: <total> / カテゴリ: bigtech=N, ai=N, jp=N
 
-## サマリ (重要記事 5〜10 件)
+## サマリ (重要記事 N 件) ← quick / deep のみ
 
-- **[<タイトル>](url)** _(<feed_name>, <category>)_ — <1〜2 文の日本語要約>
+- **[<タイトル>](url)** _(<feed_name>, <category>, <YYYY-MM-DD>)_ — <1〜2 文の日本語要約> <(summary based) があれば末尾に>
 - ...
 
-## トレンド
+## トレンド ← deep / trend のみ
 
-- **<キーワード>**: 出現 <N> 件 / 関連記事: <短い文脈>
+- **<テーマ>**: <意味的な解釈の 1〜2 文> 関連: [記事 A](url), [記事 B](url)
 - ...
 
 ## カテゴリ別件数
@@ -102,15 +140,17 @@ Markdown で次の構造で返す:
 | jp       | N    |
 ```
 
-### 3. ガードレール
+## ガードレール
 
-- **PII / 機密情報**: D1 内には公開記事のみ蓄積されているはずだが、author 名以外の個人情報が混ざっていたら除外する。
-- **過剰な要約数**: total が 50 を超える場合は category ごとに重要 3〜5 件まで絞り、残りは件数のみ報告。
-- **D1 接続失敗時**: `--target=remote` で 401/403 が出たら `wrangler login` 推奨を user に伝える。`--target=local` ならまず `pnpm migrate:local` と `pnpm dev` で 1 回 collection を回すよう案内する。
-- **記事 0 件**: スキルは正直に「該当期間に記事なし」と報告。creative writing は禁止。
+- **PII / 機密情報**: 公開記事のみ蓄積されている前提だが、author 名以外の個人情報が混ざっていたら出力から除外する
+- **D1 接続失敗時**:
+  - `--target=remote` で 401/403 → `pnpm --filter @tnb/web exec wrangler login` を案内
+  - `--target=local` で 0 件 → `pnpm migrate:local` + `pnpm dev` でローカル収集を 1 回回すよう案内
+- **記事 0 件**: 「該当期間に記事なし」と正直に報告する。creative writing で埋めない
+- **WebFetch 連続失敗**: deep モードで選定記事の半数以上が fetch 失敗したら、残りは `quick` 相当 (`(summary based)` 付き) に退避し、出力末尾に `_注: WebFetch が複数失敗したため一部 summary ベース_` を付ける
 
 ## 関連ファイル
 
 - 実装: `tools/d1-client/recent.mjs`
-- スキーマ: `migrations/0001_init.sql` (articles, feeds テーブル)
-- 型: `packages/shared-types/src/index.ts` (`Article` interface)
+- スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds` テーブル)
+- 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
