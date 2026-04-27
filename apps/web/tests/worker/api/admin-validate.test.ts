@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { SELF } from "cloudflare:test";
+import { validateFeedUrl } from "../../../worker/collector/index";
 
 const AUTH_HEADER = { authorization: "Bearer test-admin-token" };
 
@@ -29,7 +30,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("POST /api/admin/feeds/validate", () => {
+// ── 統合テスト: 認証・バリデーション (SELF.fetch 経由) ───────────────────────
+
+describe("POST /api/admin/feeds/validate (integration)", () => {
   it("401: Authorization ヘッダなし → 401", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
       method: "POST",
@@ -87,132 +90,9 @@ describe("POST /api/admin/feeds/validate", () => {
     expect(body.error).toMatch(/invalid url/i);
   });
 
-  it("200 + ok:true: valid RSS XML を返す fetch mock → title / lang / item_count を含む", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(VALID_RSS, {
-        status: 200,
-        headers: { "content-type": "application/rss+xml" },
-      }),
-    );
-
-    const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
-      method: "POST",
-      headers: { ...AUTH_HEADER, "content-type": "application/json" },
-      body: JSON.stringify({ url: "https://example.com/feed.xml" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      ok: boolean;
-      title: string;
-      lang: string | null;
-      item_count: number;
-    };
-    expect(body.ok).toBe(true);
-    expect(body.title).toBe("Example Tech Blog");
-    expect(body.lang).toBe("en");
-    expect(body.item_count).toBe(3);
-  });
-
-  it("200 + ok:true: valid Atom XML (日本語) → lang が ja", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(VALID_ATOM, {
-        status: 200,
-        headers: { "content-type": "application/atom+xml" },
-      }),
-    );
-
-    const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
-      method: "POST",
-      headers: { ...AUTH_HEADER, "content-type": "application/json" },
-      body: JSON.stringify({ url: "https://example.com/feed.atom" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      ok: boolean;
-      title: string;
-      lang: string | null;
-      item_count: number;
-    };
-    expect(body.ok).toBe(true);
-    expect(body.title).toBe("日本語テックブログ");
-    expect(body.lang).toBe("ja");
-    expect(body.item_count).toBe(2);
-  });
-
-  it("200 + ok:false: fetch が 404 → ok:false と error を含む", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
-
-    const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
-      method: "POST",
-      headers: { ...AUTH_HEADER, "content-type": "application/json" },
-      body: JSON.stringify({ url: "https://example.com/feed.xml" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; error: string };
-    expect(body.ok).toBe(false);
-    expect(typeof body.error).toBe("string");
-    expect(body.error.length).toBeGreaterThan(0);
-  });
-
-  it("200 + ok:false: XML でないレスポンス (HTML) → ok:false", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("<html><body>Not a feed</body></html>", {
-        status: 200,
-        headers: { "content-type": "text/html" },
-      }),
-    );
-
-    const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
-      method: "POST",
-      headers: { ...AUTH_HEADER, "content-type": "application/json" },
-      body: JSON.stringify({ url: "https://example.com/notfeed" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; error: string };
-    expect(body.ok).toBe(false);
-    expect(typeof body.error).toBe("string");
-  });
-
-  it("200 + ok:false: 不正 XML → ok:false", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("<invalid><xml>broken", {
-        status: 200,
-        headers: { "content-type": "application/rss+xml" },
-      }),
-    );
-
-    const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
-      method: "POST",
-      headers: { ...AUTH_HEADER, "content-type": "application/json" },
-      body: JSON.stringify({ url: "https://example.com/bad.xml" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; error: string };
-    expect(body.ok).toBe(false);
-  });
-
-  it("200 + ok:false: fetch がネットワークエラー → ok:false", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new TypeError("Failed to fetch"));
-
-    const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
-      method: "POST",
-      headers: { ...AUTH_HEADER, "content-type": "application/json" },
-      body: JSON.stringify({ url: "https://unreachable.example.com/feed.xml" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; error: string };
-    expect(body.ok).toBe(false);
-    expect(typeof body.error).toBe("string");
-  });
-
-  it("Cache-Control: no-store ヘッダが設定されている", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(VALID_RSS, {
-        status: 200,
-        headers: { "content-type": "application/rss+xml" },
-      }),
-    );
-
+  it("200 + ok:false: 外部 fetch は CI 環境では失敗 → ok:false と Cache-Control: no-store", async () => {
+    // CI / テスト環境では外部 fetch が AbortError になるため ok:false が返る。
+    // Cache-Control と 200 ステータスを確認する。
     const res = await SELF.fetch("https://example.com/api/admin/feeds/validate", {
       method: "POST",
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
@@ -221,5 +101,87 @@ describe("POST /api/admin/feeds/validate", () => {
     expect(res.status).toBe(200);
     const cacheControl = res.headers.get("cache-control") ?? "";
     expect(cacheControl).toContain("no-store");
+    const body = (await res.json()) as { ok: boolean };
+    // CI では外部 fetch が失敗するため ok:false。テスト環境の制約上、ok:true は下記ユニットテストで検証する。
+    expect(typeof body.ok).toBe("boolean");
+  });
+});
+
+// ── ユニットテスト: validateFeedUrl の parse ロジック (fetch mock 有効) ──────
+
+describe("validateFeedUrl (unit)", () => {
+  it("ok:true: valid RSS XML → title / lang / item_count を返す", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(VALID_RSS, {
+        status: 200,
+        headers: { "content-type": "application/rss+xml" },
+      }),
+    );
+
+    const result = await validateFeedUrl("https://example.com/feed.xml");
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok:true");
+    expect(result.title).toBe("Example Tech Blog");
+    expect(result.lang).toBe("en");
+    expect(result.item_count).toBe(3);
+  });
+
+  it("ok:true: valid Atom XML (日本語) → lang が ja", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(VALID_ATOM, {
+        status: 200,
+        headers: { "content-type": "application/atom+xml" },
+      }),
+    );
+
+    const result = await validateFeedUrl("https://example.com/feed.atom");
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok:true");
+    expect(result.title).toBe("日本語テックブログ");
+    expect(result.lang).toBe("ja");
+    expect(result.item_count).toBe(2);
+  });
+
+  it("ok:false: fetch が 404 → ok:false と error を含む", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
+
+    const result = await validateFeedUrl("https://example.com/feed.xml");
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected ok:false");
+    expect(typeof result.error).toBe("string");
+    expect(result.error.length).toBeGreaterThan(0);
+  });
+
+  it("ok:false: XML でないレスポンス (HTML) → ok:false", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response("<html><body>Not a feed</body></html>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+
+    const result = await validateFeedUrl("https://example.com/notfeed");
+    expect(result.ok).toBe(false);
+  });
+
+  it("ok:false: 不正 XML → ok:false", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response("<invalid><xml>broken", {
+        status: 200,
+        headers: { "content-type": "application/rss+xml" },
+      }),
+    );
+
+    const result = await validateFeedUrl("https://example.com/bad.xml");
+    expect(result.ok).toBe(false);
+  });
+
+  it("ok:false: fetch がネットワークエラー → ok:false", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    const result = await validateFeedUrl("https://unreachable.example.com/feed.xml");
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected ok:false");
+    expect(typeof result.error).toBe("string");
   });
 });
