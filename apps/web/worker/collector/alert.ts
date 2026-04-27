@@ -1,5 +1,5 @@
-import type { CollectResult } from "./index";
 import type { Env } from "../types";
+import type { CollectResult } from "./index";
 
 export interface AlertSummary {
   failedFeeds: { id: string; error: string }[];
