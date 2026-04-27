@@ -3,6 +3,7 @@ import type { Env } from "./types";
 import api from "./api/router";
 import syndication from "./api/syndication";
 import { collectAll } from "./collector";
+import { pruneOldArticles } from "./db/retention";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -58,6 +59,15 @@ const handler: ExportedHandler<Env> = {
         console.error("[scheduled] collectAll failed", err);
       }),
     );
+    // Run retention once per day at UTC 17:00 to avoid peak write hours
+    if (new Date().getUTCHours() === 17) {
+      ctx.waitUntil(
+        pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "0")).then((r) => {
+          console.log(`[retention] deleted=${r.deleted}`);
+          return r;
+        }),
+      );
+    }
   },
 };
 
