@@ -38,12 +38,21 @@ const MOCK_STATS_RESPONSE = {
   feed_activity: [],
 };
 
+// CalendarHeatmap の fetch をモックするため URL ごとにレスポンスを分岐する
 function mockFetchSuccess() {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(MOCK_STATS_RESPONSE),
+    vi.fn().mockImplementation((url: string) => {
+      if ((url as string).includes("/api/articles/calendar")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ days: [] }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(MOCK_STATS_RESPONSE),
+      });
     }),
   );
 }
@@ -153,5 +162,13 @@ describe("StatsDashboard", () => {
     expect(screen.getByText("ai")).toBeTruthy();
     expect(screen.getByText("jp")).toBeTruthy();
     expect(screen.getByText("zenn")).toBeTruthy();
+  });
+
+  it("活動カレンダーセクションが描画される", async () => {
+    mockFetchSuccess();
+    render(<StatsDashboard />);
+    // CalendarHeatmap の見出しが表示されることを確認 (空データでも OK)
+    const heading = await screen.findByText("活動カレンダー");
+    expect(heading).toBeTruthy();
   });
 });

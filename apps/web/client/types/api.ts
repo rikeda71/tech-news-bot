@@ -53,3 +53,12 @@ export interface FeedDetailResponse {
   feed: FeedDetail;
   recent_articles: Article[];
 }
+
+export interface CalendarDay {
+  date: string;
+  count: number;
+}
+
+export interface CalendarResponse {
+  days: CalendarDay[];
+}
