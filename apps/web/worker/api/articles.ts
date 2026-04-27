@@ -5,6 +5,7 @@ import {
   countArticlesByMonth,
   getArticleById,
   getArticlesByAuthor,
+  getArticlesByFeed,
   getArticlesCalendar,
   getArticlesByMonth,
   getNeighbors,
@@ -151,6 +152,29 @@ app.get("/by-author/:author", async (c) => {
   if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
 
   const result = await getArticlesByAuthor(c.env.DB, author, limitNum, cursor);
+
+  return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
+    "Cache-Control": "public, max-age=300",
+  });
+});
+
+app.get("/by-feed/:feedId", async (c) => {
+  const feedIdRaw = c.req.param("feedId");
+  const feedId = decodeURIComponent(feedIdRaw).trim();
+  if (!feedId) return c.json({ error: "feedId must not be empty" }, 400);
+
+  const limitRaw = c.req.query("limit") ?? "20";
+  const limitNum = Number(limitRaw);
+  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 50) {
+    return c.json({ error: "limit must be an integer between 1 and 50" }, 400);
+  }
+
+  const cursorRaw = c.req.query("cursor");
+  const cursor = decodeCursor(cursorRaw);
+  // cursor が指定されているのに decode に失敗した場合は 400
+  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+
+  const result = await getArticlesByFeed(c.env.DB, feedId, limitNum, cursor);
 
   return c.json({ articles: result.articles, next_cursor: encodeCursor(result.nextCursor) }, 200, {
     "Cache-Control": "public, max-age=300",
