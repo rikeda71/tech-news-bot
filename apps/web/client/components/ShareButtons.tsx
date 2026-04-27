@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "../hooks/useToast";
 
 interface Props {
   url: string;
@@ -7,6 +8,7 @@ interface Props {
 
 export function ShareButtons({ url, title }: Props) {
   const [copied, setCopied] = useState(false);
+  const { show } = useToast();
 
   const encUrl = encodeURIComponent(url);
   const encTitle = encodeURIComponent(title);
@@ -19,6 +21,7 @@ export function ShareButtons({ url, title }: Props) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      show("リンクをコピーしました", "success");
     } catch {
       // clipboard API 非対応環境では無視
     }
