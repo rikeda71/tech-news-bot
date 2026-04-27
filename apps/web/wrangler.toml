@@ -14,7 +14,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "tech-news-bot-db"
-database_id = "REPLACE_WITH_REAL_ID_FROM_wrangler_d1_create"
+database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 migrations_dir = "../../migrations"
 
 [triggers]
