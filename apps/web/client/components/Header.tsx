@@ -1,6 +1,7 @@
 import { useTheme } from "../hooks/useTheme";
 
-export type AppView = "articles" | "stats";
+// "feed" は /feed/:id のフィード詳細ページで使用。nav タブには載せない
+export type AppView = "articles" | "stats" | "feed";
 
 interface HeaderProps {
   view?: AppView;
@@ -64,9 +65,9 @@ export function Header({ view, onViewChange }: HeaderProps) {
         <nav className="app-nav" aria-label="ページ切替">
           <button
             type="button"
-            className={`app-nav-tab${view === "articles" || !view ? " active" : ""}`}
+            className={`app-nav-tab${view === "articles" ? " active" : ""}`}
             onClick={() => onViewChange("articles")}
-            aria-current={view === "articles" || !view ? "page" : undefined}
+            aria-current={view === "articles" ? "page" : undefined}
           >
             Articles
           </button>

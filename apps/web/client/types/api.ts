@@ -37,3 +37,19 @@ export interface FeedsResponse {
   feeds: FeedSummary[];
   nextCursor: string | null;
 }
+
+export interface FeedDetail {
+  id: string;
+  name: string;
+  url: string;
+  category: FeedCategory;
+  lang: FeedLang;
+  enabled: boolean;
+  articles_30d: number;
+  last_published_at: string | null;
+}
+
+export interface FeedDetailResponse {
+  feed: FeedDetail;
+  recent_articles: Article[];
+}
