@@ -7,6 +7,7 @@ import syndication from "./api/syndication";
 import opml from "./api/opml";
 import { collectAll } from "./collector";
 import { pruneOldArticles } from "./db/retention";
+import { sendDailyDigest } from "./notify/slack-daily";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -54,12 +55,24 @@ app.all("*", async (c) => {
 
 const handler: ExportedHandler<Env> = {
   fetch: app.fetch,
-  async scheduled(_controller, env, ctx) {
+  async scheduled(controller, env, ctx) {
     // READONLY=1 の preview 環境ではコレクターを起動しない
     if (env.READONLY === "1") {
-      console.log("[scheduled] READONLY mode – skipping collectAll");
+      console.log("[scheduled] READONLY mode – skipping");
       return;
     }
+
+    // 日次 cron (0 0 * * *): Slack ダイジェスト投稿
+    if (controller.cron === "0 0 * * *") {
+      ctx.waitUntil(
+        sendDailyDigest(env.DB, env.SLACK_WEBHOOK_URL).catch((err) => {
+          console.error("[scheduled] sendDailyDigest failed", err);
+        }),
+      );
+      return;
+    }
+
+    // 3 時間ごとの cron (0 */3 * * *): RSS 収集
     ctx.waitUntil(
       collectAll(env).catch((err) => {
         console.error("[scheduled] collectAll failed", err);
