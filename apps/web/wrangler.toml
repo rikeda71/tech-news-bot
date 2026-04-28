@@ -18,7 +18,10 @@ database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 migrations_dir = "../../migrations"
 
 [triggers]
-crons = ["0 */3 * * *"]
+# 0 */3 * * * : 3 時間ごとの RSS 収集
+# 0 0 * * *   : 毎日 UTC 00:00 (JST 09:00) に Slack 日次ダイジェスト投稿
+# SLACK_WEBHOOK_URL は wrangler secret put SLACK_WEBHOOK_URL で登録する
+crons = ["0 */3 * * *", "0 0 * * *"]
 
 [vars]
 COLLECTOR_CONCURRENCY = "4"
