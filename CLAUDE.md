@@ -92,6 +92,12 @@ PoC 規模 (Worker 1 個) なので `packages/` は廃止し、すべての work
 
 YAML は `@modyfi/vite-plugin-yaml` により build 時に JSON へ変換され Worker bundle に inline される。runtime 依存は無し。
 
-## Skill: `tech-news-digest`
+## Skills
 
-D1 から今日 / 今週の記事を抽出して日本語で要約 + トレンド検出する Claude Skill。詳細は `.claude/skills/tech-news-digest/SKILL.md` 参照。
+D1 の記事を活用する Claude Skills が 3 種類ある。詳細は各 SKILL.md 参照。
+
+| Skill | 用途 | SKILL.md |
+| ----- | ---- | -------- |
+| `tech-news-digest` | 今日・今週・任意期間の記事をリスト形式でダイジェスト | `.claude/skills/tech-news-digest/SKILL.md` |
+| `tech-news-weekly` | 週次・月次をストーリー形式のレポートとして生成 | `.claude/skills/tech-news-weekly/SKILL.md` |
+| `tech-news-search` | 特定キーワードで FTS5 全文検索し深掘り解説を生成 | `.claude/skills/tech-news-search/SKILL.md` |
