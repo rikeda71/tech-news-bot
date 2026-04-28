@@ -1,0 +1,96 @@
+name: Cleanup orphan preview workers
+
+# preview.yml の cleanup-preview job が走らなかった (失敗 / 旧 PR) ケースで
+# tech-news-bot-pr-<N> worker が残ることがある。
+# 日次で account 内の preview worker を点検し、open PR と紐付かないものを削除する。
+
+on:
+  schedule:
+    - cron: "30 1 * * *" # daily UTC 01:30
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (list only, do not delete)"
+        type: boolean
+        default: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # schedule は dry_run input がないので false (= 実削除) として扱う
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: List open PR numbers
+        id: prs
+        run: |
+          set -euo pipefail
+          OPEN_PRS=$(gh pr list --state open --limit 200 --json number --jq '.[].number' | paste -sd "," -)
+          echo "open_prs=${OPEN_PRS}" >> "$GITHUB_OUTPUT"
+          echo "Open PRs: ${OPEN_PRS:-<none>}"
+
+      - name: List preview workers
+        id: workers
+        run: |
+          set -euo pipefail
+          response=$(curl -sf \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts?per_page=200")
+          # tech-news-bot-pr-<N> 形式だけ抽出 (本体 tech-news-bot は除外)
+          workers=$(echo "$response" | jq -r '.result[].id' | grep -E '^tech-news-bot-pr-[0-9]+$' || true)
+          if [ -z "$workers" ]; then
+            echo "No preview workers found."
+          else
+            echo "Found preview workers:"
+            echo "$workers"
+          fi
+          # 改行区切りを GITHUB_OUTPUT で扱うために delimited heredoc 形式を使う
+          {
+            echo "workers<<EOF_WORKERS"
+            echo "$workers"
+            echo "EOF_WORKERS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Delete orphan workers
+        run: |
+          set -euo pipefail
+          OPEN_PRS=",${{ steps.prs.outputs.open_prs }},"
+          WORKERS='${{ steps.workers.outputs.workers }}'
+          KEPT=0
+          TARGET=0
+          if [ -z "$WORKERS" ]; then
+            echo "Nothing to clean."
+            exit 0
+          fi
+          for w in $WORKERS; do
+            pr_num="${w#tech-news-bot-pr-}"
+            if echo "$OPEN_PRS" | grep -q ",${pr_num},"; then
+              echo "keep   $w (PR #${pr_num} is open)"
+              KEPT=$((KEPT + 1))
+              continue
+            fi
+            TARGET=$((TARGET + 1))
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "would-delete $w"
+            else
+              echo "delete $w"
+              # ?force=true でアクティブ deployment も削除する
+              curl -sf -X DELETE \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${w}?force=true" \
+                | jq -c '{success, errors}'
+            fi
+          done
+          echo ""
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Summary (dry-run): kept=${KEPT} would-delete=${TARGET}"
+          else
+            echo "Summary: kept=${KEPT} deleted=${TARGET}"
+          fi
