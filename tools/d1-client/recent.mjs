@@ -9,6 +9,11 @@
 //
 // Output (stdout): JSON object as documented in SKILL.md
 // Errors: human-readable text -> stderr, exit code 1
+//
+// 注意: --since の時刻計算は UTC 基準 (JST ではない)。
+//   --since=today は「現在から 24 時間前」を意味する。
+//   JST で「今日」の 0:00 起点が必要な場合は --since=1 (過去 1 日) も同義だが、
+//   厳密に JST 起点にしたい場合は明示的な ISO 日時クエリが必要。
 
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -117,6 +122,20 @@ function main() {
     process.stderr.write(`${err.message}\n`);
     process.exit(1);
   }
+  // URL による de-dup: Zenn はトレンド・トピックが同一記事を複数フィードに出すため、
+  // 最も古い published_at のものを 1 件だけ残す。
+  const sorted = articles.toSorted((a, b) => a.published_at.localeCompare(b.published_at));
+  const seen = new Set();
+  const deduped = [];
+  for (const a of sorted) {
+    if (!seen.has(a.url)) {
+      seen.add(a.url);
+      deduped.push(a);
+    }
+  }
+  // 出力は新しい順に戻す
+  const dedupedSorted = deduped.toSorted((a, b) => b.published_at.localeCompare(a.published_at));
+
   const result = {
     since: sinceISO,
     target: opts.target,
@@ -125,10 +144,11 @@ function main() {
       lang: opts.lang ?? null,
     },
     total: articles.length,
-    articles,
-    by_category: aggregate(articles, "category"),
-    by_feed: aggregate(articles, "feed_id"),
-    by_lang: aggregate(articles, "lang"),
+    deduped_total: dedupedSorted.length,
+    articles: dedupedSorted,
+    by_category: aggregate(dedupedSorted, "category"),
+    by_feed: aggregate(dedupedSorted, "feed_id"),
+    by_lang: aggregate(dedupedSorted, "lang"),
   };
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }

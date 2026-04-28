@@ -63,7 +63,8 @@ stdout に出る JSON 形式:
   "since": "2026-04-26T05:00:00.000Z",
   "target": "remote",
   "filters": { "category": null, "lang": null },
-  "total": 42,
+  "total": 48,
+  "deduped_total": 42,
   "articles": [
     {
       "id": 123,
@@ -87,21 +88,9 @@ stdout に出る JSON 形式:
 
 **URL による de-dup (Zenn 対策)**:
 
-Zenn はトレンド・トピックフィードが同一記事を重複して出力する。Stage 1 完了後、`articles` を `url` でグループ化し、重複 URL は最も古い `published_at` のものを 1 件だけ残す。実装:
+`recent.mjs` は v1.1 以降、de-dup 済みの `articles` を返す。出力 JSON の `deduped_total` フィールドが de-dup 後の件数、`total` が元の件数。以降のすべてのステージでは `articles` (de-dup 済み) をそのまま使えばよい。
 
-```js
-const seen = new Map();
-const deduped = [];
-for (const a of articles.sort((x, y) => x.published_at.localeCompare(y.published_at))) {
-  if (!seen.has(a.url)) {
-    seen.set(a.url, true);
-    deduped.push(a);
-  }
-}
-// deduped を以降のステージで使用
-```
-
-de-dup 後の件数を `## カテゴリ別件数` に反映する。
+`deduped_total` を `## カテゴリ別件数` の「総件数」として表示する。`total` と差がある場合は `(de-dup 前: N)` と注記する。
 
 エラーは stderr + exit 1。`--target=remote` で 401/403 が返ったら `pnpm --filter @tnb/web exec wrangler login` を案内する。`--target=local` で記事 0 件なら、まず `pnpm migrate:local` と `pnpm dev` でローカル収集を 1 回回すよう案内する。
 
@@ -114,16 +103,16 @@ de-dup 後の件数を `## カテゴリ別件数` に反映する。
 - 業界の方針転換 / 体制変更 (買収、CTO 交代、組織再編など)
 - 公開時刻が新しい方を残す (同一トピックが複数記事ある場合)
 
-選定理由を 1 行内部メモして次ステージに渡す。`total > 50` のときは category ごとに 3〜5 件まで絞る。
+選定理由を 1 行内部メモして次ステージに渡す。`deduped_total > 50` のときは category ごとに 3〜5 件まで絞る。さらに **同一フィード (feed_id) からは 3 件まで** に制限する。特定フィードが大量記事を出している日 (例: google-developers が 20 件/日) でも特定フィードに偏らないようにするため。
 
-**webfetch_blocklist** — 以下のホストは Stage 2 の重要記事候補から除外する (Stage 4 トレンド分析には引き続き含める):
+**webfetch_blocklist** — 以下のホストは WebFetch をスキップする (Stage 4 トレンド分析には引き続き含める):
 
 | ホスト       | 理由                                             |
 | ------------ | ------------------------------------------------ |
 | `openai.com` | Cloudflare Bot Management により WebFetch が 403 |
 | `medium.com` | paywall / ログイン wall で本文取得不可           |
 
-除外判定は `new URL(article.url).hostname` で行う。除外した記事は Stage 3 をスキップし `(summary based)` を付けて出力に含める。
+除外判定は `new URL(article.url).hostname` で行う。blocklist ホストの記事は Stage 3 をスキップして `summary` (≤500 字) から要約を生成し、`(summary based)` を末尾に付けて出力に含める。「除外」は WebFetch のみ除外であり、出力から除くわけではない。
 
 ### Stage 3: Deep read — 本文を WebFetch で取得 (deep のみ)
 
@@ -166,7 +155,7 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 ```md
 # Tech News Digest — <期間ラベル> (<mode>)
 
-期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): <total> / カテゴリ: bigtech=N, ai=N, jp=N, zenn=N
+期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): <deduped_total> / カテゴリ: bigtech=N, ai=N, jp=N, zenn=N
 
 ## サマリ (重要記事 N 件) ← quick / deep のみ
 
