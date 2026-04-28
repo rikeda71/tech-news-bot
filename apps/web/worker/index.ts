@@ -55,20 +55,10 @@ app.all("*", async (c) => {
 
 const handler: ExportedHandler<Env> = {
   fetch: app.fetch,
-  async scheduled(controller, env, ctx) {
+  async scheduled(_controller, env, ctx) {
     // READONLY=1 の preview 環境ではコレクターを起動しない
     if (env.READONLY === "1") {
       console.log("[scheduled] READONLY mode – skipping");
-      return;
-    }
-
-    // 日次 cron (0 0 * * *): Slack ダイジェスト投稿
-    if (controller.cron === "0 0 * * *") {
-      ctx.waitUntil(
-        sendDailyDigest(env.DB, env.SLACK_WEBHOOK_URL).catch((err) => {
-          console.error("[scheduled] sendDailyDigest failed", err);
-        }),
-      );
       return;
     }
 
@@ -78,8 +68,18 @@ const handler: ExportedHandler<Env> = {
         console.error("[scheduled] collectAll failed", err);
       }),
     );
+
+    const utcHour = new Date().getUTCHours();
+    // UTC 00:00 (JST 09:00): Slack 日次ダイジェスト投稿
+    if (utcHour === 0) {
+      ctx.waitUntil(
+        sendDailyDigest(env.DB, env.SLACK_WEBHOOK_URL).catch((err) => {
+          console.error("[scheduled] sendDailyDigest failed", err);
+        }),
+      );
+    }
     // Run retention once per day at UTC 17:00 to avoid peak write hours
-    if (new Date().getUTCHours() === 17) {
+    if (utcHour === 17) {
       ctx.waitUntil(
         pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "0")).then((r) => {
           console.log(`[retention] deleted=${r.deleted}`);
