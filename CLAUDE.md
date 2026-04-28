@@ -102,3 +102,4 @@ D1 の記事を活用する Claude Skills。詳細は各 SKILL.md 参照。
 | `tech-news-weekly`  | 週次・月次をストーリー形式のレポートとして生成                            | `.claude/skills/tech-news-weekly/SKILL.md`  |
 | `tech-news-search`  | 特定キーワードで FTS5 全文検索し深掘り解説を生成                          | `.claude/skills/tech-news-search/SKILL.md`  |
 | `tech-news-related` | ピボット記事 1 本を起点に関連記事を D1 から探して関係性・文脈マップを生成 | `.claude/skills/tech-news-related/SKILL.md` |
+| `tech-news-summary` | 単一の記事 URL を渡して本文ベースで深く日本語要約                         | `.claude/skills/tech-news-summary/SKILL.md` |

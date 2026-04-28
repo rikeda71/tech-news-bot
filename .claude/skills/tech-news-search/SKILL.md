@@ -11,6 +11,7 @@ description: 特定キーワードで D1 の記事を深掘り検索する skill
 - **tech-news-weekly**: 週次・月次を「読み物」として仕上げる。ニュースレター的な narrative が必要な場合はこちら。
 - **tech-news-search (本 skill)**: 特定キーワードで深掘り検索。「MCP とは？」「最近の Rust 記事」「LLM inference の話題」のような問い合わせに最適。
 - **tech-news-related**: ピボット記事 1 本を起点に関連記事を D1 から探して関係性・文脈マップを生成する。「この記事に関連する記事を教えて」のような問い合わせにはこちら。
+- **tech-news-summary**: 1 つの記事 URL を深く読む。特定 URL の記事内容を詳しく知りたい場合はこちら。
 
 ## やること
 
