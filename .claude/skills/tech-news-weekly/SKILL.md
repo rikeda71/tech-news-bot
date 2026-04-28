@@ -218,5 +218,5 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 - 実装: `tools/d1-client/recent.mjs`
 - スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds` テーブル)
 - 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
-- 関連 skill: `.claude/skills/tech-news-digest/SKILL.md` (デイリーダイジェスト skill)
+- 関連 skill: `.claude/skills/tech-news-digest/SKILL.md` (期間ベースダイジェスト skill)
 - 関連 skill: `.claude/skills/tech-news-search/SKILL.md` (キーワード深掘り検索)
