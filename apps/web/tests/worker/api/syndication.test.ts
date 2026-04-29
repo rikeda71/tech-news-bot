@@ -83,7 +83,7 @@ describe("/feed.json", () => {
     expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("Content-Type")).toContain("application/feed+json");
     expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
-    expect.soft(body.items.map((i) => i.id)).toEqual(["g-bigtech", "g-jp", "g-ai"]);
+    expect(body.items.map((i) => i.id)).toEqual(["g-bigtech", "g-jp", "g-ai"]);
     expect.soft(body.items[2].title).toBe("AI <Article> & friends");
   });
 
@@ -143,8 +143,8 @@ describe("/feeds/:id.xml (per-feed RSS)", () => {
 
   it("returns 304 on If-None-Match match (ETag round-trip)", async () => {
     const res1 = await SELF.fetch("https://example.com/feeds/openai-blog.xml");
+    expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect.soft(res1.status).toBe(200);
     expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/openai-blog.xml", {
@@ -347,8 +347,8 @@ describe("/feeds/:id.atom (per-feed Atom)", () => {
 
   it("returns 304 on If-None-Match match (ETag round-trip)", async () => {
     const res1 = await SELF.fetch("https://example.com/feeds/openai-blog.atom");
+    expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect.soft(res1.status).toBe(200);
     expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/openai-blog.atom", {
@@ -455,8 +455,8 @@ describe("/feeds/author/:author.xml (author RSS)", () => {
 
   it("returns 304 on If-None-Match match (ETag round-trip)", async () => {
     const res1 = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
+    expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect.soft(res1.status).toBe(200);
 
     const res2 = await SELF.fetch("https://example.com/feeds/author/Sam.xml", {
       headers: { "If-None-Match": etag },
@@ -592,8 +592,8 @@ describe("/feeds/author/:author.atom (author Atom)", () => {
 
   it("returns ETag header and supports 304 round-trip", async () => {
     const res1 = await SELF.fetch("https://example.com/feeds/author/Sam.atom");
+    expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect.soft(res1.status).toBe(200);
     expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/author/Sam.atom", {
@@ -647,8 +647,8 @@ describe("/feeds/lang/:lang.xml (lang RSS)", () => {
 
   it("returns ETag header and supports 304 round-trip", async () => {
     const res1 = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
+    expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect.soft(res1.status).toBe(200);
     expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/lang/ja.xml", {
@@ -752,8 +752,8 @@ describe("/feeds/lang/:lang.atom (lang Atom)", () => {
 
   it("returns ETag header and supports 304 round-trip", async () => {
     const res1 = await SELF.fetch("https://example.com/feeds/lang/en.atom");
+    expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect.soft(res1.status).toBe(200);
     expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/lang/en.atom", {

@@ -113,7 +113,7 @@ describe("GET /api/feeds - basic", () => {
       }[];
     };
     expect.soft(res.status).toBe(200);
-    expect.soft(Array.isArray(body.feeds)).toBe(true);
+    expect(Array.isArray(body.feeds)).toBe(true);
     const openai = body.feeds.find((f) => f.id === "openai-blog");
     expect(openai).toBeDefined();
     expect.soft(openai!.articles_30d).toBe(2);

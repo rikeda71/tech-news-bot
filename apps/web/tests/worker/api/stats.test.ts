@@ -313,7 +313,7 @@ describe("GET /api/stats — top_authors_30d", () => {
       top_authors_30d: { author: string; count: number }[];
     };
     expect.soft(res.status).toBe(200);
-    expect.soft(Array.isArray(body.top_authors_30d)).toBe(true);
+    expect(Array.isArray(body.top_authors_30d)).toBe(true);
     const authorA = body.top_authors_30d.find((a) => a.author === "Author A");
     const authorB = body.top_authors_30d.find((a) => a.author === "Author B");
     expect.soft(authorA?.count).toBe(3);
@@ -426,7 +426,7 @@ describe("GET /api/stats — top_publishers_30d", () => {
       top_publishers_30d: { feed_id: string; feed_name: string; count: number }[];
     };
     expect.soft(res.status).toBe(200);
-    expect.soft(Array.isArray(body.top_publishers_30d)).toBe(true);
+    expect(Array.isArray(body.top_publishers_30d)).toBe(true);
     // beforeEach で google-research=2, openai-blog=1, cyberagent-developers=1
     const google = body.top_publishers_30d.find((p) => p.feed_id === "google-research");
     expect.soft(google?.count).toBe(2);

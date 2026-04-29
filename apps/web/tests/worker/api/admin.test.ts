@@ -133,8 +133,8 @@ describe("POST /api/admin/collector/run", () => {
     // 同期実行なので応答が返った時点で collector_runs に行が存在するはず
     const runs = await listRuns(env.DB, 10);
     // 最新 run は completed_at が設定されている
+    expect(runs.length).toBeGreaterThan(0);
     const latest = runs[0];
-    expect.soft(runs.length).toBeGreaterThan(0);
     expect.soft(latest.completed_at).toBeTruthy();
   }, 60_000);
 
@@ -157,7 +157,7 @@ describe("POST /api/admin/collector/run", () => {
       results: { feed_id: string }[];
     };
     expect.soft(res.status).toBe(200);
-    expect.soft(body.results).toHaveLength(1);
+    expect(body.results).toHaveLength(1);
     expect.soft(body.results[0].feed_id).toBe(REAL_FEED_ID);
   });
 
@@ -304,7 +304,7 @@ describe("GET /api/admin/runs", () => {
     });
     const body = (await res.json()) as { runs: { id: number; feeds_ok: number }[] };
     expect.soft(res.status).toBe(200);
-    expect.soft(body.runs).toHaveLength(1);
+    expect(body.runs).toHaveLength(1);
     expect.soft(body.runs[0].id).toBe(run_id);
     expect.soft(body.runs[0].feeds_ok).toBe(2);
   });
