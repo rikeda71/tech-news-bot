@@ -122,11 +122,11 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
 
 各 workflow は `.github/workflows/` 配下に置く。
 
-| File                 | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | skill 引数               |
-| -------------------- | ------------------ | ------------------ | ------------------ | ------------------------ |
-| `report-daily.yml`   | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | `since=today, deep`      |
-| `report-weekly.yml`  | `0 22 * * 0`       | 毎週月曜 07:00     | `tech-news-weekly` | `since=week`             |
-| `report-monthly.yml` | `0 22 1 * *`       | 毎月 2 日 07:00    | `tech-news-weekly` | `since=month, limit=500` |
+| File                 | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | skill 引数                                 |
+| -------------------- | ------------------ | ------------------ | ------------------ | ------------------------------------------ |
+| `report-daily.yml`   | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | `since=today, deep, category=bigtech`      |
+| `report-weekly.yml`  | `0 22 * * 0`       | 毎週月曜 07:00     | `tech-news-weekly` | `since=week, category=bigtech`             |
+| `report-monthly.yml` | `0 22 1 * *`       | 毎月 2 日 07:00    | `tech-news-weekly` | `since=month, limit=500, category=bigtech` |
 
 > monthly は GitHub Actions cron が `L` (月末) を非対応のため、「翌月 2 日 JST 07:00 に
 > 過去 30 日を集計」として暦月とほぼ等価のレポートを作る。`since=month` は skill 仕様で
@@ -149,12 +149,14 @@ tech-news-digest skill を以下の引数で起動してください:
 - since=today
 - mode=deep
 - target=remote
-- category 指定なし (全カテゴリ)
+- category=bigtech
 - lang 指定なし
 
+Stage 1 では `recent.mjs --category=bigtech --target=remote` を呼んでください。
 Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
-書き出してください。
-合わせて meta JSON を /tmp/report-meta.json に書き出してください: { kind, period_start, ... }
+書き出してください。レポートには `## カテゴリ別ハイライト` 節を含めないでください
+(bigtech 1 カテゴリのみのため不要)。
+合わせて meta JSON を /tmp/report-meta.json に書き出してください: { kind, period_start, ..., category: "bigtech" }
 ```
 
 ### concurrency

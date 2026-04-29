@@ -50,18 +50,20 @@ jobs:
             - since=today
             - mode=deep
             - target=remote
-            - category 指定なし (全カテゴリ)
+            - category=bigtech
             - lang 指定なし
 
+            Stage 1 では `recent.mjs --category=bigtech --target=remote` を呼んでください。
             Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
-            書き出してください。
+            書き出してください。レポートには `## カテゴリ別ハイライト` 節を含めないでください
+            (bigtech 1 カテゴリのみのため不要)。
             合わせて以下の JSON を /tmp/report-meta.json に書き出してください:
 
             {
               "kind": "daily",
               "period_start": "<since の ISO 8601>",
               "period_end":   "<実行時刻の ISO 8601>",
-              "category": null,
+              "category": "bigtech",
               "lang": null,
               "source_skill": "tech-news-digest",
               "generated_at": "<実行時刻の ISO 8601>",
