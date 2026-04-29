@@ -53,7 +53,7 @@ describe("useFeeds", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toBeTruthy();
+    expect(result.current.error).toContain("500");
     expect(result.current.feeds).toEqual([]);
   });
 

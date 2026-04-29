@@ -121,8 +121,7 @@ describe("useAuthorArticles", () => {
 
     const { result } = renderHook(() => useAuthorArticles(""));
 
-    // 短時間待って fetch が呼ばれていないことを確認
-    await new Promise((r) => setTimeout(r, 50));
+    await act(async () => {});
 
     expect(mockFetch).not.toHaveBeenCalled();
     expect(result.current.articles).toEqual([]);

@@ -51,11 +51,10 @@ describe("useStats", () => {
     const { result } = renderHook(() => useStats());
 
     await waitFor(() => {
-      expect(result.current.error).toBeTruthy();
+      expect(result.current.error).toContain("503");
     });
 
     expect(result.current.stats).toBeNull();
-    expect(result.current.error).toContain("503");
   });
 
   it("ネットワーク例外発生時に error が設定される", async () => {
