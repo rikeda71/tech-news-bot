@@ -52,10 +52,15 @@ function authGuard(c: Context<{ Bindings: Env }>): Response | null {
   return null;
 }
 
+// Date.toISOString() の strict round-trip だと "2026-04-29T00:00:00Z" のような
+// ms 抜きの ISO 8601 (LLM が頻繁に出力する形式) が弾かれる。
+// 形を正規表現で軽く gate しつつ Date.parse() で意味的妥当性を確認する。
+const ISO8601_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
 function isISO8601(s: unknown): s is string {
   if (typeof s !== "string" || s.length === 0) return false;
+  if (!ISO8601_RE.test(s)) return false;
   const d = new Date(s);
-  return !Number.isNaN(d.getTime()) && d.toISOString() === s;
+  return !Number.isNaN(d.getTime());
 }
 
 interface PostBody {
