@@ -79,11 +79,11 @@ describe("notifyCollectorFailure", () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
     const [url, init] = spy.mock.calls[0];
-    expect(url).toBe(WEBHOOK_URL);
-    expect(init?.method).toBe("POST");
     const body = JSON.parse(init?.body as string) as { text: string };
-    expect(body.text).toContain("[tech-news-bot]");
-    expect(body.text).toContain("feed-a");
+    expect.soft(url).toBe(WEBHOOK_URL);
+    expect.soft(init?.method).toBe("POST");
+    expect.soft(body.text).toContain("[tech-news-bot]");
+    expect.soft(body.text).toContain("feed-a");
   });
 
   it("includes streak feeds in payload", async () => {
@@ -97,8 +97,8 @@ describe("notifyCollectorFailure", () => {
     });
 
     const body = JSON.parse(spy.mock.calls[0][1]?.body as string) as { text: string };
-    expect(body.text).toContain("feed-b");
-    expect(body.text).toContain("7 consecutive failures");
+    expect.soft(body.text).toContain("feed-b");
+    expect.soft(body.text).toContain("7 consecutive failures");
   });
 
   it("does not throw on non-2xx response", async () => {
@@ -216,15 +216,15 @@ describe("sendAlert", () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
     const [url, init] = spy.mock.calls[0];
-    expect(url).toBe(WEBHOOK_URL);
     const body = JSON.parse(init?.body as string) as {
       text: string;
       blocks: { type: string; text: { type: string; text: string } }[];
     };
-    expect(body.text).toContain("collector alert");
+    expect.soft(url).toBe(WEBHOOK_URL);
+    expect.soft(body.text).toContain("collector alert");
     expect(body.blocks).toHaveLength(1);
-    expect(body.blocks[0].text.type).toBe("mrkdwn");
-    expect(body.blocks[0].text.text).toContain("Failed:");
+    expect.soft(body.blocks[0].text.type).toBe("mrkdwn");
+    expect.soft(body.blocks[0].text.text).toContain("Failed:");
   });
 
   it("does not call webhook when failed feeds < threshold (default 5)", async () => {
@@ -263,9 +263,9 @@ describe("sendAlert", () => {
     };
     const mrkdwn = body.blocks[0].text.text;
     // "feed-5" 〜 "feed-9" は含まれないことを確認 (top 5 = feed-0 〜 feed-4)
-    expect(mrkdwn).toContain("feed-0");
-    expect(mrkdwn).toContain("feed-4");
-    expect(mrkdwn).not.toContain("feed-5");
+    expect.soft(mrkdwn).toContain("feed-0");
+    expect.soft(mrkdwn).toContain("feed-4");
+    expect.soft(mrkdwn).not.toContain("feed-5");
   });
 
   it("does not throw on non-2xx webhook response", async () => {

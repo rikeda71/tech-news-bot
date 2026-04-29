@@ -29,16 +29,16 @@ describe("fetchFeed conditional GET", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(VALID_XML, { status: 200 }));
 
     const result = await fetchFeed(DUMMY_URL, 10000, 0);
-    expect(result.notModified).toBe(false);
-    expect(result.xml).toBe(VALID_XML);
+    expect.soft(result.notModified).toBe(false);
+    expect.soft(result.xml).toBe(VALID_XML);
   });
 
   it("returns notModified=true on 304 and xml is null", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 304 }));
 
     const result = await fetchFeed(DUMMY_URL, 10000, 0);
-    expect(result.notModified).toBe(true);
-    expect(result.xml).toBeNull();
+    expect.soft(result.notModified).toBe(true);
+    expect.soft(result.xml).toBeNull();
   });
 
   it("sends If-None-Match header when etag is provided", async () => {
@@ -75,8 +75,8 @@ describe("fetchFeed conditional GET", () => {
 
     const callArgs = spy.mock.calls[0];
     const headers = callArgs[1]?.headers as Record<string, string>;
-    expect(headers["if-none-match"]).toBeUndefined();
-    expect(headers["if-modified-since"]).toBeUndefined();
+    expect.soft(headers["if-none-match"]).toBeUndefined();
+    expect.soft(headers["if-modified-since"]).toBeUndefined();
   });
 
   it("saves etag from 200 response", async () => {
@@ -88,24 +88,24 @@ describe("fetchFeed conditional GET", () => {
     );
 
     const result = await fetchFeed(DUMMY_URL, 10000, 0);
-    expect(result.etag).toBe('"newetag"');
-    expect(result.lastModified).toBe("Tue, 02 Jan 2024 00:00:00 GMT");
+    expect.soft(result.etag).toBe('"newetag"');
+    expect.soft(result.lastModified).toBe("Tue, 02 Jan 2024 00:00:00 GMT");
   });
 });
 
 describe("loadFeedHeaders / updateFeedHeaders", () => {
   it("returns null headers for a feed with no saved headers", async () => {
     const headers = await loadFeedHeaders(env.DB, "test-feed");
-    expect(headers.last_etag).toBeNull();
-    expect(headers.last_modified).toBeNull();
+    expect.soft(headers.last_etag).toBeNull();
+    expect.soft(headers.last_modified).toBeNull();
   });
 
   it("saves and retrieves etag and last_modified", async () => {
     await updateFeedHeaders(env.DB, "test-feed", '"v1"', "Wed, 03 Jan 2024 00:00:00 GMT");
 
     const headers = await loadFeedHeaders(env.DB, "test-feed");
-    expect(headers.last_etag).toBe('"v1"');
-    expect(headers.last_modified).toBe("Wed, 03 Jan 2024 00:00:00 GMT");
+    expect.soft(headers.last_etag).toBe('"v1"');
+    expect.soft(headers.last_modified).toBe("Wed, 03 Jan 2024 00:00:00 GMT");
   });
 
   it("overwrites existing headers on subsequent update", async () => {
@@ -113,13 +113,13 @@ describe("loadFeedHeaders / updateFeedHeaders", () => {
     await updateFeedHeaders(env.DB, "test-feed", '"v2"', null);
 
     const headers = await loadFeedHeaders(env.DB, "test-feed");
-    expect(headers.last_etag).toBe('"v2"');
-    expect(headers.last_modified).toBeNull();
+    expect.soft(headers.last_etag).toBe('"v2"');
+    expect.soft(headers.last_modified).toBeNull();
   });
 
   it("returns null for unknown feed id", async () => {
     const headers = await loadFeedHeaders(env.DB, "non-existent-feed");
-    expect(headers.last_etag).toBeNull();
-    expect(headers.last_modified).toBeNull();
+    expect.soft(headers.last_etag).toBeNull();
+    expect.soft(headers.last_modified).toBeNull();
   });
 });

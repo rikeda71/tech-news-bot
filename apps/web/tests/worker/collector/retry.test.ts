@@ -68,9 +68,9 @@ describe("fetchFeed retry behavior", () => {
       .mockResolvedValueOnce(new Response(VALID_XML, { status: 200 }));
 
     const result = await fetchFeed(DUMMY_URL, 10000, 2);
-    expect(result.xml).toBe(VALID_XML);
-    expect(result.notModified).toBe(false);
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect.soft(result.xml).toBe(VALID_XML);
+    expect.soft(result.notModified).toBe(false);
+    expect.soft(spy).toHaveBeenCalledTimes(1);
   });
 
   it("retries on 503 and succeeds on 2nd attempt", async () => {
