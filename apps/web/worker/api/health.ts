@@ -4,8 +4,8 @@ import { countFeeds } from "../db/feeds";
 import { countAllArticles, countArticlesSince } from "../db/articles";
 import { getLatestCompletedRun } from "../db/runs";
 import { loadAllFeeds } from "../feed-config";
-import type { Env, FeedHealth, HealthResponse } from "../types";
-import type { HealthFeedsResponse } from "./types";
+import type { Env, FeedHealth } from "../types";
+import type { HealthFeedsResponse, HealthResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 

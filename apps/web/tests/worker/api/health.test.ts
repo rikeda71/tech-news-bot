@@ -3,7 +3,8 @@ import { env, SELF } from "cloudflare:test";
 import { insertArticles } from "../../../worker/db/articles";
 import { syncFeeds, recordFetchSuccess, recordFetchError } from "../../../worker/db/feeds";
 import { startRun, finishRun } from "../../../worker/db/runs";
-import type { FeedConfig, FeedHealth, HealthResponse } from "../../../worker/types";
+import type { FeedConfig, FeedHealth } from "../../../worker/types";
+import type { HealthResponse } from "../../../worker/api/types";
 
 const FEED: FeedConfig = {
   id: "health-test-feed",
