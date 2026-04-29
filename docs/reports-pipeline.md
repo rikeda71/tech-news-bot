@@ -230,6 +230,24 @@ UNIQUE index が `(kind, period, category)` で張られているため、catego
 
 ---
 
+## Slack 通知
+
+`POST /api/admin/reports` で upsert が成功すると、`SLACK_WEBHOOK_URL` に設定した incoming webhook へ通知が飛ぶ。
+通知には保存されたレポートの kind / period / category / lang / source_skill / content サイズが含まれる。
+
+- リクエスト遅延を避けるため `c.executionCtx.waitUntil(...)` で非同期送信する
+- Slack 投稿が失敗 (non-2xx / timeout 5s) しても POST 自体の応答は 200 のまま (D1 への保存は成功済み)
+- `SLACK_WEBHOOK_URL` が未設定の場合は no-op (通知なし)
+
+### 設定方法
+
+```bash
+wrangler secret put SLACK_WEBHOOK_URL
+# プロンプトに Slack incoming webhook URL を入力
+```
+
+---
+
 ## 関連ファイル
 
 - `migrations/0010_reports.sql` — テーブル / index 定義
