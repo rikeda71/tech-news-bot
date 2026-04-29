@@ -5,6 +5,10 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    ignore:
+      # Node.js LTS 24 を当面利用するため、@types/node の major bump は対象外にする
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       types:
         # @types/* をまとめて 1 PR に

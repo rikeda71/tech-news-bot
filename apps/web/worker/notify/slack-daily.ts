@@ -92,7 +92,7 @@ export function buildPayload(
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*${label} (${catArticles.length} 件抜粋)*\n${lines.join("\n")}`,
+        text: `*${label} (${catArticles.length} 件)*\n${lines.join("\n")}`,
       },
     });
   }
