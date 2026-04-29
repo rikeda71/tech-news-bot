@@ -79,8 +79,8 @@ describe("SearchInput", () => {
       <SearchInput value="" onChange={vi.fn<(q: string) => void>()} suggestVisible={false} />,
     );
     const input = screen.getByRole("searchbox");
-    // aria-expanded={false} は React が DOM から属性を除去するため null になる
-    expect(input.getAttribute("aria-expanded")).toBeNull();
+    // React は aria-* 属性を boolean false でも "false" として DOM に残す
+    expect(input.getAttribute("aria-expanded")).toBe("false");
 
     rerender(
       <SearchInput value="" onChange={vi.fn<(q: string) => void>()} suggestVisible={true} />,
