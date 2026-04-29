@@ -12,7 +12,6 @@ import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { StatsDashboard } from "./components/StatsDashboard";
 import { StatsPanel } from "./components/Stats";
 import { ToastContainer } from "./components/ToastContainer";
-import { TrendingArticles } from "./components/TrendingArticles";
 import { useArticles } from "./hooks/useArticles";
 import { useBookmarks } from "./hooks/useBookmarks";
 import { useFeeds } from "./hooks/useFeeds";
@@ -97,7 +96,6 @@ function readAuthorFromPath(): string | null {
 function readViewFromUrl(): AppView {
   if (window.location.pathname === "/stats") return "stats";
   if (window.location.pathname === "/categories") return "categories";
-  if (window.location.pathname === "/trending") return "trending";
   if (readFeedDetailFromPath() !== null) return "feed";
   if (readAuthorFromPath() !== null) return "author";
   return "articles";
@@ -133,14 +131,7 @@ function AppInner() {
     setView(next);
     setFeedDetailId("");
     setAuthorName("");
-    const path =
-      next === "stats"
-        ? "/stats"
-        : next === "categories"
-          ? "/categories"
-          : next === "trending"
-            ? "/trending"
-            : "/";
+    const path = next === "stats" ? "/stats" : next === "categories" ? "/categories" : "/";
     if (window.location.pathname !== path) {
       window.history.pushState(null, "", path);
     }
@@ -163,11 +154,6 @@ function AppInner() {
         return;
       }
       if (nextView === "categories") {
-        setFeedDetailId("");
-        setAuthorName("");
-        return;
-      }
-      if (nextView === "trending") {
         setFeedDetailId("");
         setAuthorName("");
         return;
@@ -485,12 +471,6 @@ function AppInner() {
         <StatsDashboard onNavigateToAuthor={handleGoToAuthorDetail} />
       ) : view === "categories" ? (
         <CategoriesOverview onSelectCategory={handleSelectCategory} />
-      ) : view === "trending" ? (
-        <TrendingArticles
-          onFilterByCategory={handleFilterByCategory}
-          onFilterByFeedId={handleGoToFeedDetail}
-          onNavigateToAuthor={handleGoToAuthorDetail}
-        />
       ) : view === "feed" && feedDetailId ? (
         <FeedDetail
           feedId={feedDetailId}

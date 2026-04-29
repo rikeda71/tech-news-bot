@@ -12,7 +12,6 @@ import {
   getArticlesCalendar,
   getArticlesByMonth,
   getNeighbors,
-  getPopularArticles,
   getRandomArticles,
   getRelatedArticles,
   listArticles,
@@ -30,7 +29,6 @@ import type {
   ArticleCalendarResponse,
   ArticleListResponse,
   ArticleNeighborsResponse,
-  ArticlePopularResponse,
   ArticleRandomResponse,
   ArticleRelatedResponse,
   ArticleSearchResponse,
@@ -251,26 +249,6 @@ app.get("/calendar", async (c) => {
   const items = await getArticlesCalendar(c.env.DB, days, lang, category);
 
   return c.json<ArticleCalendarResponse>({ days, items }, 200, {
-    "Cache-Control": "public, max-age=600",
-  });
-});
-
-app.get("/popular", async (c) => {
-  const daysRaw = c.req.query("days") ?? "7";
-  const days = parseInt(daysRaw, 10);
-  if (isNaN(days) || days < 1 || days > 30) {
-    return c.json({ error: "invalid days" }, 400);
-  }
-
-  const limitRaw = c.req.query("limit") ?? "30";
-  const limit = parseInt(limitRaw, 10);
-  if (isNaN(limit) || limit < 1 || limit > 100) {
-    return c.json({ error: "invalid limit" }, 400);
-  }
-
-  const result = await getPopularArticles(c.env.DB, days, limit);
-
-  return c.json<ArticlePopularResponse>(result, 200, {
     "Cache-Control": "public, max-age=600",
   });
 });

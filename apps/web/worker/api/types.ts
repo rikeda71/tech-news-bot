@@ -34,12 +34,6 @@ export interface ArticleCalendarResponse {
   items: CalendarItem[];
 }
 
-export interface ArticlePopularResponse {
-  articles: Article[];
-  window_days: number;
-  total: number;
-}
-
 export interface ArticleSearchResponse {
   query: string;
   tokens: string[];

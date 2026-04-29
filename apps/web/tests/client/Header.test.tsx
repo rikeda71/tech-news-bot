@@ -79,14 +79,14 @@ describe("Header", () => {
     expect(mockSetTheme).toHaveBeenCalledWith("system");
   });
 
-  it("renders nav tabs including トレンド when onViewChange is provided", () => {
+  it("renders nav tabs including カテゴリ when onViewChange is provided", () => {
     render(<Header view="articles" onViewChange={() => {}} />);
-    expect(screen.getByRole("button", { name: "トレンド" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "カテゴリ" })).toBeTruthy();
   });
 
-  it("トレンド tab is aria-current=page when view is trending", () => {
-    render(<Header view="trending" onViewChange={() => {}} />);
-    const btn = screen.getByRole("button", { name: "トレンド" });
+  it("カテゴリ tab is aria-current=page when view is categories", () => {
+    render(<Header view="categories" onViewChange={() => {}} />);
+    const btn = screen.getByRole("button", { name: "カテゴリ" });
     expect(btn.getAttribute("aria-current")).toBe("page");
   });
 });
