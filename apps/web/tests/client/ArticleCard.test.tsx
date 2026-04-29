@@ -33,23 +33,24 @@ describe("ArticleCard", () => {
     expect(screen.getByText("Sample Article Title")).toBeTruthy();
   });
 
-  it("applies read class when isRead returns true", () => {
+  it("applies dim style when isRead returns true", () => {
     // localStorage に id=1 を既読として設定してから描画する
     localStorage.setItem("tnb-read-articles", JSON.stringify([1]));
     const { container } = render(
       <ArticleCard article={baseArticle} onFilterByCategory={noop} onFilterByFeedId={noop} />,
     );
     const article = container.querySelector("article");
-    expect(article?.className).toContain("read");
+    // Tailwind 移行で .read クラス → opacity-55 utility に変更
+    expect(article?.className).toContain("opacity-55");
   });
 
-  it("does not apply read class for unread article", () => {
+  it("does not dim unread article", () => {
     const unreadArticle = { ...baseArticle, id: 99 };
     const { container } = render(
       <ArticleCard article={unreadArticle} onFilterByCategory={noop} onFilterByFeedId={noop} />,
     );
     const article = container.querySelector("article");
-    expect(article?.className).not.toContain("read");
+    expect(article?.className).not.toContain("opacity-55");
   });
 
   it("renders the category badge", () => {

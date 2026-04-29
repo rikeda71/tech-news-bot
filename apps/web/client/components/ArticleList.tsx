@@ -19,7 +19,7 @@ export function ArticleList({
   q,
 }: Props) {
   return (
-    <div className="article-list">
+    <div className="grid gap-[var(--space-3)]">
       {articles.map((a, i) => (
         <ArticleCard
           key={a.id}
