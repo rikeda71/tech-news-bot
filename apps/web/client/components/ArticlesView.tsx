@@ -24,6 +24,7 @@ interface Props {
   error: string | null;
   nextCursor: string | null;
   loadMore: () => void;
+  autoLoadStopped: boolean;
   selectedIndex: number;
   q: string;
   category: FeedCategory | "";
@@ -68,6 +69,7 @@ export function ArticlesView({
   error,
   nextCursor,
   loadMore,
+  autoLoadStopped,
   selectedIndex,
   q,
   category,
@@ -248,7 +250,11 @@ export function ArticlesView({
           onClick={loadMore}
           disabled={loadingMore}
         >
-          {loadingMore ? "読み込み中…" : "もっと読み込む"}
+          {loadingMore
+            ? "読み込み中…"
+            : autoLoadStopped
+              ? "自動読み込み停止 / もっと読み込む"
+              : "もっと読み込む"}
         </button>
       )}
     </>
