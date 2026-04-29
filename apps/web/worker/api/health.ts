@@ -50,8 +50,9 @@ app.get("/", async (c) => {
     c.header("Cache-Control", "no-cache");
     return c.json<HealthResponse>(body);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return c.json({ ok: false, error: message }, 500);
+    // D1 エラーの詳細 (SQL/テーブル名等) をクライアントに漏らさない
+    console.error("[health] D1 query failed:", err instanceof Error ? err.message : String(err));
+    return c.json({ ok: false, error: "Internal Server Error" }, 500);
   }
 });
 
@@ -63,8 +64,12 @@ app.get("/feeds", async (c) => {
     c.header("Cache-Control", "public, max-age=60");
     return c.json<HealthFeedsResponse>(health);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return c.json({ status: "degraded", error: message }, 500);
+    // D1 エラーの詳細 (SQL/テーブル名等) をクライアントに漏らさない
+    console.error(
+      "[health/feeds] D1 query failed:",
+      err instanceof Error ? err.message : String(err),
+    );
+    return c.json({ status: "degraded", error: "Internal Server Error" }, 500);
   }
 });
 
