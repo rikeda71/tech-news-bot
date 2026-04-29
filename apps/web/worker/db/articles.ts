@@ -765,54 +765,6 @@ export async function getArticlesByCategory(
   return { articles, nextCursor };
 }
 
-export interface PopularArticlesResult {
-  articles: Article[];
-  window_days: number;
-  total: number;
-}
-
-/**
- * 直近 N 日の記事を feed_id + author 単位で de-dup し、published_at DESC で返す。
- * 同一 feed/author の中で published_at が最大の記事 (= 最新記事) を代表として選ぶ。
- * published_at が同一の場合は id の大きい方 (後から挿入された方) を選ぶ。
- * author が NULL の記事は SQLite の GROUP BY NULL 挙動により feed_id ごとに 1 件残る。
- */
-export async function getPopularArticles(
-  db: D1Database,
-  days: number,
-  limit: number,
-): Promise<PopularArticlesResult> {
-  const interval = `-${days} days`;
-  // 同一 feed_id + author グループの中で (published_at, id) の組が最大のものを選ぶ。
-  // サブクエリで MAX(published_at) を求め、同 published_at 内は MAX(id) で tie-break する。
-  const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
-    WHERE a.published_at >= datetime('now', ?1)
-      AND a.id IN (
-        SELECT MAX(id)
-        FROM articles
-        WHERE published_at >= datetime('now', ?1)
-          AND (feed_id, author, published_at) IN (
-            SELECT feed_id, author, MAX(published_at)
-            FROM articles
-            WHERE published_at >= datetime('now', ?1)
-            GROUP BY feed_id, author
-          )
-        GROUP BY feed_id, author
-      )
-    ORDER BY a.published_at DESC
-    LIMIT ?2
-  `;
-
-  const result = await db.prepare(sql).bind(interval, limit).all<Article>();
-
-  const articles = result.results ?? [];
-  return { articles, window_days: days, total: articles.length };
-}
-
 export interface GetArticlesByDayResult {
   articles: Article[];
   nextCursor: { publishedAt: string; id: number } | null;
