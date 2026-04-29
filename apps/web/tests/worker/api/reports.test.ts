@@ -129,6 +129,22 @@ describe("POST /api/admin/reports", () => {
     expect(res.status).toBe(400);
   });
 
+  // LLM はミリ秒抜きの ISO 8601 (`...:00Z`) を生成しがちなので受け入れる
+  it("200: accepts ISO 8601 without milliseconds", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          period_start: "2026-04-27T00:00:00Z",
+          period_end: "2026-04-28T00:00:00Z",
+          generated_at: "2026-04-28T00:01:00Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(200);
+  });
+
   it("400: rejects empty content", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/reports", {
       method: "POST",
