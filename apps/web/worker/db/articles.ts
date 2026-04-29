@@ -443,25 +443,6 @@ export async function getTopAuthors30d(db: D1Database): Promise<TopAuthorRow[]> 
   return rows.results ?? [];
 }
 
-/** 過去 30 日のフィード別記事数 TOP 10 (feed_name は feeds テーブル JOIN) */
-export async function getTopPublishers30d(db: D1Database): Promise<TopPublisherRow[]> {
-  const rows = await db
-    .prepare(
-      `SELECT a.feed_id,
-              COALESCE(f.name, a.feed_id) AS feed_name,
-              COUNT(*) AS count
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
-       WHERE a.published_at >= datetime('now', '-30 days')
-       GROUP BY a.feed_id
-       ORDER BY count DESC
-       LIMIT 10`,
-    )
-    .all<TopPublisherRow>();
-
-  return rows.results ?? [];
-}
-
 /** 過去 30 日の言語別記事数 (ja / en 両方を常に返す) */
 export async function getByLang30d(db: D1Database): Promise<ByLang30d> {
   const rows = await db
