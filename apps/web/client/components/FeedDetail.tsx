@@ -143,7 +143,7 @@ export function FeedDetail({ feedId, onBack, onFilterByFeedId, onFilterByCategor
           <span
             className={`inline-flex items-center px-[var(--space-2)] py-0.5 rounded-full text-[var(--font-size-xs)] font-semibold uppercase tracking-[0.04em] border-none font-[inherit] leading-[var(--line-height-tight)] whitespace-nowrap ${catBadgeClass}`}
           >
-            <span aria-hidden="true" style={{ marginRight: "3px" }}>
+            <span aria-hidden="true" className="mr-[3px]">
               {CATEGORY_ICON[feed.category] ?? ""}
             </span>
             {CATEGORY_LABEL[feed.category] ?? feed.category}
