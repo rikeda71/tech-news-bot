@@ -20,7 +20,7 @@ D1 (本番) ── articles
 Worker (Hono)
    ↓ 5. upsertReport → レスポンス { ok, id } を /tmp/post-resp.json に保存
 D1 (本番) ── reports
-   ↓ 6. GH Actions → Slack (LLM が生成した /tmp/slack-message.md に viewer URL を付与して webhook に投稿)
+   ↓ 6. GH Actions → Slack (Bot Token + chat.postMessage API でスレッド投稿: 親=タイトル+重要度 / 子=本文)
 Slack
 ```
 
@@ -143,7 +143,7 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
    - env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (recent.mjs が wrangler 経由で D1 にアクセスする際に必要)
    - prompt: skill 起動 + `/tmp/report.md` / `/tmp/report-meta.json` / `/tmp/slack-message.md` への書き出しを指示
 3. `jq` で markdown と meta JSON を 1 つの payload にまとめ、`curl POST /api/admin/reports` で Worker に投入 (レスポンスを `/tmp/post-resp.json` に保存)
-4. `Post to Slack` ステップで blocks payload を組み立て incoming webhook に投稿
+4. `Post to Slack (threaded)` ステップで Slack Bot Token + `chat.postMessage` API を使い、親メッセージ (タイトル + 重要度) を投稿後、`thread_ts` を取得して本文を thread にぶら下げる
 
 **カテゴリ複数取得パターン**: `recent.mjs` はカンマ区切り複数指定に非対応のため、カテゴリごとに呼んで URL で de-dup する:
 
@@ -166,13 +166,15 @@ meta_json の `included_categories` にカバーしたカテゴリ配列を記�
 
 repository secrets に以下を登録する。
 
-| Secret                    | 用途                                                 | 取得元                                          |
-| ------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由) | `claude /install-github-app` で発行             |
-| `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                  | `openssl rand -hex 32` などで生成 (GH 側で管理) |
-| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要      | Cloudflare dashboard → API Tokens               |
-| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                         | Cloudflare dashboard                            |
-| `SLACK_WEBHOOK_URL`       | Slack 投稿 (incoming webhook)                        | Slack ワークスペースで incoming webhook を作成  |
+| Secret                    | 用途                                                                 | 取得元                                                             |
+| ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由)                 | `claude /install-github-app` で発行                                |
+| `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                                  | `openssl rand -hex 32` などで生成 (GH 側で管理)                    |
+| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要                      | Cloudflare dashboard → API Tokens                                  |
+| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                                         | Cloudflare dashboard                                               |
+| `SLACK_BOT_TOKEN`         | report workflow の Slack スレッド投稿 (`chat.postMessage` API)       | Slack App 管理画面 → OAuth & Permissions → Bot Token (`xoxb-...`)  |
+| `SLACK_CHANNEL_ID`        | report workflow の投稿先 channel ID (= `CTPQ8SP98`)                  | Slack channel の URL または右クリック → Copy link から取得         |
+| `SLACK_WEBHOOK_URL`       | collector 日次ダイジェスト用 (apps/web/worker/notify/slack-daily.ts) | Slack ワークスペースで incoming webhook を作成 (report では未使用) |
 
 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` は既に deploy workflow で使っている
 ものを流用できる。
@@ -232,20 +234,30 @@ UNIQUE index が `(kind, period, category)` で張られているため、catego
 ## Slack 通知
 
 Slack への投稿は Worker ではなく GitHub Actions 側で行う。
+Slack Bot Token + `chat.postMessage` API を使い、**スレッド化した 2 段構成**で投稿する。
 
 フロー:
 
 1. Skill (Claude Code) が `/tmp/slack-message.md` を生成 (Slack mrkdwn 形式、30000 文字以内)
 2. `Save report to D1` ステップで POST レスポンス (`{ ok, id }`) を `/tmp/post-resp.json` に保存
-3. `Post to Slack` ステップが blocks payload を組み立てて Slack incoming webhook に投稿
+3. `Post to Slack (threaded)` ステップが 2 段階の `chat.postMessage` を実行:
+   - **Step A (親メッセージ)**: タイトル + 重要度を header/context block で投稿。レスポンスの `.ts` を取得
+   - **Step B (子メッセージ)**: 取得した `ts` を `thread_ts` に指定し、`slack-message.md` を chunks に分割して thread にぶら下げる
 
 ### Blocks payload 構造
 
+**親メッセージ** (`chat.postMessage`):
+
 ```
 header block   : 🟢/🟡/🔴 + 種別 + 期間
-context block  : 重要度テキスト + generated_at
-divider
-section block × N : slack-message.md を 2800 chars 単位でチャンク分割
+context block  : 重要度テキスト · generated_at
+```
+
+**子メッセージ** (thread_ts 付き `chat.postMessage`):
+
+```
+section block × N : slack-message.md を 2800 chars 単位でチャンク分割 (最大 48 チャンク)
+[context block    : 省略された場合の注記 (超過時のみ)]
 divider
 section block  : レポート全文を Web で開く (viewer URL)
 ```
@@ -260,18 +272,30 @@ section block  : レポート全文を Web で開く (viewer URL)
 
 特性:
 
-- 6000 文字制限は撤廃。30000 文字以内を推奨上限とし、blocks 分割で長文に対応
-- blocks 総数は最大 50 (Slack 制約)。チャンク数は上限 44 に制限し、固定ブロック 5 個と合わせて 49 以下に収まる
-- スレッド投稿は incoming webhook の仕様で不可 (`thread_ts` 非対応)。将来必要になれば bot token (`xoxb-`) + `chat.postMessage` に移行する
-- `SLACK_WEBHOOK_URL` が未設定の場合は no-op でスキップ (投稿しないだけで workflow は正常終了)
-- `continue-on-error: true` を付けているため、Slack 投稿が失敗 (non-2xx / timeout) しても workflow 全体が fail しない
-- webhook URL リテラルをコードに埋め込まない。`${{ secrets.SLACK_WEBHOOK_URL }}` 経由でのみ参照する
+- 30000 文字以内を推奨上限とし、blocks 分割で長文に対応
+- 子メッセージの blocks 総数は最大 50 (Slack 制約)。チャンク数は上限 48 に制限し、divider + viewer link の 2 枠を確保
+- `SLACK_BOT_TOKEN` または `SLACK_CHANNEL_ID` が未設定の場合は no-op でスキップ (投稿しないだけで workflow は正常終了)
+- `continue-on-error: true` を付けているため、Slack 投稿が失敗しても workflow 全体が fail しない
+- bot token リテラルをコードに埋め込まない。`${{ secrets.SLACK_BOT_TOKEN }}` 経由でのみ参照する
+- **bot を channel に invite する必要がある**: Slack ワークスペースで `/invite @<bot名>` を channel (CTPQ8SP98) で実行しないと `not_in_channel` エラーになる
+
+> **注**: `apps/web/worker/notify/slack-daily.ts` (collector の日次ダイジェスト) は引き続き
+> `SLACK_WEBHOOK_URL` (incoming webhook) を使用する。この webhook は削除しないこと。
 
 ### 設定方法
 
 ```bash
-gh secret set SLACK_WEBHOOK_URL
-# プロンプトに Slack incoming webhook URL を入力
+# Slack App を作成して Bot Token (xoxb-...) を取得し登録する
+gh secret set SLACK_BOT_TOKEN
+# プロンプトに xoxb-... トークンを入力
+
+# SLACK_CHANNEL_ID は登録済み (CTPQ8SP98)
+# 未登録の場合:
+gh secret set SLACK_CHANNEL_ID
+# プロンプトに CTPQ8SP98 を入力
+
+# Slack App に chat:write スコープを付与し、bot を channel に invite:
+# Slack ワークスペース内で /invite @<bot名> を CTPQ8SP98 channel で実行
 ```
 
 ---

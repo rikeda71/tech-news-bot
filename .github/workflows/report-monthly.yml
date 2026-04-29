@@ -121,77 +121,128 @@ jobs:
             -o /tmp/post-resp.json \
             --data-binary @/tmp/report-payload.json
 
-      - name: Post to Slack
+      - name: Post to Slack (threaded)
         if: ${{ success() }}
         continue-on-error: true
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           WORKER_URL: https://tech-news-bot.rikeda71.workers.dev
         run: |
           set -euo pipefail
-          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
-            echo "SLACK_WEBHOOK_URL not set – skipping Slack notification"
+
+          # required secrets / files の存在チェック (skip 条件)
+          if [ -z "${SLACK_BOT_TOKEN:-}" ] || [ -z "${SLACK_CHANNEL_ID:-}" ]; then
+            echo "SLACK_BOT_TOKEN or SLACK_CHANNEL_ID not set – skipping Slack thread post"
             exit 0
           fi
-          if [ ! -f /tmp/slack-message.md ] || [ ! -f /tmp/post-resp.json ]; then
-            echo "Slack message or post response missing – skipping Slack notification"
+          if [ ! -f /tmp/slack-message.md ] || [ ! -f /tmp/post-resp.json ] || [ ! -f /tmp/report-meta.json ]; then
+            echo "Required files missing – skipping Slack thread post"
             exit 0
           fi
+
           REPORT_ID=$(jq -r '.id' /tmp/post-resp.json)
           if [ -z "$REPORT_ID" ] || [ "$REPORT_ID" = "null" ]; then
-            echo "Could not determine report id – skipping Slack notification"
+            echo "report id missing – skipping"
             exit 0
           fi
           VIEWER_URL="$WORKER_URL/reports/$REPORT_ID"
 
-          # タイトル / 重要度を組み立て (monthly: 🔴)
           KIND=$(jq -r '.kind' /tmp/report-meta.json)
-          PERIOD_START=$(jq -r '.period_start' /tmp/report-meta.json | cut -c1-10)
-          PERIOD_END=$(jq -r '.period_end' /tmp/report-meta.json | cut -c1-10)
-          TITLE="🔴 Monthly Tech Report (${PERIOD_START} 〜 ${PERIOD_END})"
-          IMPORTANCE="重要度: 高"
+          PERIOD_START=$(jq -r '.period_start' /tmp/report-meta.json)
+          PERIOD_END=$(jq -r '.period_end' /tmp/report-meta.json)
           GENERATED_AT=$(jq -r '.generated_at' /tmp/report-meta.json)
 
-          # slack-message.md を 2800 chars 単位の section block 群に変換
-          BLOCKS_JSON=$(node -e "
-            const fs = require('fs');
-            const text = fs.readFileSync('/tmp/slack-message.md', 'utf8');
-            const chunkSize = 2800;
-            const blocks = [];
-            for (let i = 0; i < text.length; i += chunkSize) {
-              blocks.push({ type: 'section', text: { type: 'mrkdwn', text: text.slice(i, i + chunkSize) } });
-            }
-            // 50 block 上限: header(1) + context(1) + divider(1) + chunks + divider(1) + footer(1) = 5 + chunks
-            const maxChunks = 44;
-            const trimmed = blocks.slice(0, maxChunks);
-            process.stdout.write(JSON.stringify(trimmed));
-          ")
+          # Build title (emoji + label + period)
+          case "$KIND" in
+            daily)
+              EMOJI="🟢"; SEVERITY="重要度: 低"; LABEL="Daily"
+              DATE_LABEL=$(echo "$PERIOD_END" | cut -c1-10)
+              TITLE="$EMOJI $LABEL Tech Report ($DATE_LABEL)"
+              ;;
+            weekly)
+              EMOJI="🟡"; SEVERITY="重要度: 中"; LABEL="Weekly"
+              START=$(echo "$PERIOD_START" | cut -c1-10); END=$(echo "$PERIOD_END" | cut -c1-10)
+              TITLE="$EMOJI $LABEL Tech Report ($START 〜 $END)"
+              ;;
+            monthly)
+              EMOJI="🔴"; SEVERITY="重要度: 高"; LABEL="Monthly"
+              START=$(echo "$PERIOD_START" | cut -c1-10); END=$(echo "$PERIOD_END" | cut -c1-10)
+              TITLE="$EMOJI $LABEL Tech Report ($START 〜 $END)"
+              ;;
+            *)
+              echo "Unknown kind $KIND – skipping"; exit 0 ;;
+          esac
 
-          TITLE_ESC=$(jq -Rn --arg v "$TITLE" '$v')
-          IMPORTANCE_ESC=$(jq -Rn --arg v "$IMPORTANCE | generated_at: $GENERATED_AT" '$v')
-          VIEWER_ESC=$(jq -Rn --arg v "— <${VIEWER_URL}|レポート全文を Web で開く>" '$v')
-
-          jq -n \
-            --argjson title "$TITLE_ESC" \
-            --argjson importance "$IMPORTANCE_ESC" \
-            --argjson chunks "$BLOCKS_JSON" \
-            --argjson viewer "$VIEWER_ESC" \
+          # ===== Step A: post parent (title + severity) =====
+          PARENT_PAYLOAD=$(jq -n \
+            --arg ch "$SLACK_CHANNEL_ID" \
+            --arg t "$TITLE" \
+            --arg s "$SEVERITY · generated_at: $GENERATED_AT" \
             '{
-              text: $title,
-              blocks: (
-                [
-                  { type: "header", text: { type: "plain_text", text: $title } },
-                  { type: "context", elements: [{ type: "mrkdwn", text: $importance }] },
-                  { type: "divider" }
-                ]
-                + $chunks
-                + [
-                  { type: "divider" },
-                  { type: "section", text: { type: "mrkdwn", text: $viewer } }
-                ]
-              )
-            }' > /tmp/slack-payload.json
+              channel: $ch,
+              text: $t,
+              blocks: [
+                { type: "header", text: { type: "plain_text", text: $t, emoji: true } },
+                { type: "context", elements: [ { type: "mrkdwn", text: $s } ] }
+              ]
+            }')
 
-          curl -fsS -X POST "$SLACK_WEBHOOK_URL" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/slack-payload.json
+          PARENT_RESP=$(curl -fsS -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data "$PARENT_PAYLOAD")
+
+          PARENT_OK=$(echo "$PARENT_RESP" | jq -r '.ok')
+          if [ "$PARENT_OK" != "true" ]; then
+            ERR=$(echo "$PARENT_RESP" | jq -r '.error // "unknown"')
+            echo "Parent post failed: $ERR"
+            exit 0
+          fi
+          THREAD_TS=$(echo "$PARENT_RESP" | jq -r '.ts')
+          if [ -z "$THREAD_TS" ] || [ "$THREAD_TS" = "null" ]; then
+            echo "Parent ts missing – skipping child post"; exit 0
+          fi
+
+          # ===== Step B: post child (chunked body in thread) =====
+          # python で安全に chunk 分割。runner 標準で python3 が入っている。
+          CHILD_PAYLOAD=$(VIEWER_URL="$VIEWER_URL" SLACK_CHANNEL_ID="$SLACK_CHANNEL_ID" THREAD_TS="$THREAD_TS" python3 - <<'PYEOF'
+          import json, os
+          with open('/tmp/slack-message.md', encoding='utf-8') as f:
+              msg = f.read().rstrip()
+          CHUNK = 2800       # Slack mrkdwn block limit 3000 chars 安全側
+          MAX_BLOCKS = 48    # divider + section (viewer link) のために 2 枠残す
+          chunks = [msg[i:i+CHUNK] for i in range(0, len(msg), CHUNK)]
+          truncated = False
+          if len(chunks) > MAX_BLOCKS:
+              chunks = chunks[:MAX_BLOCKS]
+              truncated = True
+          blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": c}} for c in chunks]
+          if truncated:
+              blocks.append({"type": "context", "elements": [{"type": "mrkdwn",
+                  "text": "_…本文が長すぎたため一部省略されました。続きは Web viewer で_"}]})
+          blocks.append({"type": "divider"})
+          blocks.append({"type": "section", "text": {"type": "mrkdwn",
+              "text": f"<{os.environ['VIEWER_URL']}|レポート全文を Web で開く>"}})
+          payload = {
+              "channel": os.environ['SLACK_CHANNEL_ID'],
+              "thread_ts": os.environ['THREAD_TS'],
+              "text": "レポート本文",
+              "blocks": blocks,
+          }
+          print(json.dumps(payload, ensure_ascii=False))
+          PYEOF
+          )
+
+          CHILD_RESP=$(curl -fsS -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data "$CHILD_PAYLOAD")
+
+          CHILD_OK=$(echo "$CHILD_RESP" | jq -r '.ok')
+          if [ "$CHILD_OK" != "true" ]; then
+            ERR=$(echo "$CHILD_RESP" | jq -r '.error // "unknown"')
+            echo "Child post failed: $ERR"
+            exit 0
+          fi
+          echo "Posted parent + thread successfully (ts=$THREAD_TS)"
