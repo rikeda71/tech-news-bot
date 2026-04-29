@@ -9,6 +9,7 @@ import health from "./health";
 import stats from "./stats";
 import admin from "./admin";
 import reports from "./reports";
+import publicReports from "./reports-public";
 import docs from "./docs";
 import { catalogHandler } from "./catalog";
 
@@ -26,7 +27,14 @@ function allowedOriginsCors(c: Context<{ Bindings: Env }>, next: Next) {
   return cors({ origin: origins })(c, next);
 }
 
-const PUBLIC_PATHS = ["/articles/*", "/categories/*", "/feeds/*", "/stats/*", "/health/*"] as const;
+const PUBLIC_PATHS = [
+  "/articles/*",
+  "/categories/*",
+  "/feeds/*",
+  "/stats/*",
+  "/health/*",
+  "/reports/*",
+] as const;
 for (const path of PUBLIC_PATHS) {
   api.use(path, allowedOriginsCors);
 }
@@ -43,6 +51,8 @@ api.route("/stats", stats);
 // Hono は path matching が前方一致でなく完全一致なので衝突しない。
 api.route("/admin/reports", reports);
 api.route("/admin", admin);
+// 公開 reports endpoint: 認証不要で一覧・詳細を提供する
+api.route("/reports", publicReports);
 api.route("/", docs);
 
 export default api;
