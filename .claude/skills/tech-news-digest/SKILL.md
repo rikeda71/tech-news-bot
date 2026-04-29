@@ -46,7 +46,7 @@ D1 (`articles` テーブル) から期間指定で記事メタデータを取得
 
 - `--since=<today|week|month|N>` (必須)
 - `--target=<local|remote>` (省略時 `local`)
-- `--category=<bigtech|ai|jp|zenn>` (任意)
+- `--category=<bigtech|ai|jp>` (任意)
 - `--lang=<ja|en>` (任意)
 - `--limit=<N>` (デフォルト 200)
 
@@ -55,7 +55,7 @@ D1 (`articles` テーブル) から期間指定で記事メタデータを取得
 ```sh
 node tools/d1-client/recent.mjs --since=today --target=remote
 node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
-node tools/d1-client/recent.mjs --since=week --category=zenn --target=remote
+node tools/d1-client/recent.mjs --since=week --category=jp --target=remote
 ```
 
 stdout に出る JSON 形式:
@@ -71,24 +71,24 @@ stdout に出る JSON 形式:
     {
       "id": 123,
       "guid": "...",
-      "feed_id": "zenn-trending",
-      "feed_name": "Zenn トレンド",
+      "feed_id": "google-developers",
+      "feed_name": "Google Developers Blog",
       "title": "...",
-      "url": "https://zenn.dev/...",
+      "url": "https://developers.googleblog.com/...",
       "summary": "<= 500 char excerpt>",
       "author": "...",
       "published_at": "2026-04-27T...",
-      "category": "zenn",
+      "category": "bigtech",
       "lang": "ja"
     }
   ],
-  "by_category": { "ai": 12, "bigtech": 18, "jp": 8, "zenn": 4 },
-  "by_feed": { "zenn-trending": 3 },
+  "by_category": { "ai": 12, "bigtech": 18, "jp": 8 },
+  "by_feed": { "google-developers": 3 },
   "by_lang": { "en": 30, "ja": 12 }
 }
 ```
 
-**URL による de-dup (Zenn 対策)**:
+**URL による de-dup**:
 
 `recent.mjs` は v1.1 以降、de-dup 済みの `articles` を返す。出力 JSON の `deduped_total` フィールドが de-dup 後の件数、`total` が元の件数。以降のすべてのステージでは `articles` (de-dup 済み) をそのまま使えばよい。
 
@@ -124,9 +124,9 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、本文を読�
 
 ```
 バッチ計画例 (3 ホスト、各 2 記事):
-  batch[github.com]   → batch[zenn.dev]   → batch[aws.amazon.com]
-  ↓ parallel          ↓ parallel           ↓ parallel
-  [gh-1, gh-2]        [zenn-1, zenn-2]     [aws-1, aws-2]
+  batch[github.com]   → batch[aws.amazon.com]   → batch[developers.googleblog.com]
+  ↓ parallel          ↓ parallel                  ↓ parallel
+  [gh-1, gh-2]        [aws-1, aws-2]               [google-1, google-2]
 ```
 
 注意:
@@ -140,12 +140,12 @@ Stage 1 の全記事 (`articles`、Stage 1 の de-dup 後) を見渡し、タイ
 
 **横断トレンド**: カテゴリ横断で共通するテーマ / プロダクト / 概念を抽出 (頻度より関連性を優先)。
 
-**カテゴリ別ハイライト** (bigtech / ai / jp / zenn): 各カテゴリの特徴的な動きや話題を 2〜3 点まとめる。カテゴリの記事が 0 件のときは「記事なし」と書く。
+**カテゴリ別ハイライト** (bigtech / ai / jp): 各カテゴリの特徴的な動きや話題を 2〜3 点まとめる。カテゴリの記事が 0 件のときは「記事なし」と書く。
 
 分析視点:
 
 - 一過性のニュースか継続的なトレンドか
-- カテゴリ間 (bigtech / ai / jp / zenn) の温度差
+- カテゴリ間 (bigtech / ai / jp) の温度差
 - 各トレンド項目に関連記事のリンクを 2〜3 件添える
 
 頻度トークン (`"llm" 5 件`、`"mcp" 3 件`…) を列挙する出力はしない。意味を読まずに語彙だけ並べる行為を禁止する。
@@ -157,7 +157,7 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 ```md
 # Tech News Digest — <期間ラベル> (<mode>)
 
-期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): <deduped_total> / カテゴリ: bigtech=N, ai=N, jp=N, zenn=N
+期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): <deduped_total> / カテゴリ: bigtech=N, ai=N, jp=N
 
 ## サマリ (重要記事 N 件) ← quick / deep のみ
 
@@ -186,11 +186,6 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 - <ハイライト 1>
 - ...
 
-### zenn
-
-- <ハイライト 1>
-- ...
-
 ## カテゴリ別件数
 
 | Category | 件数 |
@@ -198,7 +193,6 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 | bigtech  | N    |
 | ai       | N    |
 | jp       | N    |
-| zenn     | N    |
 ```
 
 ## ガードレール

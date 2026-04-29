@@ -36,7 +36,7 @@ D1 (`articles` テーブル) から週次・月次の記事を取得し、意味
 
 - `--since=<week|month>` (必須)
 - `--target=<local|remote>` (省略時 `local`)
-- `--category=<bigtech|ai|jp|zenn>` (任意)
+- `--category=<bigtech|ai|jp>` (任意)
 - `--lang=<ja|en>` (任意)
 - `--limit=<N>` (デフォルト 200、月次は 500 推奨)
 
@@ -55,7 +55,7 @@ node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
 
 stdout の JSON 形式は `tech-news-digest` と同一 (`since`, `total`, `articles`, `by_category`, `by_feed`, `by_lang`)。
 
-**URL による de-dup (Zenn 対策)**:
+**URL による de-dup**:
 
 Stage 1 完了後、`articles` を `url` でグループ化し、重複 URL は最も古い `published_at` のものを 1 件だけ残す:
 
@@ -109,9 +109,9 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、日本語 1�
 
 ```
 バッチ計画例 (3 ホスト、各 2 記事):
-  batch[github.com]   → batch[zenn.dev]   → batch[aws.amazon.com]
-  ↓ parallel          ↓ parallel           ↓ parallel
-  [gh-1, gh-2]        [zenn-1, zenn-2]     [aws-1, aws-2]
+  batch[github.com]   → batch[aws.amazon.com]   → batch[developers.googleblog.com]
+  ↓ parallel          ↓ parallel                  ↓ parallel
+  [gh-1, gh-2]        [aws-1, aws-2]               [google-1, google-2]
 ```
 
 注意:
@@ -132,7 +132,7 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 
 - 語彙頻度 (`"llm" 5 件` 等) を機械的に列挙しない — 意味を読む
 - 一過性のニュースか継続的なトレンドかを区別する
-- カテゴリ間 (bigtech / ai / jp / zenn) の温度差を意識する
+- カテゴリ間 (bigtech / ai / jp) の温度差を意識する
 
 #### 時系列 narrative
 
@@ -150,7 +150,7 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 
 <!-- 月次の場合: # Monthly Tech News — <YYYY-MM> -->
 
-期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): <total> / カテゴリ: bigtech=N, ai=N, jp=N, zenn=N
+期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): <total> / カテゴリ: bigtech=N, ai=N, jp=N
 
 ## 今週の主要トピック
 
@@ -184,11 +184,6 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 - <ハイライト 1>
 - ...
 
-### zenn
-
-- <ハイライト 1>
-- ...
-
 ## 注目記事ピックアップ
 
 - **[<タイトル>](url)** _(<feed_name>, <YYYY-MM-DD>)_: <1〜2 文の要約> <(summary based) があれば末尾に>
@@ -201,7 +196,6 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 | bigtech  | N    |
 | ai       | N    |
 | jp       | N    |
-| zenn     | N    |
 ```
 
 各セクションを省略しない。記事 0 件のカテゴリは「記事なし」と記載する。
