@@ -270,13 +270,6 @@ feeds:
     lang: ja
     enabled: true
 
-  - id: mercari-engineering
-    name: Mercari Engineering Blog
-    url: https://engineering.mercari.com/blog/feed.xml
-    category: jp
-    lang: ja
-    enabled: true
-
   - id: pfn-tech-blog
     name: Preferred Networks Tech Blog
     url: https://tech.preferred.jp/ja/feed/
