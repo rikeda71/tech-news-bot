@@ -9,6 +9,22 @@ import type {
 import type { Env } from "../types";
 import type { StatsResponse } from "./types";
 
+// 全期間集計を 1 クエリにまとめることで articles テーブルのフルスキャンを 4→1 回に削減する
+const SUMMARY_SQL = `
+  SELECT
+    COUNT(*) AS total,
+    MAX(published_at) AS last_published,
+    MAX(fetched_at)   AS last_fetched,
+    SUM(CASE WHEN published_at >= datetime('now','-1 day') THEN 1 ELSE 0 END) AS last24h,
+    SUM(CASE WHEN category='bigtech' THEN 1 ELSE 0 END) AS cat_bigtech,
+    SUM(CASE WHEN category='ai'      THEN 1 ELSE 0 END) AS cat_ai,
+    SUM(CASE WHEN category='jp'      THEN 1 ELSE 0 END) AS cat_jp,
+    SUM(CASE WHEN category='zenn'    THEN 1 ELSE 0 END) AS cat_zenn,
+    SUM(CASE WHEN lang='ja' THEN 1 ELSE 0 END) AS lang_ja,
+    SUM(CASE WHEN lang='en' THEN 1 ELSE 0 END) AS lang_en
+  FROM articles
+`;
+
 const app = new Hono<{ Bindings: Env }>();
 
 // 24 時間以上収集成功していない or 直近で error が記録されているフィードを stale と判定
@@ -31,27 +47,17 @@ const STALE_FEEDS_SQL = `
 app.get("/", async (c) => {
   const db = c.env.DB;
 
-  // 10 クエリを 1 回の db.batch で発行してラウンドトリップを 1 本に削減する
+  // 6 クエリを 1 回の db.batch で発行してラウンドトリップを 1 本に削減する
+  // (SUMMARY_SQL で全期間集計 4→1、feedActivity から top_publishers を派生させて 2→1)
   const [
-    totalResult,
-    byCategoryResult,
-    byLangResult,
-    recentResult,
+    summaryResult,
     staleResult,
     categoryTrendRaw,
     feedActivityRaw,
     topAuthorsRaw,
-    topPublishersRaw,
     byLang30dRaw,
   ] = await db.batch([
-    db.prepare(
-      "SELECT COUNT(*) AS n, MAX(published_at) AS last_published, MAX(fetched_at) AS last_fetched FROM articles",
-    ),
-    db.prepare(`SELECT category, COUNT(*) AS n FROM articles GROUP BY category`),
-    db.prepare(`SELECT lang, COUNT(*) AS n FROM articles GROUP BY lang`),
-    db.prepare(
-      `SELECT COUNT(*) AS n FROM articles WHERE published_at >= datetime('now', '-1 day')`,
-    ),
+    db.prepare(SUMMARY_SQL),
     db.prepare(STALE_FEEDS_SQL),
     db.prepare(
       `SELECT date(published_at) AS date, category, COUNT(*) AS n
@@ -83,17 +89,6 @@ app.get("/", async (c) => {
        LIMIT 10`,
     ),
     db.prepare(
-      `SELECT a.feed_id,
-              COALESCE(f.name, a.feed_id) AS feed_name,
-              COUNT(*) AS count
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
-       WHERE a.published_at >= datetime('now', '-30 days')
-       GROUP BY a.feed_id
-       ORDER BY count DESC
-       LIMIT 10`,
-    ),
-    db.prepare(
       `SELECT lang, COUNT(*) AS count
        FROM articles
        WHERE published_at >= datetime('now', '-30 days')
@@ -101,12 +96,18 @@ app.get("/", async (c) => {
     ),
   ]);
 
-  const totalRow = (totalResult.results?.[0] ?? null) as {
-    n: number;
+  const summaryRow = (summaryResult.results?.[0] ?? null) as {
+    total: number;
     last_published: string | null;
     last_fetched: string | null;
+    last24h: number;
+    cat_bigtech: number;
+    cat_ai: number;
+    cat_jp: number;
+    cat_zenn: number;
+    lang_ja: number;
+    lang_en: number;
   } | null;
-  const recentRow = (recentResult.results?.[0] ?? null) as { n: number } | null;
 
   // getCategoryTrend30d と同等の 0 埋め処理
   const today = new Date();
@@ -136,26 +137,34 @@ app.get("/", async (c) => {
     if (row.lang === "ja") byLang30d.ja = row.count;
     else if (row.lang === "en") byLang30d.en = row.count;
   }
+  const feedActivity = (feedActivityRaw.results ?? []) as FeedActivityRow[];
+  // feedActivity は articles_30d DESC 済みなので先頭 10 件が top_publishers と等価
+  const topPublishers: TopPublisherRow[] = feedActivity.slice(0, 10).map((r) => ({
+    feed_id: r.feed_id,
+    feed_name: r.feed_name,
+    count: r.articles_30d,
+  }));
 
   return c.json<StatsResponse>({
-    total: totalRow?.n ?? 0,
-    last_published_at: totalRow?.last_published ?? null,
-    last_fetched_at: totalRow?.last_fetched ?? null,
-    last24h: recentRow?.n ?? 0,
-    by_category: Object.fromEntries(
-      ((byCategoryResult.results ?? []) as { category: string; n: number }[]).map((r) => [
-        r.category,
-        r.n,
-      ]),
-    ),
-    by_lang: Object.fromEntries(
-      ((byLangResult.results ?? []) as { lang: string; n: number }[]).map((r) => [r.lang, r.n]),
-    ),
+    total: summaryRow?.total ?? 0,
+    last_published_at: summaryRow?.last_published ?? null,
+    last_fetched_at: summaryRow?.last_fetched ?? null,
+    last24h: summaryRow?.last24h ?? 0,
+    by_category: {
+      bigtech: summaryRow?.cat_bigtech ?? 0,
+      ai: summaryRow?.cat_ai ?? 0,
+      jp: summaryRow?.cat_jp ?? 0,
+      zenn: summaryRow?.cat_zenn ?? 0,
+    },
+    by_lang: {
+      ja: summaryRow?.lang_ja ?? 0,
+      en: summaryRow?.lang_en ?? 0,
+    },
     stale_feeds: (staleResult.results ?? []) as StatsResponse["stale_feeds"],
     category_trend_30d: points,
-    feed_activity: (feedActivityRaw.results ?? []) as FeedActivityRow[],
+    feed_activity: feedActivity,
     top_authors_30d: (topAuthorsRaw.results ?? []) as TopAuthorRow[],
-    top_publishers_30d: (topPublishersRaw.results ?? []) as TopPublisherRow[],
+    top_publishers_30d: topPublishers,
     by_lang_30d: byLang30d,
   });
 });
