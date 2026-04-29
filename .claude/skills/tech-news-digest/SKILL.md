@@ -53,10 +53,39 @@ D1 (`articles` テーブル) から期間指定で記事メタデータを取得
 実行例:
 
 ```sh
+# 単一カテゴリ
 node tools/d1-client/recent.mjs --since=today --target=remote
 node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
 node tools/d1-client/recent.mjs --since=week --category=jp --target=remote
 ```
+
+**複数カテゴリを対象にする場合 (例: bigtech + ai + jp)**:
+
+`recent.mjs` はカンマ区切り複数指定に非対応のため、カテゴリごとに呼んで URL で de-dup する:
+
+```sh
+# カテゴリごとに取得
+node tools/d1-client/recent.mjs --since=today --category=bigtech --target=remote > /tmp/arts_bigtech.json
+node tools/d1-client/recent.mjs --since=today --category=ai      --target=remote > /tmp/arts_ai.json
+node tools/d1-client/recent.mjs --since=today --category=jp      --target=remote > /tmp/arts_jp.json
+```
+
+取得後、3 つの `articles[]` を結合して URL de-dup する (古い `published_at` 優先):
+
+```js
+const seen = new Map();
+const merged = [];
+for (const a of [...bigtech, ...ai, ...jp].sort((x, y) =>
+  x.published_at.localeCompare(y.published_at),
+)) {
+  if (!seen.has(a.url)) {
+    seen.set(a.url, true);
+    merged.push(a);
+  }
+}
+```
+
+以降の Stage はマージ済み `merged` を `articles` として扱う。
 
 stdout に出る JSON 形式:
 
@@ -159,7 +188,9 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 
 期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): <deduped_total> / カテゴリ: bigtech=N, ai=N, jp=N
 
-## サマリ (重要記事 N 件) ← quick / deep のみ
+## Pick 記事リンク一覧 ← quick / deep のみ。必ず出力する。省略禁止
+
+Stage 2 で選定した重要記事のリンク集。
 
 - **[<タイトル>](url)** _(<feed_name>, <category>, <YYYY-MM-DD>)_ — <1〜2 文の日本語要約> <(summary based) があれば末尾に>
 - ...
@@ -193,6 +224,24 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 | bigtech  | N    |
 | ai       | N    |
 | jp       | N    |
+```
+
+**複数カテゴリ (例: bigtech / ai / jp) のレポートを生成する場合**は、`## カテゴリ別ハイライト` に代わり `## カテゴリ別動向` 節を設け、各カテゴリをサブセクションとして展開する:
+
+```md
+## カテゴリ別動向
+
+### bigtech
+
+<bigtech カテゴリの技術動向 2〜3 点。関連記事リンクを自然に埋め込む>
+
+### ai
+
+<ai カテゴリの技術動向 2〜3 点>
+
+### jp
+
+<jp カテゴリの技術動向 2〜3 点>
 ```
 
 ## ガードレール

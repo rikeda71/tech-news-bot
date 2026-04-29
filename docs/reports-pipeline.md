@@ -124,11 +124,11 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
 
 各 workflow は `.github/workflows/` 配下に置く。
 
-| File                 | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | skill 引数                                 |
-| -------------------- | ------------------ | ------------------ | ------------------ | ------------------------------------------ |
-| `report-daily.yml`   | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | `since=today, deep, category=bigtech`      |
-| `report-weekly.yml`  | `0 22 * * 0`       | 毎週月曜 07:00     | `tech-news-weekly` | `since=week, category=bigtech`             |
-| `report-monthly.yml` | `0 22 1 * *`       | 毎月 2 日 07:00    | `tech-news-weekly` | `since=month, limit=500, category=bigtech` |
+| File                 | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | skill 引数                                                          |
+| -------------------- | ------------------ | ------------------ | ------------------ | ------------------------------------------------------------------- |
+| `report-daily.yml`   | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | `since=today, deep, categories=bigtech+ai+jp (3 回呼び), zenn 除外` |
+| `report-weekly.yml`  | `0 22 * * 0`       | 毎週月曜 07:00     | `tech-news-weekly` | `since=week, categories=bigtech+ai (2 回呼び)`                      |
+| `report-monthly.yml` | `0 22 1 * *`       | 毎月 2 日 07:00    | `tech-news-weekly` | `since=month, limit=500, categories=bigtech+ai (2 回呼び)`          |
 
 > monthly は GitHub Actions cron が `L` (月末) を非対応のため、「翌月 2 日 JST 07:00 に
 > 過去 30 日を集計」として暦月とほぼ等価のレポートを作る。`since=month` は skill 仕様で
@@ -137,29 +137,23 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
 ### Workflow の構造 (共通)
 
 1. `actions/checkout` + `pnpm/action-setup` + `actions/setup-node` + `pnpm install`
-2. `anthropics/claude-code-base-action@v1`
+2. `anthropics/claude-code-base-action@beta`
    - `claude_code_oauth_token`: subscription 経由で発行された OAuth token
    - `allowed_tools`: `"Bash,Read,Write,WebFetch,Skill"`
    - env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (recent.mjs が wrangler 経由で D1 にアクセスする際に必要)
-   - prompt: skill 起動 + `/tmp/report.md` / `/tmp/report-meta.json` への書き出しを指示
-3. `jq` で markdown と meta JSON を 1 つの payload にまとめ、`curl POST /api/admin/reports` で Worker に投入
+   - prompt: skill 起動 + `/tmp/report.md` / `/tmp/report-meta.json` / `/tmp/slack-message.md` への書き出しを指示
+3. `jq` で markdown と meta JSON を 1 つの payload にまとめ、`curl POST /api/admin/reports` で Worker に投入 (レスポンスを `/tmp/post-resp.json` に保存)
+4. `Post to Slack` ステップで blocks payload を組み立て incoming webhook に投稿
 
-prompt の本体例 (`report-daily.yml`):
+**カテゴリ複数取得パターン**: `recent.mjs` はカンマ区切り複数指定に非対応のため、カテゴリごとに呼んで URL で de-dup する:
 
 ```
-tech-news-digest skill を以下の引数で起動してください:
-- since=today
-- mode=deep
-- target=remote
-- category=bigtech
-- lang 指定なし
-
-Stage 1 では `recent.mjs --category=bigtech --target=remote` を呼んでください。
-Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
-書き出してください。レポートには `## カテゴリ別ハイライト` 節を含めないでください
-(bigtech 1 カテゴリのみのため不要)。
-合わせて meta JSON を /tmp/report-meta.json に書き出してください: { kind, period_start, ..., category: "bigtech" }
+daily   : --category=bigtech, --category=ai, --category=jp を各 1 回 → 3 結果をマージ → URL de-dup
+weekly  : --category=bigtech, --category=ai を各 1 回 → 2 結果をマージ → URL de-dup
+monthly : --category=bigtech --limit=500, --category=ai --limit=500 を各 1 回 → 2 結果をマージ → URL de-dup
 ```
+
+meta_json の `included_categories` にカバーしたカテゴリ配列を記録する (Worker 側 schema 変更なし、`meta_json` 任意 JSON)。
 
 ### concurrency
 
@@ -241,12 +235,34 @@ Slack への投稿は Worker ではなく GitHub Actions 側で行う。
 
 フロー:
 
-1. Skill (Claude Code) が `/tmp/slack-message.md` を生成 (Slack mrkdwn 形式、6000 文字以内)
+1. Skill (Claude Code) が `/tmp/slack-message.md` を生成 (Slack mrkdwn 形式、30000 文字以内)
 2. `Save report to D1` ステップで POST レスポンス (`{ ok, id }`) を `/tmp/post-resp.json` に保存
-3. `Post to Slack` ステップが `id` から viewer URL を組み立て、`/tmp/slack-message.md` の末尾に付与して Slack incoming webhook に投稿
+3. `Post to Slack` ステップが blocks payload を組み立てて Slack incoming webhook に投稿
+
+### Blocks payload 構造
+
+```
+header block   : 🟢/🟡/🔴 + 種別 + 期間
+context block  : 重要度テキスト + generated_at
+divider
+section block × N : slack-message.md を 2800 chars 単位でチャンク分割
+divider
+section block  : レポート全文を Web で開く (viewer URL)
+```
+
+重要度と絵文字:
+
+| kind    | 絵文字 | タイトル例                                          | 重要度テキスト |
+| ------- | ------ | --------------------------------------------------- | -------------- |
+| daily   | 🟢     | `🟢 Daily Tech Report (2026-04-29)`                 | 重要度: 低     |
+| weekly  | 🟡     | `🟡 Weekly Tech Report (2026-04-22 〜 2026-04-29)`  | 重要度: 中     |
+| monthly | 🔴     | `🔴 Monthly Tech Report (2026-03-30 〜 2026-04-29)` | 重要度: 高     |
 
 特性:
 
+- 6000 文字制限は撤廃。30000 文字以内を推奨上限とし、blocks 分割で長文に対応
+- blocks 総数は最大 50 (Slack 制約)。チャンク数は上限 44 に制限し、固定ブロック 5 個と合わせて 49 以下に収まる
+- スレッド投稿は incoming webhook の仕様で不可 (`thread_ts` 非対応)。将来必要になれば bot token (`xoxb-`) + `chat.postMessage` に移行する
 - `SLACK_WEBHOOK_URL` が未設定の場合は no-op でスキップ (投稿しないだけで workflow は正常終了)
 - `continue-on-error: true` を付けているため、Slack 投稿が失敗 (non-2xx / timeout) しても workflow 全体が fail しない
 - webhook URL リテラルをコードに埋め込まない。`${{ secrets.SLACK_WEBHOOK_URL }}` 経由でのみ参照する
