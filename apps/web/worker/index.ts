@@ -82,7 +82,7 @@ const handler: ExportedHandler<Env> = {
     // cron `0 */6 * * *` は UTC 00,06,12,18 のみ起動するため 17 ではなく 18 に揃える。
     if (utcHour === 18) {
       ctx.waitUntil(
-        pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "0")).then((r) => {
+        pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "90")).then((r) => {
           console.log(`[retention] deleted=${r.deleted}`);
           return r;
         }),

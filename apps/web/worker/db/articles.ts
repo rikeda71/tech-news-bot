@@ -334,18 +334,6 @@ export async function countArticlesSince(db: D1Database, isoDate: string): Promi
   return row?.c ?? 0;
 }
 
-export async function deleteOlderThan(db: D1Database, retentionDays: number): Promise<number> {
-  if (!Number.isFinite(retentionDays) || retentionDays <= 0) return 0;
-  // SQLite で安全のため整数化、少数日は切り捨て
-  const days = Math.floor(retentionDays);
-  const result = await db
-    .prepare(`DELETE FROM articles WHERE published_at < datetime('now', ?1)`)
-    .bind(`-${days} days`)
-    .run();
-  // FTS トリガで複数 changes が返るため、count(*) との差分は取らずに meta は参考値
-  return result.meta?.changes ?? 0;
-}
-
 export interface CategoryTrendPoint {
   date: string;
   ai: number;
