@@ -122,12 +122,15 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
 
 各 workflow は `.github/workflows/` 配下に置く。
 
-| File               | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | category / lang |
-| ------------------ | ------------------ | ------------------ | ------------------ | --------------- |
-| `report-daily.yml` | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | 全カテゴリ      |
+| File                 | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | skill 引数               |
+| -------------------- | ------------------ | ------------------ | ------------------ | ------------------------ |
+| `report-daily.yml`   | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | `since=today, deep`      |
+| `report-weekly.yml`  | `0 22 * * 0`       | 毎週月曜 07:00     | `tech-news-weekly` | `since=week`             |
+| `report-monthly.yml` | `0 22 1 * *`       | 毎月 2 日 07:00    | `tech-news-weekly` | `since=month, limit=500` |
 
-> 当面は daily のみ。weekly / monthly が必要になったら同じ pattern で workflow を追加
-> する (skill だけ `tech-news-weekly` に差し替え、`since=week` / `since=month` を渡す)。
+> monthly は GitHub Actions cron が `L` (月末) を非対応のため、「翌月 2 日 JST 07:00 に
+> 過去 30 日を集計」として暦月とほぼ等価のレポートを作る。`since=month` は skill 仕様で
+> 過去 30 日を意味する (暦月ぴったりではない)。
 
 ### Workflow の構造 (共通)
 
@@ -196,12 +199,17 @@ repository secrets に以下を登録する。
 GitHub Actions UI から `workflow_dispatch` で再実行するだけで OK。
 同じ `(kind, period_start, period_end, category, lang)` の組み合わせは upsert で上書きされる。
 
-### weekly / monthly を追加するとき
+### カテゴリ別レポートを追加するとき
 
-1. `.github/workflows/report-weekly.yml` (例) を `report-daily.yml` をベースに作成
-2. cron を `"0 22 * * 0"` (毎週日曜 JST 07:00) などに変更
-3. prompt の skill を `tech-news-weekly` / `since=week` などに差し替え
-4. meta JSON の `kind` を `weekly` に変更
+現状 daily / weekly / monthly はいずれも全カテゴリを対象にしている。`category=bigtech` 専用
+レポートなどが欲しくなったら、既存 workflow をコピーして以下を変える:
+
+1. ファイル名 / `name:` / `concurrency.group` を `report-<kind>-<category>.yml` 等に変更
+2. prompt の `category 指定なし` を `category=<bigtech|ai|jp|zenn>` に変更
+3. meta JSON の `category` を該当カテゴリ名に変更
+
+UNIQUE index が `(kind, period, category)` で張られているため、category 違いは別行として
+共存する (上書きされない)。
 
 ### トラブルシュート
 
@@ -223,5 +231,7 @@ GitHub Actions UI から `workflow_dispatch` で再実行するだけで OK。
 - `apps/web/worker/api/router.ts` — `/admin/reports` のマウント
 - `apps/web/worker/api/types.ts` — `AdminReport*Response`
 - `apps/web/tests/worker/api/reports.test.ts` — 18 ケースの統合テスト
-- `.github/workflows/report-daily.yml` — daily 用 cron workflow
+- `.github/workflows/report-daily.yml` — daily 用 cron workflow (`tech-news-digest`)
+- `.github/workflows/report-weekly.yml` — weekly 用 cron workflow (`tech-news-weekly`)
+- `.github/workflows/report-monthly.yml` — monthly 用 cron workflow (`tech-news-weekly --since=month`)
 - `docs/operations/admin-token-rotation.md` — ADMIN_TOKEN ローテーション手順
