@@ -25,6 +25,18 @@ import { ToastContext, useToastState } from "./hooks/useToast";
 import { useUrlState } from "./hooks/useUrlState";
 import type { FeedCategory, FeedLang } from "./types/api";
 
+function EmptyState({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <div className="text-center text-[var(--fg-muted)] py-[var(--space-8)] px-[var(--space-3)] border border-dashed border-[var(--border-subtle)] rounded-[var(--radius-lg)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]">
+      <span className="text-[2.5rem] block mb-[var(--space-3)] leading-none">{icon}</span>
+      <div className="text-[var(--font-size-md)] font-semibold text-[var(--fg-secondary)] mb-[var(--space-1)]">
+        {title}
+      </div>
+      <div className="text-[var(--font-size-sm)] text-[var(--fg-muted)]">{body}</div>
+    </div>
+  );
+}
+
 function formatRelative(iso: string): string {
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return iso;
@@ -463,7 +475,7 @@ function AppInner() {
   });
 
   return (
-    <div className="app">
+    <div className="max-w-[var(--max-width-content)] mx-auto pt-[calc(var(--header-height)+var(--space-6))] pb-[var(--space-12)] px-[var(--space-4)]">
       <Header view={view} onViewChange={handleViewChange} />
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
 
@@ -487,22 +499,22 @@ function AppInner() {
         />
       ) : (
         <>
-          <header className="header">
-            <span className="subtitle">
+          <header className="flex justify-between items-center flex-wrap gap-[var(--space-2)] mb-[var(--space-4)]">
+            <span className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">
               {stats ? `${stats.total.toLocaleString()} 記事 · 直近 24h: ${stats.last24h}` : ""}
               {feeds.length > 0 ? ` · ${feeds.length} sources` : ""}
               {stats?.last_fetched_at ? ` · 最終更新 ${formatRelative(stats.last_fetched_at)}` : ""}
             </span>
             <button
               type="button"
-              className={`bookmarks-only-toggle${bookmarkedOnly ? " active" : ""}`}
+              className={`py-[5px] px-[var(--space-3)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-full)] text-[var(--font-size-sm)] font-[inherit] cursor-pointer whitespace-nowrap shrink-0 transition-[border-color,color,background] duration-100 hover:border-[var(--accent)] hover:text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2${bookmarkedOnly ? " bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-semibold" : " text-[var(--fg-muted)]"}`}
               onClick={handleBookmarkedOnlyToggle}
               aria-pressed={bookmarkedOnly}
             >
               ★ {bookmarks.size} 件{bookmarkedOnly ? " (表示中)" : ""}
             </button>
             {stats && stats.stale_feeds.length > 0 && (
-              <details className="stale-warning">
+              <details className="w-full mt-[var(--space-2)] py-[var(--space-2)] px-[var(--space-3)] border border-[rgba(207,34,46,0.4)] rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--font-size-sm)] [&>summary]:cursor-pointer [&>summary]:text-[var(--danger)] [&>summary]:font-semibold [&>ul]:mt-[var(--space-2)] [&>ul]:mb-0 [&>ul]:pl-[20px] [&>ul>li]:mb-[var(--space-1)]">
                 <summary>⚠ {stats.stale_feeds.length} 件の収集に問題があります</summary>
                 <ul>
                   {stats.stale_feeds.map((f) => (
@@ -510,7 +522,11 @@ function AppInner() {
                       <strong>{f.name}</strong>
                       {f.last_status === "error" ? " · error" : " · stale"}
                       {f.last_fetched_at ? ` · ${formatRelative(f.last_fetched_at)}` : " · 未取得"}
-                      {f.last_error && <div className="stale-error">{f.last_error}</div>}
+                      {f.last_error && (
+                        <div className="text-[var(--fg-muted)] [font-family:ui-monospace,SFMono-Regular,monospace] text-[var(--font-size-xs)] mt-[2px]">
+                          {f.last_error}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -537,8 +553,8 @@ function AppInner() {
             onRemove={removePreset}
           />
 
-          <div className="toolbar">
-            <div className="search-input-wrapper">
+          <div className="grid grid-cols-1 gap-[var(--space-3)] mb-[var(--space-5)] p-[var(--space-3)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] min-[720px]:[grid-template-columns:1fr_auto_auto_auto] min-[720px]:items-center">
+            <div className="relative">
               <SearchInput
                 ref={searchRef}
                 value={q}
@@ -574,21 +590,25 @@ function AppInner() {
             />
           </div>
 
-          {loading && <div className="loader">読み込み中…</div>}
-          {error && !loading && <div className="error">取得エラー: {error}</div>}
-          {!loading && !error && articles.length === 0 && bookmarkedOnly && (
-            <div className="empty">
-              <span className="empty-icon">🔖</span>
-              <div className="empty-title">ブックマークがありません</div>
-              <div className="empty-body">記事カードのブックマークアイコンから追加できます。</div>
+          {loading && (
+            <div className="text-center text-[var(--fg-muted)] py-[var(--space-8)] px-[var(--space-3)] border border-dashed border-[var(--border-subtle)] rounded-[var(--radius-lg)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]">
+              読み込み中…
             </div>
           )}
-          {!loading && !error && articles.length === 0 && !bookmarkedOnly && (
-            <div className="empty">
-              <span className="empty-icon">📭</span>
-              <div className="empty-title">記事がまだありません</div>
-              <div className="empty-body">Cron 実行をお待ちください。</div>
+          {error && !loading && (
+            <div className="text-center text-[var(--danger)] py-[var(--space-8)] px-[var(--space-3)] border border-[rgba(207,34,46,0.3)] rounded-[var(--radius-lg)] bg-[var(--danger-soft)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]">
+              取得エラー: {error}
             </div>
+          )}
+          {!loading && !error && articles.length === 0 && bookmarkedOnly && (
+            <EmptyState
+              icon="🔖"
+              title="ブックマークがありません"
+              body="記事カードのブックマークアイコンから追加できます。"
+            />
+          )}
+          {!loading && !error && articles.length === 0 && !bookmarkedOnly && (
+            <EmptyState icon="📭" title="記事がまだありません" body="Cron 実行をお待ちください。" />
           )}
 
           {articles.length > 0 && (
@@ -603,7 +623,12 @@ function AppInner() {
           )}
 
           {nextCursor && (
-            <button type="button" className="load-more" onClick={loadMore} disabled={loadingMore}>
+            <button
+              type="button"
+              className="block mx-auto mt-[var(--space-5)] py-[var(--space-2)] px-[var(--space-6)] bg-[var(--bg-overlay)] text-[var(--fg-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] cursor-pointer text-[var(--font-size-sm)] font-[inherit] font-medium transition-[border-color,background] duration-100 hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] disabled:opacity-50 disabled:cursor-progress focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+              onClick={loadMore}
+              disabled={loadingMore}
+            >
               {loadingMore ? "読み込み中…" : "もっと読み込む"}
             </button>
           )}
