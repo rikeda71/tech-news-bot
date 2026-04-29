@@ -40,7 +40,7 @@ paths:
 
 - ローカル state: `useState`
 - ページ間で共有 / URL 反映: `useUrlState` (既存フック) で querystring に同期。SPA リロードで状態保持
-- 永続化: `localStorage` 経由。`useLocalStorage` 系のフックを使い、SSR 安全 (`typeof window !== "undefined"` チェック) は不要 (本プロジェクト SSR していない)
+- 永続化: `localStorage` 経由。`useLocalStorage` 系のフックを使い、SSR 安全 (`typeof window !== "undefined"` チェック) は不要 (本プロジェクトは React を SSR していない。Worker fallback で HTMLRewriter ベースの meta 書き換えを行うが、React 自体は CSR のまま)
 - グローバル UI state: Context + `use()`。Redux / Zustand 等は導入していない
 
 ## データ取得

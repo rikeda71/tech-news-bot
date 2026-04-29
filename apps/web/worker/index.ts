@@ -5,6 +5,7 @@ import sitemap from "./api/sitemap";
 import robots from "./api/robots";
 import syndication from "./api/syndication";
 import opml from "./api/opml";
+import { rewriteShell } from "./api/spa-shell";
 import { collectAll } from "./collector";
 import { pruneOldArticles } from "./db/retention";
 import { sendDailyDigest } from "./notify/slack-daily";
@@ -41,17 +42,17 @@ app.route("/", opml);
 
 // 静的アセットへのフォールバック (Cloudflare Static Assets binding)
 // Vite は /assets/ 以下に hash 付きファイル名を出力するため、強キャッシュが安全。
-// それ以外 (index.html / SPA fallback) は no-cache で常に最新を取得する。
+// /assets/* 以外の SPA ルートは rewriteShell で route ごとにメタタグを書き換える。
+// /api/* と /assets/* はこのハンドラより前に処理されるため、ここに到達するのは SPA ルートのみ。
 app.all("*", async (c) => {
-  const res = await c.env.ASSETS.fetch(c.req.raw);
   const url = new URL(c.req.url);
-  const isHashed = url.pathname.startsWith("/assets/");
-  const headers = new Headers(res.headers);
-  headers.set(
-    "Cache-Control",
-    isHashed ? "public, max-age=31536000, immutable" : "no-cache, must-revalidate",
-  );
-  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+  if (url.pathname.startsWith("/assets/")) {
+    const res = await c.env.ASSETS.fetch(c.req.raw);
+    const headers = new Headers(res.headers);
+    headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+  }
+  return rewriteShell(c.req.raw, c.env);
 });
 
 const handler: ExportedHandler<Env> = {
