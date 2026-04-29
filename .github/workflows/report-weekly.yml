@@ -46,21 +46,29 @@ jobs:
             tech-news-weekly skill を以下の引数で起動してください:
             - since=week
             - target=remote
-            - category=bigtech
+            - bigtech と ai の 2 カテゴリを対象にする
             - lang 指定なし
 
-            Stage 1 では `recent.mjs --category=bigtech --target=remote` を呼んでください。
+            Stage 1 では bigtech / ai の 2 カテゴリをそれぞれ取得してマージしてください:
+              node tools/d1-client/recent.mjs --since=week --category=bigtech --target=remote
+              node tools/d1-client/recent.mjs --since=week --category=ai      --target=remote
+            2 つの articles[] を結合し URL de-dup (古い published_at 優先) する。
+            以降の Stage はマージ済み articles を対象とする。
+
             Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
-            書き出してください。レポートには `## カテゴリ別ハイライト` 節を含めないでください
-            (bigtech 1 カテゴリのみのため不要)。
+            書き出してください。レポートには以下の節を必ず含めてください:
+            - `## 注目記事ピックアップ` (必須・省略禁止): 各記事にタイトル/URL/feed_name/category/YYYY-MM-DD/1〜2文要約を含む
+            - `## カテゴリ別ハイライト` (必須): bigtech / ai の各サブセクション (###) でカテゴリごとの動向をサマる
+
             合わせて以下の JSON を /tmp/report-meta.json に書き出してください:
 
             {
               "kind": "weekly",
               "period_start": "<実行時刻 -7 日 の ISO 8601>",
               "period_end":   "<実行時刻の ISO 8601>",
-              "category": "bigtech",
+              "category": null,
               "lang": null,
+              "included_categories": ["bigtech","ai"],
               "source_skill": "tech-news-weekly",
               "generated_at": "<実行時刻の ISO 8601>",
               "dedup_total": <number>,
@@ -75,9 +83,9 @@ jobs:
 
             加えて、Slack 投稿用のメッセージを /tmp/slack-message.md に書き出してください。
             - Slack mrkdwn 記法 (*bold*, _italic_, <URL|label>)
-            - 全体で 6000 文字以内
+            - 30000 文字以内 (上限。長くても構わない)
             - 冒頭にレポート概要を 1〜2 文
-            - その後に「主要トピック」「カテゴリ別ハイライト」「注目記事 (各記事は 1 行、リンク付き)」を Slack で読みやすく整形
+            - その後に「カテゴリ別ハイライト (bigtech / ai)」「注目記事 (各記事は 1 行、リンク付き)」を Slack で読みやすく整形
             - 末尾に viewer URL は付けない (Actions 側で自動付与される)
 
       - name: Save report to D1 via admin API
@@ -102,7 +110,7 @@ jobs:
               source_skill: .source_skill,
               generated_at: .generated_at,
               content: $content,
-              meta: { dedup_total: .dedup_total, by_category: .by_category, by_feed: .by_feed }
+              meta: { dedup_total: .dedup_total, by_category: .by_category, by_feed: .by_feed, included_categories: .included_categories }
             }' /tmp/report-meta.json > /tmp/report-payload.json
 
           curl -fsS -X POST "$WORKER_URL/api/admin/reports" \
@@ -133,11 +141,55 @@ jobs:
             exit 0
           fi
           VIEWER_URL="$WORKER_URL/reports/$REPORT_ID"
-          {
-            cat /tmp/slack-message.md
-            printf '\n\n— <%s|レポート全文を Web で開く>\n' "$VIEWER_URL"
-          } > /tmp/slack-final.md
-          jq -Rs '{ text: . }' /tmp/slack-final.md > /tmp/slack-payload.json
+
+          # タイトル / 重要度を組み立て (weekly: 🟡)
+          KIND=$(jq -r '.kind' /tmp/report-meta.json)
+          PERIOD_START=$(jq -r '.period_start' /tmp/report-meta.json | cut -c1-10)
+          PERIOD_END=$(jq -r '.period_end' /tmp/report-meta.json | cut -c1-10)
+          TITLE="🟡 Weekly Tech Report (${PERIOD_START} 〜 ${PERIOD_END})"
+          IMPORTANCE="重要度: 中"
+          GENERATED_AT=$(jq -r '.generated_at' /tmp/report-meta.json)
+
+          # slack-message.md を 2800 chars 単位の section block 群に変換
+          BLOCKS_JSON=$(node -e "
+            const fs = require('fs');
+            const text = fs.readFileSync('/tmp/slack-message.md', 'utf8');
+            const chunkSize = 2800;
+            const blocks = [];
+            for (let i = 0; i < text.length; i += chunkSize) {
+              blocks.push({ type: 'section', text: { type: 'mrkdwn', text: text.slice(i, i + chunkSize) } });
+            }
+            // 50 block 上限: header(1) + context(1) + divider(1) + chunks + divider(1) + footer(1) = 5 + chunks
+            const maxChunks = 44;
+            const trimmed = blocks.slice(0, maxChunks);
+            process.stdout.write(JSON.stringify(trimmed));
+          ")
+
+          TITLE_ESC=$(jq -Rn --arg v "$TITLE" '$v')
+          IMPORTANCE_ESC=$(jq -Rn --arg v "$IMPORTANCE | generated_at: $GENERATED_AT" '$v')
+          VIEWER_ESC=$(jq -Rn --arg v "— <${VIEWER_URL}|レポート全文を Web で開く>" '$v')
+
+          jq -n \
+            --argjson title "$TITLE_ESC" \
+            --argjson importance "$IMPORTANCE_ESC" \
+            --argjson chunks "$BLOCKS_JSON" \
+            --argjson viewer "$VIEWER_ESC" \
+            '{
+              text: $title,
+              blocks: (
+                [
+                  { type: "header", text: { type: "plain_text", text: $title } },
+                  { type: "context", elements: [{ type: "mrkdwn", text: $importance }] },
+                  { type: "divider" }
+                ]
+                + $chunks
+                + [
+                  { type: "divider" },
+                  { type: "section", text: { type: "mrkdwn", text: $viewer } }
+                ]
+              )
+            }' > /tmp/slack-payload.json
+
           curl -fsS -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             --data-binary @/tmp/slack-payload.json
