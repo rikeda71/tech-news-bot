@@ -1,3 +1,4 @@
+import { toIso8601 } from "./shared";
 import type { FeedMeta } from "./shared";
 
 export function renderJsonFeed(meta: FeedMeta): { contentType: string; body: string } {
@@ -14,7 +15,9 @@ export function renderJsonFeed(meta: FeedMeta): { contentType: string; body: str
       title: a.title,
       content_text: a.summary ?? "",
       summary: a.summary ?? undefined,
-      date_published: a.published_at,
+      // JSON Feed 1.1 は date_published を RFC 3339 と規定しているため
+      // DB 値をそのまま使わず必ず有効な ISO 8601 に変換する
+      date_published: toIso8601(a.published_at),
       authors: a.author ? [{ name: a.author }] : undefined,
       tags: [a.category, a.lang, ...(a.feed_name ? [a.feed_name] : [])],
       _feed_id: a.feed_id,

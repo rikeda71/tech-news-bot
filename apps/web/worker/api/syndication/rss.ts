@@ -1,8 +1,18 @@
-import { escapeXml, toRfc822 } from "./shared";
+import { escapeXml, feedUpdatedAt, toRfc822 } from "./shared";
 import type { FeedMeta } from "./shared";
 
 export function renderRssFeed(meta: FeedMeta): { contentType: string; body: string } {
-  const lastBuild = meta.articles[0]?.published_at ?? new Date().toISOString();
+  const lastBuild = feedUpdatedAt(meta.articles);
+  // RSS 2.0 の <channel><link> は必須要素。
+  // siteOrigin() が空文字を返すケース（不正な URL など）では feedUrl の origin を代替使用する。
+  let channelLink = meta.origin;
+  if (!channelLink) {
+    try {
+      channelLink = new URL(meta.feedUrl).origin;
+    } catch {
+      channelLink = meta.feedUrl;
+    }
+  }
 
   const items = meta.articles
     .map((a) => {
@@ -30,7 +40,7 @@ export function renderRssFeed(meta: FeedMeta): { contentType: string; body: stri
     `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">` +
     `<channel>` +
     `<title>${escapeXml(meta.title)}</title>` +
-    `<link>${escapeXml(meta.origin)}</link>` +
+    `<link>${escapeXml(channelLink)}</link>` +
     `<description>${escapeXml(meta.description)}</description>` +
     languageTag +
     `<lastBuildDate>${toRfc822(lastBuild)}</lastBuildDate>` +
