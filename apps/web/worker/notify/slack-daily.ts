@@ -19,8 +19,10 @@ export interface DailyDigestArticle {
 }
 
 export interface DailyDigestResult {
-  /** 投稿が行われた (webhookUrl が設定されていた) 場合 true */
+  /** 投稿が行われた (webhookUrl が設定されていて fetch が 2xx だった) 場合 true */
   posted: boolean;
+  /** fetch が non-2xx または例外の場合に設定されるエラー説明 */
+  error?: string;
 }
 
 /** 過去 24 時間の記事を D1 から取得する */
@@ -105,7 +107,7 @@ export function buildPayload(
 
 /**
  * Slack incoming webhook に日次ダイジェストを投稿する。
- * SLACK_WEBHOOK_URL が未設定なら no-op (ログのみ)。fetch 失敗は console.error のみ。
+ * SLACK_WEBHOOK_URL が未設定なら no-op (ログのみ)。fetch 失敗 / non-2xx は posted=false で返す。
  * Discord は blocks を無視して text フィールドをメッセージとして表示する。
  */
 export async function postDailyDigest(
@@ -130,12 +132,14 @@ export async function postDailyDigest(
       signal: controller.signal,
     });
     if (!res.ok) {
+      const error = `status ${res.status}`;
       console.error(`[slack-daily] webhook returned non-2xx: ${res.status} ${res.statusText}`);
+      return { posted: false, error };
     }
   } catch (err) {
-    console.error(
-      `[slack-daily] failed to post: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[slack-daily] failed to post: ${message}`);
+    return { posted: false, error: message };
   } finally {
     clearTimeout(timer);
   }

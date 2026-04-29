@@ -256,14 +256,18 @@ describe("postDailyDigest", () => {
     expect(Array.isArray(body.blocks)).toBe(true);
   });
 
-  it("does not throw on non-2xx response", async () => {
+  it("returns posted=false with error when webhook returns non-2xx", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 500 }));
-    await expect(postDailyDigest(WEBHOOK_URL, [], "2026-04-28")).resolves.toBeDefined();
+    const result = await postDailyDigest(WEBHOOK_URL, [], "2026-04-28");
+    expect(result.posted).toBe(false);
+    expect(result.error).toBe("status 500");
   });
 
-  it("does not throw on network error", async () => {
+  it("returns posted=false with error message when fetch throws", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    await expect(postDailyDigest(WEBHOOK_URL, [], "2026-04-28")).resolves.toBeDefined();
+    const result = await postDailyDigest(WEBHOOK_URL, [], "2026-04-28");
+    expect(result.posted).toBe(false);
+    expect(result.error).toBe("Failed to fetch");
   });
 });
 
