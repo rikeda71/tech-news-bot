@@ -14,7 +14,9 @@ app.get("/robots.txt", (c) => {
     `Sitemap: ${origin}/sitemap.xml`,
   ].join("\n");
   c.header("Content-Type", "text/plain; charset=utf-8");
-  c.header("Cache-Control", "public, max-age=3600");
+  // robots.txt の内容は静的なためエッジキャッシュを積極活用する。
+  // stale-while-revalidate でキャッシュ切れ後も裏でリフレッシュしつつ即返せる。
+  c.header("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
   return c.body(body);
 });
 

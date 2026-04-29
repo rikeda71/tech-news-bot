@@ -11,18 +11,14 @@ function escapeXml(input: string): string {
 function buildSitemap(origin: string): string {
   const feeds = loadEnabledFeeds();
 
+  // /api/openapi.json は JSON API ドキュメントであり HTML コンテンツではないため
+  // サイトマップのクロール対象から除外してクロールバジェットを節約する
   const staticUrls = [
     [
       `<url>`,
       `<loc>${escapeXml(origin)}/</loc>`,
       `<changefreq>hourly</changefreq>`,
       `<priority>1.0</priority>`,
-      `</url>`,
-    ].join(""),
-    [
-      `<url>`,
-      `<loc>${escapeXml(origin)}/api/openapi.json</loc>`,
-      `<priority>0.3</priority>`,
       `</url>`,
     ].join(""),
   ];
@@ -51,7 +47,9 @@ app.get("/sitemap.xml", (c) => {
   const origin = `${url.protocol}//${url.host}`;
   const xml = buildSitemap(origin);
   c.header("Content-Type", "application/xml; charset=utf-8");
-  c.header("Cache-Control", "public, max-age=3600");
+  // feeds.yaml は静的なためエッジキャッシュを積極活用する。
+  // stale-while-revalidate でキャッシュ切れ後も裏でリフレッシュしつつ即返せる。
+  c.header("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
   return c.body(xml);
 });
 
