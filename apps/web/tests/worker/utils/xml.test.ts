@@ -87,11 +87,9 @@ describe("parseXml", () => {
   });
 
   describe("RDF / RSS 1.0", () => {
-    it("parses RDF and returns an object (non-empty)", () => {
+    it("parses RDF and returns an object with rdf:RDF root", () => {
       const result = parseXml(RDF_XML) as ParsedObj;
-      expect(typeof result).toBe("object");
-      const keys = Object.keys(result);
-      expect(keys.length).toBeGreaterThan(0);
+      expect("rdf:RDF" in result).toBe(true);
     });
   });
 
@@ -166,6 +164,10 @@ describe("pickText", () => {
 
   it("picks first non-null string from array", () => {
     expect(pickText([null, undefined, "found", "second"])).toBe("found");
+  });
+
+  it("skips empty string in array and returns next non-empty value", () => {
+    expect(pickText(["", "found"])).toBe("found");
   });
 
   it("returns null for empty array", () => {
