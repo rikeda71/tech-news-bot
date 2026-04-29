@@ -284,75 +284,6 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
-/**
- * 特定の feed_ids のみを対象に収集する。admin 手動トリガー用。
- * - feedIds 未指定時は全 enabled feed を対象にする
- * - feedIds 指定時は enabled かつ指定 ID に含まれるものだけを対象にする
- */
-export async function collectFeeds(env: Env, feedIds?: string[]): Promise<CollectAllResult> {
-  const start = Date.now();
-  const feeds = loadEnabledFeeds();
-  await syncFeeds(env.DB, feeds);
-
-  const d1EnabledIds = await getEnabledFeedIds(env.DB);
-  const activeFeeds = feeds.filter((f) => {
-    if (!d1EnabledIds.has(f.id)) return false;
-    if (feedIds !== undefined) return feedIds.includes(f.id);
-    return true;
-  });
-
-  const concurrency = Number(env.COLLECTOR_CONCURRENCY ?? "4") || 4;
-  const timeoutMs = Number(env.COLLECTOR_TIMEOUT_MS ?? "10000") || 10000;
-  const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
-  const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
-
-  const headersMap = await loadFeedHeadersAll(
-    env.DB,
-    activeFeeds.map((f) => f.id),
-  );
-  const emptyHeaders: FeedHeaders = { last_etag: null, last_modified: null };
-
-  const results = await runWithConcurrency(activeFeeds, concurrency, (feed) =>
-    collectFeed(
-      env,
-      feed,
-      headersMap.get(feed.id) ?? emptyHeaders,
-      summaryMax,
-      timeoutMs,
-      maxRetries,
-    ),
-  );
-
-  const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
-  const skipped304 = results.filter((r) => r.status === "not_modified").length;
-
-  const durationMs = Date.now() - start;
-  console.log(
-    `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} duration=${durationMs}ms`,
-  );
-  for (const r of results) {
-    if (r.status === "error") {
-      console.warn(`[collector] ${r.feedId} ERROR: ${r.error}`);
-    }
-  }
-
-  if (env.ALERT_WEBHOOK_URL) {
-    const minFailures = Number(env.ALERT_MIN_FAILURES ?? "3") || 3;
-    const feedStreak = Number(env.ALERT_FEED_STREAK ?? "5") || 5;
-    try {
-      const streaks = await getFeedStreaks(env.DB);
-      await maybeAlert(env.ALERT_WEBHOOK_URL, results, streaks, minFailures, feedStreak);
-    } catch (err) {
-      console.error(
-        `[collector] alert check failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  }
-
-  // retention は scheduled() の pruneOldArticles に一本化しているため、ここでは常に 0
-  return { total: activeFeeds.length, inserted, pruned: 0, results, durationMs };
-}
-
 export type ValidateFeedResult =
   | { ok: true; title: string; lang: string | null; item_count: number }
   | { ok: false; error: string };
@@ -427,7 +358,7 @@ export async function validateFeedUrl(url: string): Promise<ValidateFeedResult> 
 
 export async function collectAll(
   env: Env,
-  opts?: { runId?: number; feedIds?: readonly string[] },
+  opts?: { runId?: number; feedIds?: readonly string[]; source?: "cron" | "manual" },
 ): Promise<CollectAllResult> {
   const start = Date.now();
   const startedAt = new Date(start).toISOString();
@@ -527,8 +458,9 @@ export async function collectAll(
     }
   }
 
+  const source = opts?.source ?? "cron";
   console.log(
-    `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} duration=${durationMs}ms`,
+    `[collector] source=${source} feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} duration=${durationMs}ms`,
   );
 
   // D1 コスト集計を AE に送信する (best-effort)
@@ -579,4 +511,14 @@ export async function collectAll(
   }
 
   return finalResult;
+}
+
+/**
+ * 特定の feed_ids のみを対象に収集する。admin 手動トリガー用。
+ * collectAll の薄いラッパー。run tracking (collector_runs) も有効。
+ * - feedIds 未指定時は全 enabled feed を対象にする
+ * - feedIds 指定時は enabled かつ指定 ID に含まれるものだけを対象にする
+ */
+export async function collectFeeds(env: Env, feedIds?: string[]): Promise<CollectAllResult> {
+  return collectAll(env, { source: "manual", feedIds });
 }
