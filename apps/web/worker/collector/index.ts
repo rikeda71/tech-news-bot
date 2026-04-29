@@ -7,9 +7,10 @@ import { D1CostAccumulator, writeCollectorEvent, writeD1CostEvent } from "./metr
 import { maybeAlert, sendAlert } from "./alert";
 import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
 import {
+  type FeedHeaders,
   getEnabledFeedIds,
   getFeedStreaks,
-  loadFeedHeaders,
+  loadFeedHeadersAll,
   recordFetchError,
   recordFetchSuccess,
   syncFeeds,
@@ -177,6 +178,7 @@ function isSafeUrl(url: string): boolean {
 async function collectFeed(
   env: Env,
   feed: FeedConfig,
+  savedHeaders: FeedHeaders,
   summaryMax: number,
   timeoutMs: number,
   maxRetries: number,
@@ -184,8 +186,8 @@ async function collectFeed(
   const fetchedAt = new Date().toISOString();
   const t0 = performance.now();
   try {
-    // 前回の conditional GET ヘッダを読み込んでリクエストに付与する
-    const savedHeaders = await loadFeedHeaders(env.DB, feed.id);
+    // savedHeaders は collectAll 冒頭で全 enabled feed 分を 1 query でまとめて取得済み。
+    // feed あたり 1 read を消費しないので Worker の subrequest 上限対策になる。
     const result = await fetchFeed(feed.url, timeoutMs, maxRetries, {
       etag: savedHeaders.last_etag,
       lastModified: savedHeaders.last_modified,
@@ -304,8 +306,21 @@ export async function collectFeeds(env: Env, feedIds?: string[]): Promise<Collec
   const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
   const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
 
+  const headersMap = await loadFeedHeadersAll(
+    env.DB,
+    activeFeeds.map((f) => f.id),
+  );
+  const emptyHeaders: FeedHeaders = { last_etag: null, last_modified: null };
+
   const results = await runWithConcurrency(activeFeeds, concurrency, (feed) =>
-    collectFeed(env, feed, summaryMax, timeoutMs, maxRetries),
+    collectFeed(
+      env,
+      feed,
+      headersMap.get(feed.id) ?? emptyHeaders,
+      summaryMax,
+      timeoutMs,
+      maxRetries,
+    ),
   );
 
   const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
@@ -458,9 +473,22 @@ export async function collectAll(
     }
   }
 
+  const headersMap = await loadFeedHeadersAll(
+    env.DB,
+    activeFeeds.map((f) => f.id),
+  );
+  const emptyHeaders: FeedHeaders = { last_etag: null, last_modified: null };
+
   const results = await runWithConcurrency(activeFeeds, concurrency, async (feed) => {
     const feedStart = Date.now();
-    const result = await collectFeed(env, feed, summaryMax, timeoutMs, maxRetries);
+    const result = await collectFeed(
+      env,
+      feed,
+      headersMap.get(feed.id) ?? emptyHeaders,
+      summaryMax,
+      timeoutMs,
+      maxRetries,
+    );
     const durationMs = Date.now() - feedStart;
 
     // 各フィードの結果を記録する。失敗しても collectFeed の結果は返す。

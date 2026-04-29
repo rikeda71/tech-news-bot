@@ -28,6 +28,29 @@ export async function loadFeedHeaders(db: D1Database, feedId: string): Promise<F
 }
 
 /**
+ * 複数 feed の conditional GET ヘッダを 1 query でまとめて返す。
+ * collectAll では feed ごとに loadFeedHeaders を呼ぶと subrequest を消費するため、
+ * Worker の subrequest 上限対策として一括取得する。
+ * 該当行が無い feed は Map に含まれず、呼び出し側で null ペアにフォールバックする。
+ */
+export async function loadFeedHeadersAll(
+  db: D1Database,
+  feedIds: string[],
+): Promise<Map<string, FeedHeaders>> {
+  if (feedIds.length === 0) return new Map();
+  const placeholders = feedIds.map((_, i) => `?${i + 1}`).join(",");
+  const rows = await db
+    .prepare(`SELECT id, last_etag, last_modified FROM feeds WHERE id IN (${placeholders})`)
+    .bind(...feedIds)
+    .all<{ id: string; last_etag: string | null; last_modified: string | null }>();
+  const map = new Map<string, FeedHeaders>();
+  for (const row of rows.results ?? []) {
+    map.set(row.id, { last_etag: row.last_etag, last_modified: row.last_modified });
+  }
+  return map;
+}
+
+/**
  * 200 応答時のレスポンスヘッダを保存する。
  * null を渡すと既存値を NULL 上書きする (サーバが ETag を返さなくなった場合)。
  */
@@ -70,6 +93,21 @@ export async function syncFeeds(db: D1Database, feeds: FeedConfig[]): Promise<vo
   for (let i = 0; i < stmts.length; i += BATCH_SIZE) {
     await db.batch(stmts.slice(i, i + BATCH_SIZE));
   }
+
+  // yaml に存在しない feed を D1 で disable する (orphan cleanup)。
+  // 削除しない理由: 過去記事は articles.feed_id 経由で feed 名・カテゴリを引いているため、
+  // レコード自体は残し enabled=0 で stats の stale 判定や collector 対象から除外する。
+  const ids = feeds.map((f) => f.id);
+  const placeholders = ids.map((_, i) => `?${i + 1}`).join(",");
+  await db
+    .prepare(
+      `UPDATE feeds
+       SET enabled = 0,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE enabled = 1 AND id NOT IN (${placeholders})`,
+    )
+    .bind(...ids)
+    .run();
 }
 
 export async function recordFetchSuccess(
