@@ -28,9 +28,7 @@ const VALID_LANGS = new Set(["ja", "en"]);
  */
 function sanitizeFtsQuery(q) {
   // ダブルクォートを除去し、FTS5 特殊文字 (* ^ ( ) : - ;) をスペースに置換
-  const cleaned = q
-    .replace(/"/g, "")
-    .replace(/[*^();:-]/g, " ");
+  const cleaned = q.replace(/"/g, "").replace(/[*^();:-]/g, " ");
   // スペースで分割し空トークンを除去、FTS5 予約語 (AND/OR/NOT) を除去
   const tokens = cleaned
     .split(/\s+/)
@@ -147,9 +145,7 @@ function main() {
     process.exit(2);
   }
   if (opts.lang !== null && !VALID_LANGS.has(opts.lang)) {
-    process.stderr.write(
-      `Invalid --lang=${opts.lang}. Allowed: ${[...VALID_LANGS].join("|")}\n`,
-    );
+    process.stderr.write(`Invalid --lang=${opts.lang}. Allowed: ${[...VALID_LANGS].join("|")}\n`);
     process.exit(2);
   }
   const sinceISO = sinceToISO(opts.since);

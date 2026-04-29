@@ -54,14 +54,14 @@ FTS5 (trigram tokenizer, `migration/0003_fts5_trigram.sql` で設定) を使っ�
 node tools/d1-client/search.mjs --q=<keyword> [options]
 ```
 
-| オプション   | デフォルト | 説明                             |
-| ------------ | ---------- | -------------------------------- |
+| オプション   | デフォルト | 説明                                       |
+| ------------ | ---------- | ------------------------------------------ |
 | `--q`        | (必須)     | 検索キーワード (FTS5 特殊文字は除去される) |
-| `--since`    | `month`    | `today` / `week` / `month` / `N` |
-| `--target`   | `local`    | `local` または `remote`          |
-| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn` |
-| `--lang`     | なし       | `ja` または `en`                 |
-| `--limit`    | `100`      | 最大取得件数 (上限 1000)         |
+| `--since`    | `month`    | `today` / `week` / `month` / `N`           |
+| `--target`   | `local`    | `local` または `remote`                    |
+| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`           |
+| `--lang`     | なし       | `ja` または `en`                           |
+| `--limit`    | `100`      | 最大取得件数 (上限 1000)                   |
 
 例:
 
