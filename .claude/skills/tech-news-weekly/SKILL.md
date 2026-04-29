@@ -53,6 +53,35 @@ node tools/d1-client/recent.mjs --since=month --target=remote --limit=500
 node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
 ```
 
+**複数カテゴリを対象にする場合 (例: bigtech + ai)**:
+
+`recent.mjs` はカンマ区切り複数指定に非対応のため、カテゴリごとに呼んで URL で de-dup する:
+
+```sh
+# 週次 (bigtech + ai の 2 カテゴリ)
+node tools/d1-client/recent.mjs --since=week --category=bigtech --target=remote > /tmp/arts_bigtech.json
+node tools/d1-client/recent.mjs --since=week --category=ai      --target=remote > /tmp/arts_ai.json
+
+# 月次 (bigtech + ai の 2 カテゴリ、上限拡張)
+node tools/d1-client/recent.mjs --since=month --category=bigtech --target=remote --limit=500 > /tmp/arts_bigtech.json
+node tools/d1-client/recent.mjs --since=month --category=ai      --target=remote --limit=500 > /tmp/arts_ai.json
+```
+
+取得後、2 つの `articles[]` を結合して URL de-dup する (古い `published_at` 優先):
+
+```js
+const seen = new Map();
+const merged = [];
+for (const a of [...bigtech, ...ai].sort((x, y) => x.published_at.localeCompare(y.published_at))) {
+  if (!seen.has(a.url)) {
+    seen.set(a.url, true);
+    merged.push(a);
+  }
+}
+```
+
+以降の Stage はマージ済み `merged` を `articles` として扱う。
+
 stdout の JSON 形式は `tech-news-digest` と同一 (`since`, `total`, `articles`, `by_category`, `by_feed`, `by_lang`)。
 
 **URL による de-dup**:
@@ -184,9 +213,9 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 - <ハイライト 1>
 - ...
 
-## 注目記事ピックアップ
+## 注目記事ピックアップ ← 必ず出力する。省略禁止
 
-- **[<タイトル>](url)** _(<feed_name>, <YYYY-MM-DD>)_: <1〜2 文の要約> <(summary based) があれば末尾に>
+- **[<タイトル>](url)** _(<feed_name>, <category>, <YYYY-MM-DD>)_: <1〜2 文の要約> <(summary based) があれば末尾に>
 - ...
 
 ## カテゴリ別件数
@@ -199,6 +228,8 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 ```
 
 各セクションを省略しない。記事 0 件のカテゴリは「記事なし」と記載する。
+
+**複数カテゴリ (例: bigtech + ai) のレポートを生成する場合**は、`## カテゴリ別ハイライト` の各サブセクションを対象カテゴリのみ展開し、`## 注目記事ピックアップ` の各エントリには `category` フィールドを必ず含める。
 
 ## ガードレール
 
