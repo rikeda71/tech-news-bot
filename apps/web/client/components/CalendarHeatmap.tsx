@@ -193,6 +193,7 @@ export function CalendarHeatmap({ days: initialDays = 90 }: Props) {
                     className={`w-[12px] h-[12px] rounded-[2px] transition-opacity duration-100 hover:opacity-80${
                       level >= 0 ? ` ${bgClass}` : " invisible"
                     }`}
+                    data-level={level}
                     aria-label={label || undefined}
                     title={label || undefined}
                     aria-hidden={!cell.inRange}
