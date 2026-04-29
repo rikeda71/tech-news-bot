@@ -433,7 +433,10 @@ export interface ByLang30d {
   en: number;
 }
 
-/** 過去 30 日の author 別記事数 TOP 10 (null / 空文字除外) */
+/**
+ * 過去 30 日の author 別記事数 TOP 10 (null / 空文字除外)。
+ * Zenn は個人ブログ集約サービスのため企業 tech blog の人気著者ランキングからは除外する。
+ */
 export async function getTopAuthors30d(db: D1Database): Promise<TopAuthorRow[]> {
   const rows = await db
     .prepare(
@@ -441,6 +444,7 @@ export async function getTopAuthors30d(db: D1Database): Promise<TopAuthorRow[]> 
        FROM articles
        WHERE author IS NOT NULL
          AND author != ''
+         AND category != 'zenn'
          AND published_at >= datetime('now', '-30 days')
        GROUP BY author
        ORDER BY count DESC
