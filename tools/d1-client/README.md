@@ -56,7 +56,7 @@ node tools/d1-client/search.mjs --q=<keyword> [options]
 
 | オプション   | デフォルト | 説明                             |
 | ------------ | ---------- | -------------------------------- |
-| `--q`        | (必須)     | 検索キーワード                   |
+| `--q`        | (必須)     | 検索キーワード (FTS5 特殊文字は除去される) |
 | `--since`    | `month`    | `today` / `week` / `month` / `N` |
 | `--target`   | `local`    | `local` または `remote`          |
 | `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn` |

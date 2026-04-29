@@ -19,6 +19,28 @@ const REPO_ROOT = path.resolve(path.dirname(__filename), "..", "..");
 const WRANGLER_DIR = path.join(REPO_ROOT, "apps", "web");
 const DB_NAME = "tech-news-bot-db";
 
+const VALID_CATEGORIES = new Set(["bigtech", "ai", "jp", "zenn"]);
+const VALID_LANGS = new Set(["ja", "en"]);
+
+/**
+ * FTS5 オペレータ汚染を防ぐため入力をサニタイズする。
+ * ダブルクォートと FTS5 特殊文字を除去し、各トークンを quoted phrase として再構築する。
+ */
+function sanitizeFtsQuery(q) {
+  // ダブルクォートを除去し、FTS5 特殊文字 (* ^ ( ) : - ;) をスペースに置換
+  const cleaned = q
+    .replace(/"/g, "")
+    .replace(/[*^();:-]/g, " ");
+  // スペースで分割し空トークンを除去、FTS5 予約語 (AND/OR/NOT) を除去
+  const tokens = cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((t) => !["AND", "OR", "NOT"].includes(t.toUpperCase()));
+  if (tokens.length === 0) return '""';
+  // 各トークンを quoted phrase として連結（部分一致精度を保ちつつオペレータ汚染を防ぐ）
+  return tokens.map((t) => `"${t}"`).join(" ");
+}
+
 function parseArgs(argv) {
   const out = { q: null, since: "month", target: "local", category: null, lang: null, limit: 100 };
   for (const arg of argv.slice(2)) {
@@ -50,10 +72,8 @@ function sinceToISO(spec) {
 }
 
 function buildSQL({ q, since, category, lang, limit }) {
-  // trigram tokenizer は quoted phrase でもスペース区切り単語でも動作するが、
-  // quoted で渡すと部分一致の精度が上がる場面がある。
-  const escapedQ = q.replace(/"/g, '""');
-  const quotedQ = `"${escapedQ}"`;
+  // sanitizeFtsQuery で特殊文字を除去済みの quoted phrase を MATCH に渡す。
+  const matchExpr = sanitizeFtsQuery(q);
   const sinceEscaped = since.replace(/'/g, "''");
 
   const extraWhere = [];
@@ -68,7 +88,7 @@ SELECT a.id, a.guid, a.feed_id, f.name AS feed_name,
 FROM articles a
 JOIN articles_fts fts ON fts.rowid = a.id
 LEFT JOIN feeds f ON f.id = a.feed_id
-WHERE articles_fts MATCH '${quotedQ}'
+WHERE articles_fts MATCH '${matchExpr}'
   AND a.published_at > '${sinceEscaped}'
   ${extraClause}
 ORDER BY rank, a.published_at DESC
@@ -118,6 +138,18 @@ function main() {
   const opts = parseArgs(process.argv);
   if (!opts.q) {
     process.stderr.write("Missing --q=<keyword>\n");
+    process.exit(2);
+  }
+  if (opts.category !== null && !VALID_CATEGORIES.has(opts.category)) {
+    process.stderr.write(
+      `Invalid --category=${opts.category}. Allowed: ${[...VALID_CATEGORIES].join("|")}\n`,
+    );
+    process.exit(2);
+  }
+  if (opts.lang !== null && !VALID_LANGS.has(opts.lang)) {
+    process.stderr.write(
+      `Invalid --lang=${opts.lang}. Allowed: ${[...VALID_LANGS].join("|")}\n`,
+    );
     process.exit(2);
   }
   const sinceISO = sinceToISO(opts.since);
