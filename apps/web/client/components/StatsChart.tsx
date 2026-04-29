@@ -37,13 +37,13 @@ export function StatsChart({ data, categories }: StatsChartProps) {
   const labelIndices = new Set([0, Math.floor((barCount - 1) / 2), barCount - 1]);
 
   return (
-    <figure className="stats-chart-fig">
+    <figure className="m-0">
       {/* 凡例 */}
-      <div className="stats-chart-legend">
+      <div className="flex flex-wrap gap-[var(--space-3)] mb-[var(--space-2)] text-[var(--font-size-sm)] text-[var(--fg-muted)]">
         {categories.map((cat) => (
-          <span key={cat} className="stats-chart-legend-item">
+          <span key={cat} className="flex items-center gap-[var(--space-1)]">
             <span
-              className="stats-chart-legend-dot"
+              className="inline-block w-[10px] h-[10px] rounded-[var(--radius-sm)] shrink-0"
               style={{ background: CATEGORY_COLORS[cat] ?? "#999" }}
             />
             {cat}
@@ -56,7 +56,7 @@ export function StatsChart({ data, categories }: StatsChartProps) {
         preserveAspectRatio="none"
         aria-label="カテゴリ別 30 日記事数トレンド"
         role="img"
-        className="stats-chart-svg"
+        className="block w-full h-auto [aspect-ratio:800/160] text-[var(--fg-primary)]"
       >
         {/* y 軸グリッド線 (0 / 50% / 100%) */}
         {[0, 0.5, 1].map((ratio) => {

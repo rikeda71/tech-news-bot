@@ -4,12 +4,22 @@ import type { AuthorCount, PublisherCount, Stats } from "../hooks/useStats";
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="stats-card">
-      <div className="stats-card-label">{label}</div>
-      <div className="stats-card-value">{value.toLocaleString("ja-JP")}</div>
+    <div className="p-[var(--space-4)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] flex flex-col gap-[var(--space-1)] transition-[box-shadow] duration-200 hover:shadow-[var(--shadow-sm)]">
+      <div className="text-[var(--font-size-xs)] font-semibold text-[var(--fg-muted)] uppercase tracking-[0.06em]">
+        {label}
+      </div>
+      <div className="text-[var(--font-size-2xl)] font-bold text-[var(--fg-primary)] leading-[1.1] tracking-[-0.02em]">
+        {value.toLocaleString("ja-JP")}
+      </div>
     </div>
   );
 }
+
+// stats セクション共通スタイル
+const sectionClass =
+  "p-[var(--space-4)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)]";
+const sectionTitleClass =
+  "text-[var(--font-size-sm)] font-semibold text-[var(--fg-muted)] m-0 mb-[var(--space-4)] uppercase tracking-[0.05em]";
 
 function BarRow({
   label,
@@ -24,26 +34,30 @@ function BarRow({
 }) {
   const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
   return (
-    <div className="stats-bar-row">
+    <div className="grid [grid-template-columns:minmax(120px,180px)_1fr_60px] items-center gap-[var(--space-3)]">
       {onClick ? (
         <button
           type="button"
-          className="stats-bar-label stats-bar-label-clickable"
+          className="text-[var(--font-size-sm)] text-[var(--fg-primary)] whitespace-nowrap overflow-hidden text-ellipsis bg-transparent border-none cursor-pointer p-0 font-[inherit] text-left transition-[color] duration-100 hover:text-[var(--accent)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2 focus-visible:rounded-[var(--radius-sm)]"
           onClick={onClick}
           title={`${label} の記事一覧`}
         >
           {label}
         </button>
       ) : (
-        <span className="stats-bar-label">{label}</span>
+        <span className="text-[var(--font-size-sm)] text-[var(--fg-primary)] whitespace-nowrap overflow-hidden text-ellipsis">
+          {label}
+        </span>
       )}
       <div
-        className="stats-bar"
+        className="h-[8px] rounded-[var(--radius-full)] bg-[var(--accent)] opacity-70 min-w-[2px] transition-opacity duration-100 hover:opacity-100"
         role="img"
         aria-label={`${label}: ${count}件`}
         style={{ width: `${pct}%` }}
       />
-      <span className="stats-bar-count">{count.toLocaleString("ja-JP")}</span>
+      <span className="text-[var(--font-size-sm)] text-[var(--fg-muted)] text-right [font-variant-numeric:tabular-nums]">
+        {count.toLocaleString("ja-JP")}
+      </span>
     </div>
   );
 }
@@ -58,9 +72,9 @@ function AuthorsSection({
   const top = authors.slice(0, 10);
   const max = top[0]?.count ?? 1;
   return (
-    <section className="stats-section">
-      <h3 className="stats-section-title">著者別 (30 日・上位 10 件)</h3>
-      <div className="stats-bar-list">
+    <section className={sectionClass}>
+      <h3 className={sectionTitleClass}>著者別 (30 日・上位 10 件)</h3>
+      <div className="grid gap-[var(--space-2)]">
         {top.map((a) => (
           <BarRow
             key={a.author}
@@ -79,9 +93,9 @@ function PublishersSection({ publishers }: { publishers: PublisherCount[] }) {
   const top = publishers.slice(0, 10);
   const max = top[0]?.count ?? 1;
   return (
-    <section className="stats-section">
-      <h3 className="stats-section-title">フィード別 (30 日・上位 10 件)</h3>
-      <div className="stats-bar-list">
+    <section className={sectionClass}>
+      <h3 className={sectionTitleClass}>フィード別 (30 日・上位 10 件)</h3>
+      <div className="grid gap-[var(--space-2)]">
         {top.map((p) => (
           <BarRow key={p.feed_id} label={p.name} count={p.count} maxCount={max} />
         ))}
@@ -94,9 +108,9 @@ function LangSection({ byLang }: { byLang: Record<string, number> }) {
   const entries = Object.entries(byLang).toSorted((a, b) => b[1] - a[1]);
   const max = entries[0]?.[1] ?? 1;
   return (
-    <section className="stats-section">
-      <h3 className="stats-section-title">言語別 (30 日)</h3>
-      <div className="stats-bar-list">
+    <section className={sectionClass}>
+      <h3 className={sectionTitleClass}>言語別 (30 日)</h3>
+      <div className="grid gap-[var(--space-2)]">
         {entries.map(([lang, count]) => (
           <BarRow key={lang} label={lang} count={count} maxCount={max} />
         ))}
@@ -109,9 +123,9 @@ function CategorySection({ byCategory }: { byCategory: Record<string, number> })
   const entries = Object.entries(byCategory).toSorted((a, b) => b[1] - a[1]);
   const max = entries[0]?.[1] ?? 1;
   return (
-    <section className="stats-section">
-      <h3 className="stats-section-title">カテゴリ別 (累計)</h3>
-      <div className="stats-bar-list">
+    <section className={sectionClass}>
+      <h3 className={sectionTitleClass}>カテゴリ別 (累計)</h3>
+      <div className="grid gap-[var(--space-2)]">
         {entries.map(([cat, count]) => (
           <BarRow key={cat} label={cat} count={count} maxCount={max} />
         ))}
@@ -152,8 +166,18 @@ export function StatsDashboard({ onNavigateToAuthor }: StatsDashboardProps = {})
     };
   }, []);
 
-  if (loading) return <div className="loader">読み込み中…</div>;
-  if (error) return <div className="error">エラー: {error}</div>;
+  if (loading)
+    return (
+      <div className="text-center text-[var(--fg-muted)] p-[var(--space-8)_var(--space-3)] border border-dashed border-[var(--border-subtle)] rounded-[var(--radius-lg)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]">
+        読み込み中…
+      </div>
+    );
+  if (error)
+    return (
+      <div className="text-center text-[var(--danger)] p-[var(--space-8)_var(--space-3)] border border-[rgba(207,34,46,0.3)] rounded-[var(--radius-lg)] mt-[var(--space-4)] bg-[var(--danger-soft)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]">
+        エラー: {error}
+      </div>
+    );
   if (!stats) return null;
 
   // PR #148 で追加されたフィールドにフォールバック
@@ -163,9 +187,9 @@ export function StatsDashboard({ onNavigateToAuthor }: StatsDashboardProps = {})
   const totalArticles = stats.total;
 
   return (
-    <div className="stats-dashboard">
+    <div className="grid gap-[var(--space-6)] py-[var(--space-2)]">
       {/* サマリカード */}
-      <div className="stats-cards">
+      <div className="grid [grid-template-columns:repeat(2,1fr)] gap-[var(--space-3)] sm:[grid-template-columns:repeat(4,1fr)]">
         <SummaryCard label="総記事数" value={totalArticles} />
         <SummaryCard label="直近 24h" value={articles24h} />
         <SummaryCard label="直近 7 日" value={articles7d} />

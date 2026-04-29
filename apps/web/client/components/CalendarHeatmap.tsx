@@ -28,6 +28,15 @@ function formatDateLabel(dateStr: string): string {
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
+// ヒートマップレベル → CSS 変数を任意プロパティ式で参照するマップ
+const LEVEL_BG_CLASSES: Record<number, string> = {
+  0: "bg-[var(--heatmap-l0)]",
+  1: "bg-[var(--heatmap-l1)]",
+  2: "bg-[var(--heatmap-l2)]",
+  3: "bg-[var(--heatmap-l3)]",
+  4: "bg-[var(--heatmap-l4)]",
+};
+
 interface Props {
   days?: Period;
 }
@@ -38,9 +47,13 @@ export function CalendarHeatmap({ days: initialDays = 90 }: Props) {
 
   if (error) {
     return (
-      <section className="stats-section">
-        <h2 className="stats-section-title">活動カレンダー</h2>
-        <p className="error calendar-heatmap-error">ヒートマップを取得できませんでした</p>
+      <section className="p-[var(--space-4)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)]">
+        <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--fg-muted)] m-0 mb-[var(--space-4)] uppercase tracking-[0.05em]">
+          活動カレンダー
+        </h2>
+        <p className="text-center text-[var(--danger)] p-[var(--space-8)_var(--space-3)] border border-[rgba(207,34,46,0.3)] rounded-[var(--radius-lg)] bg-[var(--danger-soft)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)] mt-0">
+          ヒートマップを取得できませんでした
+        </p>
       </section>
     );
   }
@@ -99,15 +112,25 @@ export function CalendarHeatmap({ days: initialDays = 90 }: Props) {
   }
 
   return (
-    <section className="stats-section">
-      <div className="calendar-heatmap-header">
-        <h2 className="stats-section-title">活動カレンダー</h2>
-        <div className="calendar-heatmap-period-toggle" role="group" aria-label="表示期間">
+    <section className="p-[var(--space-4)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)]">
+      <div className="flex items-center justify-between flex-wrap gap-[var(--space-2)] mb-[var(--space-3)]">
+        <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--fg-muted)] m-0 uppercase tracking-[0.05em]">
+          活動カレンダー
+        </h2>
+        <div
+          className="flex gap-[var(--space-1)] border border-[var(--border-subtle)] rounded-[var(--radius-full)] p-[3px] bg-[var(--bg-overlay)]"
+          role="group"
+          aria-label="表示期間"
+        >
           {PERIODS.map((p) => (
             <button
               key={p}
               type="button"
-              className={`calendar-heatmap-period-btn${period === p ? " active" : ""}`}
+              className={`px-[var(--space-3)] py-[3px] border-none rounded-[var(--radius-full)] text-[var(--font-size-sm)] font-[inherit] cursor-pointer transition-[background,color] duration-100 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2${
+                period === p
+                  ? " bg-[var(--bg-elevated)] text-[var(--accent)] font-semibold shadow-[var(--shadow-sm)]"
+                  : " bg-transparent text-[var(--fg-muted)] hover:text-[var(--fg-primary)]"
+              }`}
               onClick={() => setPeriod(p)}
               aria-pressed={period === p}
             >
@@ -118,29 +141,34 @@ export function CalendarHeatmap({ days: initialDays = 90 }: Props) {
       </div>
 
       {isLoading ? (
-        <div className="loader calendar-heatmap-loader">読み込み中…</div>
+        <div className="text-center text-[var(--fg-muted)] p-[var(--space-4)] border border-dashed border-[var(--border-subtle)] rounded-[var(--radius-lg)] text-[var(--font-size-base)]">
+          読み込み中…
+        </div>
       ) : (
-        <div className="calendar-heatmap-wrapper">
+        <div className="overflow-x-auto pb-[var(--space-1)]">
           {/* 月ラベル行 */}
           <div
-            className="calendar-heatmap-months"
+            className="grid gap-[3px] ml-[24px] mb-[2px]"
             style={{ gridTemplateColumns: `repeat(${totalWeeks}, 1fr)` }}
           >
             {Array.from({ length: totalWeeks }, (_, w) => {
               const label = monthLabels.find((m) => m.weekIndex === w);
               return (
-                <div key={w} className="calendar-heatmap-month-label">
+                <div key={w} className="text-[0.65rem] text-[var(--fg-muted)] whitespace-nowrap">
                   {label?.label ?? ""}
                 </div>
               );
             })}
           </div>
 
-          <div className="calendar-heatmap-body">
+          <div className="flex gap-[var(--space-1)] items-start">
             {/* 曜日ラベル列 */}
-            <div className="calendar-heatmap-days">
+            <div className="grid [grid-template-rows:repeat(7,12px)] gap-[3px] shrink-0 w-[20px]">
               {DAY_LABELS.map((label, i) => (
-                <div key={i} className="calendar-heatmap-day-label">
+                <div
+                  key={i}
+                  className="text-[0.6rem] text-[var(--fg-muted)] leading-[12px] text-right"
+                >
                   {/* 月・水・金のみ表示してスペースを節約する */}
                   {i % 2 === 1 ? label : ""}
                 </div>
@@ -149,7 +177,7 @@ export function CalendarHeatmap({ days: initialDays = 90 }: Props) {
 
             {/* ヒートマップグリッド: 縦 7 行 (曜日) × 横 N 週 */}
             <div
-              className="calendar-heatmap"
+              className="grid [grid-template-rows:repeat(7,12px)] [grid-auto-flow:column] gap-[3px] shrink-0"
               style={{ gridTemplateColumns: `repeat(${totalWeeks}, 1fr)` }}
             >
               {cells.map((cell, idx) => {
@@ -157,11 +185,15 @@ export function CalendarHeatmap({ days: initialDays = 90 }: Props) {
                 const label = cell.dateStr
                   ? `${formatDateLabel(cell.dateStr)}: ${cell.count}件`
                   : "";
+                // inRange でないセルは invisible にする
+                const bgClass = level >= 0 ? (LEVEL_BG_CLASSES[level] ?? "") : "";
                 return (
                   <div
                     key={idx}
-                    className="calendar-heatmap-cell"
-                    data-level={level >= 0 ? level : undefined}
+                    className={`w-[12px] h-[12px] rounded-[2px] transition-opacity duration-100 hover:opacity-80${
+                      level >= 0 ? ` ${bgClass}` : " invisible"
+                    }`}
+                    data-level={level}
                     aria-label={label || undefined}
                     title={label || undefined}
                     aria-hidden={!cell.inRange}
@@ -172,12 +204,16 @@ export function CalendarHeatmap({ days: initialDays = 90 }: Props) {
           </div>
 
           {/* 凡例 */}
-          <div className="calendar-heatmap-legend">
-            <span className="calendar-heatmap-legend-label">少</span>
+          <div className="flex items-center gap-[3px] mt-[var(--space-2)] justify-end">
+            <span className="text-[0.65rem] text-[var(--fg-muted)] mx-[2px]">少</span>
             {[0, 1, 2, 3, 4].map((level) => (
-              <div key={level} className="calendar-heatmap-cell" data-level={level} aria-hidden />
+              <div
+                key={level}
+                className={`w-[12px] h-[12px] rounded-[2px] ${LEVEL_BG_CLASSES[level] ?? ""}`}
+                aria-hidden
+              />
             ))}
-            <span className="calendar-heatmap-legend-label">多</span>
+            <span className="text-[0.65rem] text-[var(--fg-muted)] mx-[2px]">多</span>
           </div>
         </div>
       )}

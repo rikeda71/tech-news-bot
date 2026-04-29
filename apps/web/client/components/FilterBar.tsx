@@ -19,6 +19,10 @@ interface Props {
   onClear: () => void;
 }
 
+// select / date-input の共通スタイル
+const inputClass =
+  "px-[var(--space-3)] py-[var(--space-2)] bg-[var(--bg-overlay)] text-[var(--fg-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[var(--font-size-sm)] font-[inherit] cursor-pointer transition-[border-color] duration-100 focus:outline-2 focus:outline-[var(--accent)] focus:outline-offset-2";
+
 export function FilterBar({
   category,
   lang,
@@ -53,7 +57,7 @@ export function FilterBar({
   return (
     <>
       <select
-        className="select"
+        className={`${inputClass} min-w-[130px]`}
         value={category}
         onChange={(e) => onCategoryChange(e.target.value as FeedCategory | "")}
       >
@@ -65,7 +69,7 @@ export function FilterBar({
       </select>
 
       <select
-        className="select"
+        className={`${inputClass} min-w-[130px]`}
         value={lang}
         onChange={(e) => onLangChange(e.target.value as FeedLang | "")}
       >
@@ -74,7 +78,11 @@ export function FilterBar({
         <option value="ja">日本語</option>
       </select>
 
-      <select className="select" value={feedId} onChange={(e) => onFeedChange(e.target.value)}>
+      <select
+        className={`${inputClass} min-w-[130px]`}
+        value={feedId}
+        onChange={(e) => onFeedChange(e.target.value)}
+      >
         <option value="">All feeds</option>
         {visibleFeeds.map((f) => (
           <option key={f.id} value={f.id}>
@@ -85,32 +93,34 @@ export function FilterBar({
 
       <input
         type="date"
-        className="date-input"
+        className={inputClass}
         value={dateFrom}
         onChange={(e) => onDateFromChange(e.target.value)}
         aria-label="期間 開始日"
       />
-      <span className="date-sep">〜</span>
+      <span className="text-[var(--fg-muted)] px-[2px] text-[var(--font-size-sm)]">〜</span>
       <input
         type="date"
-        className="date-input"
+        className={inputClass}
         value={dateTo}
         onChange={(e) => onDateToChange(e.target.value)}
         aria-label="期間 終了日"
       />
 
-      <label className="unread-only-label">
+      <label className="flex items-center gap-[var(--space-2)] text-[var(--fg-muted)] text-[var(--font-size-sm)] cursor-pointer whitespace-nowrap select-none">
         <input
           type="checkbox"
+          className="cursor-pointer accent-[var(--accent)] w-[14px] h-[14px]"
           checked={unreadOnly}
           onChange={(e) => onUnreadOnlyChange(e.target.checked)}
         />
         未読のみ
       </label>
 
-      <label className="unread-only-label">
+      <label className="flex items-center gap-[var(--space-2)] text-[var(--fg-muted)] text-[var(--font-size-sm)] cursor-pointer whitespace-nowrap select-none">
         <input
           type="checkbox"
+          className="cursor-pointer accent-[var(--accent)] w-[14px] h-[14px]"
           checked={starredOnly}
           onChange={(e) => onStarredOnlyChange(e.target.checked)}
         />
@@ -118,7 +128,11 @@ export function FilterBar({
       </label>
 
       {hasFilter && (
-        <button type="button" className="clear-filter" onClick={onClear}>
+        <button
+          type="button"
+          className="px-[var(--space-3)] py-[var(--space-2)] bg-[var(--bg-overlay)] text-[var(--fg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[var(--font-size-sm)] font-[inherit] cursor-pointer whitespace-nowrap transition-[border-color,color] duration-100 hover:border-[var(--accent)] hover:text-[var(--fg-primary)] focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+          onClick={onClear}
+        >
           ✕ 解除
         </button>
       )}
