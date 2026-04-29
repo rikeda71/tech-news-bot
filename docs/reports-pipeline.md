@@ -168,15 +168,21 @@ Stage 1〜4 を完走したあと、最終的な markdown レポート全文を 
 
 repository secrets に以下を登録する。
 
-| Secret                    | 用途                                                 | 取得元                                            |
-| ------------------------- | ---------------------------------------------------- | ------------------------------------------------- |
-| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由) | `claude /install-github-app` で発行               |
-| `ADMIN_TOKEN`             | `/api/admin/reports` の Bearer 認証                  | Worker secret と同値 (rotation 手順は別 doc 参照) |
-| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要      | Cloudflare dashboard → API Tokens                 |
-| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                         | Cloudflare dashboard                              |
+| Secret                    | 用途                                                 | 取得元                                          |
+| ------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由) | `claude /install-github-app` で発行             |
+| `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                  | `openssl rand -hex 32` などで生成 (GH 側で管理) |
+| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要      | Cloudflare dashboard → API Tokens               |
+| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                         | Cloudflare dashboard                            |
 
 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` は既に deploy workflow で使っている
 ものを流用できる。
+
+`WORKER_ADMIN_TOKEN` は **GitHub Actions secret 側を single source of truth** として扱う。
+deploy workflow に "Sync admin secret to Worker" ステップが入っていて、
+`wrangler secret put ADMIN_TOKEN` で Worker secret 側に同値を流し込む。
+これにより GH と Cloudflare の 2 箇所に同じ値を二重登録する手間を省ける。
+ローテーションするときも GH 側の値を更新して deploy を回せば Worker secret も自動的に追随する。
 
 ---
 
@@ -184,8 +190,9 @@ repository secrets に以下を登録する。
 
 ### 初回セットアップ
 
-1. PR を merge し本番 deploy が完了していること (migration 0010 が `pnpm migrate:prod` で適用済み)
-2. `CLAUDE_CODE_OAUTH_TOKEN` / `ADMIN_TOKEN` を GitHub Actions secrets に登録
+1. `CLAUDE_CODE_OAUTH_TOKEN` / `WORKER_ADMIN_TOKEN` を GitHub Actions secrets に登録
+   - `WORKER_ADMIN_TOKEN`: `openssl rand -hex 32 | gh secret set WORKER_ADMIN_TOKEN` などでランダム生成して登録する。Worker 側 secret は次の deploy で自動同期される
+2. PR を merge し本番 deploy を回す (deploy workflow が migration 0010 を適用 + `WORKER_ADMIN_TOKEN` を Worker の `ADMIN_TOKEN` secret に同期)
 3. GitHub Actions UI から `Report Daily` を `workflow_dispatch` で手動実行
 4. D1 に行が入ったか確認:
 
@@ -213,13 +220,13 @@ UNIQUE index が `(kind, period, category)` で張られているため、catego
 
 ### トラブルシュート
 
-| 症状                            | 確認ポイント                                                           |
-| ------------------------------- | ---------------------------------------------------------------------- |
-| Skill ステップで 401            | `CLAUDE_CODE_OAUTH_TOKEN` が失効していないか                           |
-| `recent.mjs` が 0 件            | `CLOUDFLARE_API_TOKEN` の権限 / `CLOUDFLARE_ACCOUNT_ID`                |
-| `/api/admin/reports` が 401     | `ADMIN_TOKEN` の値が Worker 側 secret と一致しているか                 |
-| `/api/admin/reports` が 400     | content 空 / ISO 8601 不正 / category 範囲外。step 出力の error を読む |
-| `/tmp/report.md` が生成されない | skill が Stage 4 まで到達していない。prompt のログを確認               |
+| 症状                            | 確認ポイント                                                                                             |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Skill ステップで 401            | `CLAUDE_CODE_OAUTH_TOKEN` が失効していないか                                                             |
+| `recent.mjs` が 0 件            | `CLOUDFLARE_API_TOKEN` の権限 / `CLOUDFLARE_ACCOUNT_ID`                                                  |
+| `/api/admin/reports` が 401     | `WORKER_ADMIN_TOKEN` (GH) と Worker 側 `ADMIN_TOKEN` secret が同値か (deploy ジョブで sync 済みかも確認) |
+| `/api/admin/reports` が 400     | content 空 / ISO 8601 不正 / category 範囲外。step 出力の error を読む                                   |
+| `/tmp/report.md` が生成されない | skill が Stage 4 まで到達していない。prompt のログを確認                                                 |
 
 ---
 

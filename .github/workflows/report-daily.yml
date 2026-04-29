@@ -77,7 +77,7 @@ jobs:
 
       - name: Save report to D1 via admin API
         env:
-          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          ADMIN_TOKEN: ${{ secrets.WORKER_ADMIN_TOKEN }}
           # 本番 Worker の URL (custom domain がない前提)
           WORKER_URL: https://tech-news-bot.rikeda71.workers.dev
         run: |
