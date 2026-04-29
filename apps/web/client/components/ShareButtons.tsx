@@ -6,6 +6,10 @@ interface Props {
   title: string;
 }
 
+// 共通ボタン/リンクの見た目
+const shareButtonBase =
+  "inline-flex items-center justify-center w-[26px] h-[26px] p-0 bg-[var(--bg-overlay)] text-[var(--fg-muted)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] cursor-pointer no-underline font-[inherit] transition-[color,border-color,background] duration-100 hover:text-[var(--fg-primary)] hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)] focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2";
+
 export function ShareButtons({ url, title }: Props) {
   const [copied, setCopied] = useState(false);
   const { show } = useToast();
@@ -28,12 +32,12 @@ export function ShareButtons({ url, title }: Props) {
   }
 
   return (
-    <div className="share-buttons">
+    <div className="flex gap-[var(--space-2)] items-center">
       <a
         href={xHref}
         target="_blank"
         rel="noopener"
-        className="share-button"
+        className={shareButtonBase}
         aria-label="X (Twitter) でシェア"
       >
         {/* X (Twitter) logo */}
@@ -52,7 +56,7 @@ export function ShareButtons({ url, title }: Props) {
         href={hatenaHref}
         target="_blank"
         rel="noopener"
-        className="share-button"
+        className={shareButtonBase}
         aria-label="はてなブックマークに追加"
       >
         {/* Hatena Bookmark "B!" mark */}
@@ -80,8 +84,8 @@ export function ShareButtons({ url, title }: Props) {
       </a>
       <button
         type="button"
-        className={`share-button${copied ? " share-button-copied" : ""}`}
-        aria-label="URLをコピー"
+        className={`${shareButtonBase}${copied ? " text-[var(--success)] border-[var(--success)]" : ""}`}
+        aria-label={copied ? "コピー済み" : "URLをコピー"}
         onClick={handleCopy}
       >
         {copied ? (

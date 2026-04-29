@@ -41,18 +41,16 @@ describe("ShareButtons", () => {
     expect(screen.getByRole("button", { name: /URLをコピー/i })).toBeTruthy();
   });
 
-  it("copy button click succeeds and shows copied state", async () => {
+  it("copy button click succeeds and shows copied state via aria-label", async () => {
     // happy-dom は Clipboard API を実装しているため writeText は実際に呼ばれる。
-    // spy が happy-dom の内部 window コンテキストを越えられないため、
-    // クリック後に "Copied" 状態が表示されることで動作を確認する。
+    // コピー後は aria-label が "コピー済み" に変わることで copied 状態を確認する。
     const user = userEvent.setup();
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />);
 
     const copyBtn = screen.getByRole("button", { name: /URLをコピー/i });
     await user.click(copyBtn);
 
-    // writeText 成功後に aria-label が変わることで "copied" 状態を検証
-    // (SVG のみ表示のため button の aria-label は変わらない; class 変化で確認)
-    expect(copyBtn.classList.contains("share-button-copied")).toBe(true);
+    // writeText 成功後に aria-label が "コピー済み" になることで copied 状態を確認
+    expect(screen.getByRole("button", { name: "コピー済み" })).toBeTruthy();
   });
 });
