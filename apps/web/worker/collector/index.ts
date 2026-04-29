@@ -5,7 +5,7 @@ import { parseXml, pickText, asArray } from "../utils/xml";
 import { buildGuids } from "./deduplicator";
 import { D1CostAccumulator, writeCollectorEvent, writeD1CostEvent } from "./metrics";
 import { maybeAlert, sendAlert } from "./alert";
-import { deleteOlderThan, insertArticles, type InsertableArticle } from "../db/articles";
+import { insertArticles, type InsertableArticle } from "../db/articles";
 import {
   type FeedHeaders,
   getEnabledFeedIds,
@@ -326,19 +326,9 @@ export async function collectFeeds(env: Env, feedIds?: string[]): Promise<Collec
   const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
   const skipped304 = results.filter((r) => r.status === "not_modified").length;
 
-  const retentionDays = Number(env.RETENTION_DAYS ?? "90") || 90;
-  let pruned = 0;
-  try {
-    pruned = await deleteOlderThan(env.DB, retentionDays);
-  } catch (err) {
-    console.warn(
-      `[collector] retention prune failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
-
   const durationMs = Date.now() - start;
   console.log(
-    `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
+    `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} duration=${durationMs}ms`,
   );
   for (const r of results) {
     if (r.status === "error") {
@@ -359,7 +349,8 @@ export async function collectFeeds(env: Env, feedIds?: string[]): Promise<Collec
     }
   }
 
-  return { total: activeFeeds.length, inserted, pruned, results, durationMs };
+  // retention は scheduled() の pruneOldArticles に一本化しているため、ここでは常に 0
+  return { total: activeFeeds.length, inserted, pruned: 0, results, durationMs };
 }
 
 export type ValidateFeedResult =
@@ -521,16 +512,6 @@ export async function collectAll(
   const feedsOk = results.filter((r) => r.status === "ok" || r.status === "not_modified").length;
   const feedsFailed = results.filter((r) => r.status === "error").length;
 
-  const retentionDays = Number(env.RETENTION_DAYS ?? "90") || 90;
-  let pruned = 0;
-  try {
-    pruned = await deleteOlderThan(env.DB, retentionDays);
-  } catch (err) {
-    console.warn(
-      `[collector] retention prune failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
-
   const durationMs = Date.now() - start;
   const completedAt = new Date(Date.now()).toISOString();
 
@@ -547,7 +528,7 @@ export async function collectAll(
   }
 
   console.log(
-    `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} pruned=${pruned} retentionDays=${retentionDays} duration=${durationMs}ms`,
+    `[collector] feeds=${activeFeeds.length} skipped304=${skipped304} inserted=${inserted} duration=${durationMs}ms`,
   );
 
   // D1 コスト集計を AE に送信する (best-effort)
@@ -585,7 +566,8 @@ export async function collectAll(
     }
   }
 
-  const finalResult = { total: activeFeeds.length, inserted, pruned, results, durationMs };
+  // retention は scheduled() の pruneOldArticles に一本化しているため、ここでは常に 0
+  const finalResult = { total: activeFeeds.length, inserted, pruned: 0, results, durationMs };
 
   // COLLECTOR_ALERT_WEBHOOK ベースのシンプルな閾値アラート (best-effort)
   try {
