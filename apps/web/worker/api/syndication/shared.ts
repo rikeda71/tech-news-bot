@@ -43,7 +43,7 @@ export function toRfc822(iso: string): string {
   return d.toUTCString();
 }
 
-export function siteOrigin(reqUrl: string): string {
+function siteOrigin(reqUrl: string): string {
   try {
     const u = new URL(reqUrl);
     return `${u.protocol}//${u.host}`;
