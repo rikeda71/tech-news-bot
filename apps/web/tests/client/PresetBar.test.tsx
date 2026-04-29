@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Preset, PresetFilters } from "../../client/hooks/usePresets";
 
 const { PresetBar } = await import("../../client/components/PresetBar");
@@ -24,6 +24,10 @@ describe("PresetBar", () => {
     vi.restoreAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders the add button", () => {
     render(
       <PresetBar
@@ -34,7 +38,7 @@ describe("PresetBar", () => {
         onRemove={vi.fn<(id: string) => void>()}
       />,
     );
-    expect(screen.getByText("+ 現在のフィルタを保存")).toBeTruthy();
+    screen.getByText("+ 現在のフィルタを保存");
   });
 
   it("renders preset names when presets are provided", () => {
@@ -47,8 +51,8 @@ describe("PresetBar", () => {
         onRemove={vi.fn<(id: string) => void>()}
       />,
     );
-    expect(screen.getByText("AI English")).toBeTruthy();
-    expect(screen.getByText("JP Tech")).toBeTruthy();
+    screen.getByText("AI English");
+    screen.getByText("JP Tech");
   });
 
   it("calls onApply with preset filters when preset button is clicked", async () => {
@@ -98,7 +102,6 @@ describe("PresetBar", () => {
     );
     await user.click(screen.getByText("+ 現在のフィルタを保存"));
     expect(onAdd).toHaveBeenCalledWith("My Preset", defaultFilters);
-    vi.unstubAllGlobals();
   });
 
   it("does not call onAdd when prompt returns empty string", async () => {
@@ -116,6 +119,5 @@ describe("PresetBar", () => {
     );
     await user.click(screen.getByText("+ 現在のフィルタを保存"));
     expect(onAdd).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 });
