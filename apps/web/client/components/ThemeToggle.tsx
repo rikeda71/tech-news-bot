@@ -72,12 +72,22 @@ function SystemIcon() {
   );
 }
 
+// アクティブ時: accent-soft 背景 + accent 色
+const activeClass = "bg-[var(--accent-soft)] text-[var(--accent)]";
+// 非アクティブ時: elevated 背景 + muted 色
+const baseClass =
+  "flex items-center justify-content-center w-[30px] h-[30px] p-0 bg-[var(--bg-elevated)] text-[var(--fg-muted)] border-none border-r border-[var(--border-subtle)] cursor-pointer transition-[background,color] duration-100 ease-in-out last:border-r-0 hover:bg-[var(--bg-overlay)] hover:text-[var(--fg-primary)] focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-[-2px]";
+
 export function ThemeToggle({ theme, onSetTheme }: Props) {
   return (
-    <div className="theme-toggle-group" role="group" aria-label="テーマ切替">
+    <div
+      className="flex items-center border border-[var(--border-subtle)] rounded-[var(--radius-md)] overflow-hidden shrink-0 ml-auto"
+      role="group"
+      aria-label="テーマ切替"
+    >
       <button
         type="button"
-        className={`theme-toggle-btn${theme === "light" ? " active" : ""}`}
+        className={`${baseClass}${theme === "light" ? ` ${activeClass}` : ""}`}
         aria-pressed={theme === "light"}
         aria-label="ライトモード"
         title="ライトモード"
@@ -87,7 +97,7 @@ export function ThemeToggle({ theme, onSetTheme }: Props) {
       </button>
       <button
         type="button"
-        className={`theme-toggle-btn${theme === "system" ? " active" : ""}`}
+        className={`${baseClass}${theme === "system" ? ` ${activeClass}` : ""}`}
         aria-pressed={theme === "system"}
         aria-label="OS設定に追従"
         title="OS設定に追従"
@@ -97,7 +107,7 @@ export function ThemeToggle({ theme, onSetTheme }: Props) {
       </button>
       <button
         type="button"
-        className={`theme-toggle-btn${theme === "dark" ? " active" : ""}`}
+        className={`${baseClass}${theme === "dark" ? ` ${activeClass}` : ""}`}
         aria-pressed={theme === "dark"}
         aria-label="ダークモード"
         title="ダークモード"

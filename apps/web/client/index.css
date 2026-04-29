@@ -1,3 +1,62 @@
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* data-theme="dark" を html に付与したとき dark: variant を有効化。
+   prefers-color-scheme ベースは useTheme.ts の切替ロジックと矛盾するため使わない。 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ============================================================
+   Tailwind @theme — デザイントークンを utility として使えるよう登録
+   既存の :root CSS variables は後方互換のため残す
+   ============================================================ */
+@theme {
+  /* --- 色 --- */
+  --color-bg-base: #ffffff;
+  --color-bg-elevated: #f6f8fa;
+  --color-bg-overlay: #eaeef2;
+  --color-fg-primary: #1f2328;
+  --color-fg-secondary: #444c56;
+  --color-fg-muted: #656d76;
+  --color-border-subtle: #d8dee4;
+  --color-border-strong: #adb5bd;
+  --color-accent: #0969da;
+  --color-accent-hover: #0750b8;
+
+  /* --- カテゴリ色 --- */
+  --color-cat-bigtech: #0550ae;
+  --color-cat-ai: #7d4e00;
+  --color-cat-jp: #1a7f37;
+  --color-cat-zenn: #0550ae;
+
+  /* --- スペーシング --- */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+
+  /* --- 角丸 --- */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 999px;
+
+  /* --- タイポグラフィ --- */
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.9rem;
+  --text-md: 1rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+}
+
 /* ============================================================
    デザイントークン — CSS Custom Properties
    ============================================================ */
