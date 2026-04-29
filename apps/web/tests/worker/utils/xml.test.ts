@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { asArray, parseXml, pickText } from "../../../worker/utils/xml";
+import { asArray, parseXml, pickText, stripHtml } from "../../../worker/utils/xml";
 
 // parseXml が返す型は unknown なので、テスト内では型アサーションで扱う
 type ParsedObj = Record<string, unknown>;
@@ -218,5 +218,72 @@ describe("asArray", () => {
   it("wraps number in an array", () => {
     expect(asArray(0)).toEqual([0]);
     expect(asArray(99)).toEqual([99]);
+  });
+});
+
+describe("stripHtml", () => {
+  it("returns null for null input", () => {
+    expect(stripHtml(null)).toBeNull();
+  });
+
+  it("returns null for undefined input", () => {
+    expect(stripHtml(undefined)).toBeNull();
+  });
+
+  it("returns null for empty string", () => {
+    expect(stripHtml("")).toBeNull();
+  });
+
+  it("strips basic HTML tags", () => {
+    expect(stripHtml("<p>Hello <b>world</b></p>")).toBe("Hello world");
+  });
+
+  it("strips script tags and their content", () => {
+    expect(stripHtml("<p>text</p><script>alert('xss')</script>")).toBe("text");
+  });
+
+  it("strips style tags and their content", () => {
+    expect(stripHtml("<style>body{color:red}</style><p>text</p>")).toBe("text");
+  });
+
+  it("decodes common HTML entities", () => {
+    // &nbsp; はスペースに変換され trim() で末尾スペースは除去される
+    expect(stripHtml("&amp;&lt;&gt;&quot;&#39;&nbsp;")).toBe("&<>\"'");
+  });
+
+  it("truncates to maxLen and appends ellipsis", () => {
+    expect(stripHtml("Hello world", 5)).toBe("Hello…");
+  });
+
+  it("does not truncate when text is shorter than maxLen", () => {
+    expect(stripHtml("Hi", 10)).toBe("Hi");
+  });
+
+  it("removes XML 1.0 forbidden control characters (U+0000-U+0008)", () => {
+    // NUL, SOH, STX, ETX, EOT, ENQ, ACK, BEL, BS はすべて除去される
+    const withControl = "hello\x00\x01\x02\x03\x04\x05\x06\x07\x08world";
+    expect(stripHtml(withControl)).toBe("helloworld");
+  });
+
+  it("removes XML 1.0 forbidden control characters (U+000B, U+000C)", () => {
+    // VT (vertical tab) と FF (form feed) は XML 1.0 で禁止
+    const withControl = "hello\x0B\x0Cworld";
+    expect(stripHtml(withControl)).toBe("helloworld");
+  });
+
+  it("removes XML 1.0 forbidden control characters (U+000E-U+001F)", () => {
+    // SO through US は XML 1.0 で禁止
+    const withControl = "hello\x0E\x1Fworld";
+    expect(stripHtml(withControl)).toBe("helloworld");
+  });
+
+  it("preserves tab (U+0009), LF (U+000A), CR (U+000D) as whitespace", () => {
+    // tab / LF / CR は XML 1.0 で許可されているホワイトスペース。\s+ で空白に正規化される
+    const withAllowed = "hello\x09\x0A\x0Dworld";
+    expect(stripHtml(withAllowed)).toBe("hello world");
+  });
+
+  it("returns null when input contains only control characters", () => {
+    expect(stripHtml("\x01\x02\x03")).toBeNull();
   });
 });
