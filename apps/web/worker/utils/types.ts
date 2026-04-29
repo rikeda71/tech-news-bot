@@ -18,17 +18,3 @@ export function makeOneOf<T extends string>(
   const set = new Set<string>(values);
   return (value): value is T => typeof value === "string" && set.has(value);
 }
-
-/**
- * 要素がすべて string の配列かどうかを確認する type guard。
- * JSON.parse した unknown な配列の型チェックに使う。
- */
-export function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((v) => typeof v === "string");
-}
-
-/**
- * 非空配列を表す型。
- * 「1 件以上の要素が存在することが保証されている配列」が必要な関数のシグネチャに使う。
- */
-export type NonEmptyArray<T> = [T, ...T[]];
