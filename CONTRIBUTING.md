@@ -1,6 +1,6 @@
 # Contributing to tech-news-bot
 
-Cloudflare Workers (無料枠) 上で 3 時間ごとに tech blog の RSS / Atom を収集し、D1 に保存して Web UI と JSON Feed / RSS で配信するアプリケーション。Worker は Hono ベース、フロントエンドは React 18 + Vite SPA、ツールチェインは [Vite+](https://viteplus.dev/) (`vp`) を使う。
+Cloudflare Workers (無料枠) 上で 6 時間ごとに tech blog の RSS / Atom を収集し、D1 に保存して Web UI と JSON Feed / RSS で配信するアプリケーション。Worker は Hono ベース、フロントエンドは React 19 + Vite SPA、ツールチェインは [Vite+](https://viteplus.dev/) (`vp`) を使う。
 
 ---
 
@@ -10,7 +10,7 @@ Cloudflare Workers (無料枠) 上で 3 時間ごとに tech blog の RSS / Atom
 
 - Node.js 24 以上
 - pnpm 10 以上
-- Vite+ (`vp`): `curl -fsSL https://vite.plus | bash`
+- Vite+ (`vp`): 公式サイト [viteplus.dev](https://viteplus.dev/) の手順を参照してインストール
 
 **手順**
 
@@ -29,20 +29,7 @@ pnpm migrate:local
 
 ---
 
-## 主要コマンド
-
-| 目的                          | コマンド             |
-| ----------------------------- | -------------------- |
-| dev サーバー起動              | `pnpm dev`           |
-| 本番ビルド                    | `pnpm build`         |
-| lint                          | `pnpm lint`          |
-| format                        | `pnpm format`        |
-| typecheck                     | `pnpm typecheck`     |
-| lint + fmt + typecheck まとめ | `pnpm check`         |
-| テスト                        | `pnpm test`          |
-| D1 マイグレーション (local)   | `pnpm migrate:local` |
-| D1 マイグレーション (prod)    | `pnpm migrate:prod`  |
-| デプロイ                      | `pnpm deploy`        |
+主要コマンドの一覧は [README.md#主要コマンド](README.md#主要コマンド) を参照。
 
 ---
 
@@ -59,7 +46,7 @@ pnpm migrate:local
 
 ## コーディング規約
 
-詳細は [`.claude/rules/01-coding-style.md`](.claude/rules/01-coding-style.md) を参照。要点:
+詳細は [`.claude/rules/01-typescript.md`](.claude/rules/01-typescript.md) を参照。要点:
 
 - **TypeScript strict mode**。`any` は最小限、必要なら `unknown` で受けて narrow する
 - **Lint**: oxlint (`vp lint`)。**Format**: oxfmt (`vp fmt`)。ESLint/Prettier は使用しない
@@ -75,10 +62,10 @@ pnpm migrate:local
 
 ## テスト規約
 
-詳細は [`.claude/rules/02-testing.md`](.claude/rules/02-testing.md) を参照。要点:
+詳細は [`.claude/rules/20-testing-overview.md`](.claude/rules/20-testing-overview.md) を参照。要点:
 
-- **テストランナー**: `vite-plus/test` (vitest 4) + `@cloudflare/vitest-pool-workers` v0.15
-- **起動**: `pnpm test`（root から）または `apps/web/` で `vp test run`
+- **テストランナー**: `vite-plus/test` (vitest) + `@cloudflare/vitest-pool-workers`
+- **起動**: `pnpm test` (worker) / `pnpm test:client` (client) / `pnpm e2e` (Playwright)
 - **テストファイル配置**: `apps/web/tests/<area>/<file>.test.ts`（area は `worker` / `collector` / `db` / `api` など）
 - テスト実行前に **`pnpm build` が必要**（vitest-pool-workers が `apps/web/dist/client` を要求するため）
 - `vitest` の API は `vite-plus/test` から import する。生 `vitest` は import しない
@@ -126,11 +113,12 @@ PR テンプレートに従って以下を記載する:
 ```
 tech-news-bot/
 ├── apps/web/
-│   ├── client/          React 18 + Vite SPA
+│   ├── client/          React 19 + Vite SPA
 │   ├── worker/          Hono API + cron collector
 │   │   ├── api/         /api/* エンドポイント
 │   │   ├── collector/   RSS/Atom 取得・パース
 │   │   ├── db/          D1 アクセス層
+│   │   ├── notify/      Slack 通知 (日次ダイジェスト)
 │   │   └── feeds.yaml   収集対象フィード定義
 │   └── tests/           vitest テスト
 ├── migrations/          D1 マイグレーション

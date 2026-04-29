@@ -16,13 +16,13 @@
 
 <!-- どうやって動作を確認したか。手動確認・テスト追加など -->
 
-- [ ] `pnpm test` pass
 - [ ] 手動動作確認済み (該当する場合)
 
 ## Checklist
 
-- [ ] `pnpm check` (lint + format + typecheck + build) pass
-- [ ] `pnpm test` pass
+- [ ] `pnpm check` (lint + format + typecheck) pass
+- [ ] `pnpm test` pass (worker テスト)
+- [ ] `pnpm test:client` pass (client コードを変更した場合)
 - [ ] migration を追加した場合は `pnpm migrate:local` で適用確認済み
 - [ ] 新機能・バグ修正の場合はテストを追加した
 
