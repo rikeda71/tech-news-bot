@@ -112,5 +112,29 @@ describe("ArticleCard", () => {
       expect(document.querySelector("mark")).toBeNull();
       expect(screen.getByText("Hello World")).toBeTruthy();
     });
+
+    it("escapes regex special characters in the query (e.g. C++)", () => {
+      render(
+        <ArticleCard
+          article={{ ...baseArticle, title: "Use C++ today" }}
+          q="C++"
+          onFilterByCategory={noop}
+          onFilterByFeedId={noop}
+        />,
+      );
+      expect(document.querySelector("mark")?.textContent).toBe("C++");
+    });
+
+    it("wraps multiple matches in the title with mark elements", () => {
+      render(
+        <ArticleCard
+          article={{ ...baseArticle, title: "foo bar foo" }}
+          q="foo"
+          onFilterByCategory={noop}
+          onFilterByFeedId={noop}
+        />,
+      );
+      expect(document.querySelectorAll("mark")).toHaveLength(2);
+    });
   });
 });
