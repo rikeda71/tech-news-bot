@@ -403,6 +403,12 @@ function AppInner() {
     [category, lang, feedId, q, dateFrom, dateTo],
   );
 
+  // useArticles より先にフィルタ結果を算出できないため、前回レンダリング時の値を ref で保持して渡す。
+  // これにより autoLoad.filteredLength は常に 1 レンダリング遅れの値になるが、
+  // 自動 loadMore の発火条件としては十分な精度がある。
+  const filteredLengthRef = useRef(0);
+  const isFilterActive = unreadOnly || starredOnly || bookmarkedOnly;
+
   const {
     articles: allArticles,
     loading,
@@ -410,7 +416,11 @@ function AppInner() {
     error,
     nextCursor,
     loadMore,
-  } = useArticles(query);
+    autoLoadStopped,
+  } = useArticles(query, {
+    filteredLength: filteredLengthRef.current,
+    isFilterActive,
+  });
 
   // 未読・スター・ブックマークフィルタはクライアントサイドで適用 (サーバー API はこれらを知らないため)
   const articles = useMemo(() => {
@@ -418,6 +428,8 @@ function AppInner() {
     if (unreadOnly) filtered = filtered.filter((a) => !isRead(a.id));
     if (starredOnly) filtered = filtered.filter((a) => isStarred(a.id));
     if (bookmarkedOnly) filtered = filtered.filter((a) => bookmarks.has(a.guid));
+    // 次レンダリングの autoLoad.filteredLength として使う
+    filteredLengthRef.current = filtered.length;
     return filtered;
   }, [allArticles, unreadOnly, starredOnly, bookmarkedOnly, isRead, isStarred, bookmarks]);
 
@@ -629,7 +641,11 @@ function AppInner() {
               onClick={loadMore}
               disabled={loadingMore}
             >
-              {loadingMore ? "読み込み中…" : "もっと読み込む"}
+              {loadingMore
+                ? "読み込み中…"
+                : autoLoadStopped
+                  ? "自動読み込み停止 / もっと読み込む"
+                  : "もっと読み込む"}
             </button>
           )}
         </>
