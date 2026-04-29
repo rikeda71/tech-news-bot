@@ -76,3 +76,33 @@ export interface CategorySummary {
 export interface CategoriesResponse {
   categories: CategorySummary[];
 }
+
+// ---- /api/reports ----
+
+export type ReportKind = "daily" | "weekly" | "monthly";
+
+/** /api/reports の一覧アイテム (content を含まない) */
+export interface ReportListItem {
+  id: number;
+  kind: ReportKind;
+  period_start: string;
+  period_end: string;
+  category: string | null;
+  lang: string | null;
+  source_skill: string;
+  generated_at: string;
+}
+
+/** /api/reports/:id の詳細 (content + meta_json を含む) */
+export interface ReportDetail extends ReportListItem {
+  content: string;
+  meta_json: string | null;
+}
+
+export interface ReportListResponse {
+  reports: ReportListItem[];
+}
+
+export interface ReportDetailResponse {
+  report: ReportDetail;
+}

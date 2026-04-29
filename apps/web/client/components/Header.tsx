@@ -3,7 +3,15 @@ import { useTheme } from "../hooks/useTheme";
 
 // "feed" は /feed/:id のフィード詳細ページで使用。nav タブには載せない
 // "author" は /author/:name の著者詳細ページで使用。nav タブには載せない
-export type AppView = "articles" | "stats" | "feed" | "author" | "categories";
+// "report" は /reports/:id の詳細ページで使用。nav タブには載せない
+export type AppView =
+  | "articles"
+  | "stats"
+  | "feed"
+  | "author"
+  | "categories"
+  | "reports"
+  | "report";
 
 interface HeaderProps {
   view?: AppView;
@@ -14,6 +22,7 @@ const NAV_TABS: Array<{ id: AppView; label: string; icon: string }> = [
   { id: "articles", label: "Articles", icon: "📰" },
   { id: "stats", label: "Stats", icon: "📊" },
   { id: "categories", label: "カテゴリ", icon: "🗂️" },
+  { id: "reports", label: "レポート", icon: "📝" },
 ];
 
 export function Header({ view, onViewChange }: HeaderProps) {

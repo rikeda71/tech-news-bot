@@ -56,9 +56,19 @@ export function readAuthorFromPath(): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+/** /reports/:id パスを解析してレポート ID を返す。それ以外は null。*/
+export function readReportIdFromPath(): number | null {
+  const m = window.location.pathname.match(/^\/reports\/(\d+)$/);
+  if (!m) return null;
+  const id = Number(m[1]);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
 export function readViewFromUrl(): AppView {
   if (window.location.pathname === "/stats") return "stats";
   if (window.location.pathname === "/categories") return "categories";
+  if (window.location.pathname === "/reports") return "reports";
+  if (readReportIdFromPath() !== null) return "report";
   if (readFeedDetailFromPath() !== null) return "feed";
   if (readAuthorFromPath() !== null) return "author";
   return "articles";

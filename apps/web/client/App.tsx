@@ -13,6 +13,7 @@ import {
   readAuthorFromPath,
   readFeedDetailFromPath,
   readFromUrl,
+  readReportIdFromPath,
   readViewFromUrl,
 } from "./lib/routing";
 import { ArticlesView } from "./components/ArticlesView";
@@ -20,6 +21,8 @@ import { AuthorDetail } from "./components/AuthorDetail";
 import { CategoriesOverview } from "./components/CategoriesOverview";
 import { FeedDetail } from "./components/FeedDetail";
 import { type AppView, Header } from "./components/Header";
+import { ReportDetail } from "./components/ReportDetail";
+import { ReportsList } from "./components/ReportsList";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { StatsDashboard } from "./components/StatsDashboard";
 import { ToastContainer } from "./components/ToastContainer";
@@ -28,6 +31,7 @@ function AppInner() {
   const [view, setView] = useState<AppView>(readViewFromUrl);
   const [feedDetailId, setFeedDetailId] = useState<string>(() => readFeedDetailFromPath() ?? "");
   const [authorName, setAuthorName] = useState<string>(() => readAuthorFromPath() ?? "");
+  const [reportId, setReportId] = useState<number>(() => readReportIdFromPath() ?? 0);
   const [urlFilters, setUrlFilters] = useUrlState();
   const { q, category, lang, bookmarksOnly: bookmarkedOnly } = urlFilters;
   const [feedId, setFeedId] = useState<string>(() => readFromUrl().feedId);
@@ -55,7 +59,15 @@ function AppInner() {
     setView(next);
     setFeedDetailId("");
     setAuthorName("");
-    const path = next === "stats" ? "/stats" : next === "categories" ? "/categories" : "/";
+    setReportId(0);
+    const path =
+      next === "stats"
+        ? "/stats"
+        : next === "categories"
+          ? "/categories"
+          : next === "reports"
+            ? "/reports"
+            : "/";
     if (window.location.pathname !== path) {
       window.history.pushState(null, "", path);
     }
@@ -70,15 +82,24 @@ function AppInner() {
       if (nextView === "feed") {
         setFeedDetailId(readFeedDetailFromPath() ?? "");
         setAuthorName("");
+        setReportId(0);
         return;
       }
       if (nextView === "author") {
         setAuthorName(readAuthorFromPath() ?? "");
         setFeedDetailId("");
+        setReportId(0);
+        return;
+      }
+      if (nextView === "report") {
+        setReportId(readReportIdFromPath() ?? 0);
+        setFeedDetailId("");
+        setAuthorName("");
         return;
       }
       setFeedDetailId("");
       setAuthorName("");
+      setReportId(0);
       const next = readFromUrl();
       setFeedId(next.feedId);
       setDateFrom(next.dateFrom);
@@ -124,6 +145,18 @@ function AppInner() {
     window.dispatchEvent(new PopStateEvent("popstate"));
     setView("articles");
     setAuthorName("");
+  }, []);
+
+  const handleSelectReport = useCallback((id: number) => {
+    window.history.pushState(null, "", `/reports/${id}`);
+    setView("report");
+    setReportId(id);
+  }, []);
+
+  const handleBackFromReportDetail = useCallback(() => {
+    window.history.pushState(null, "", "/reports");
+    setView("reports");
+    setReportId(0);
   }, []);
 
   const query = useMemo(
@@ -230,6 +263,10 @@ function AppInner() {
         <StatsDashboard onNavigateToAuthor={handleGoToAuthorDetail} />
       ) : view === "categories" ? (
         <CategoriesOverview onSelectCategory={filterHandlers.handleSelectCategory} />
+      ) : view === "reports" ? (
+        <ReportsList onSelectReport={handleSelectReport} />
+      ) : view === "report" && reportId > 0 ? (
+        <ReportDetail id={reportId} onBack={handleBackFromReportDetail} />
       ) : view === "feed" && feedDetailId ? (
         <FeedDetail
           feedId={feedDetailId}
