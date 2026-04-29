@@ -35,7 +35,7 @@ jobs:
       # cf-typegen は build に依存するため明示的に走らせない (skill は recent.mjs しか使わない)。
 
       - name: Run tech-news-digest skill
-        uses: anthropics/claude-code-base-action@v1
+        uses: anthropics/claude-code-base-action@beta
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
