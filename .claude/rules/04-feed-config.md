@@ -1,3 +1,10 @@
+---
+paths:
+  - "apps/web/worker/feeds.yaml"
+  - "apps/web/worker/feed-config.ts"
+  - "apps/web/worker/types.ts"
+---
+
 # Feed 設定 (feeds.yaml) のルール
 
 - 場所: `apps/web/worker/feeds.yaml`
@@ -13,3 +20,4 @@
   - トピック: `https://zenn.dev/topics/<slug>/feed`
   - ユーザー: `https://zenn.dev/<user>/feed` (`?all=1` で全件)
 - **Zenn は独立カテゴリ** (`category: zenn`): Zenn 由来の全フィード (`zenn-*`) は `bigtech` / `ai` / `jp` に分散させず、必ず `zenn` を使う。複数トピックで同一記事が出やすいため、Skill 側で URL による de-dup が必要 (SKILL.md Stage 1 参照)。
+- YAML は `@modyfi/vite-plugin-yaml` により build 時に JSON へ変換され Worker bundle に inline される。runtime 依存は無し。

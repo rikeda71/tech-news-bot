@@ -3,11 +3,21 @@ dist/
 .wrangler/
 .env
 .env.local
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
 .DS_Store
 *.log
 .vscode/
 .idea/
 worker-configuration.d.ts
+
 # Playwright
 playwright-report/
 test-results/
+
+# Claude Code (個人設定 / 一時 worktree / ローカルメモ)
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
