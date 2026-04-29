@@ -6,6 +6,8 @@ test.describe.serial("keyboard shortcuts", () => {
   test("/ キーで検索ボックスにフォーカスが当たる", async ({ page }) => {
     await page.goto("/");
     await waitForArticles(page);
+    // ブラウザウィンドウを前面に出してキーイベントが確実に届くようにする
+    await page.bringToFront();
 
     // 記事カードをクリックして input フォーカス外に出てから / を押す
     // (Tab などでどこかにフォーカスがあると isInputFocused() が true になり無視される)
@@ -24,6 +26,7 @@ test.describe.serial("keyboard shortcuts", () => {
   test("? キーでショートカット一覧 modal が開く", async ({ page }) => {
     await page.goto("/");
     await waitForArticles(page);
+    await page.bringToFront();
 
     // body にフォーカス → ? を押す
     await page.locator("body").click();
@@ -41,6 +44,7 @@ test.describe.serial("keyboard shortcuts", () => {
   test("j/k キーで記事選択が移動する", async ({ page }) => {
     await page.goto("/");
     await waitForArticles(page);
+    await page.bringToFront();
 
     // body をクリックして非 input 要素にフォーカスを当ててから j を押す
     await page.locator("body").click();
