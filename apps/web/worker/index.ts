@@ -78,8 +78,9 @@ const handler: ExportedHandler<Env> = {
         }),
       );
     }
-    // Run retention once per day at UTC 17:00 to avoid peak write hours
-    if (utcHour === 17) {
+    // Run retention once per day at UTC 18:00 (JST 03:00) — 低トラフィック帯。
+    // cron `0 */6 * * *` は UTC 00,06,12,18 のみ起動するため 17 ではなく 18 に揃える。
+    if (utcHour === 18) {
       ctx.waitUntil(
         pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "0")).then((r) => {
           console.log(`[retention] deleted=${r.deleted}`);

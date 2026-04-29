@@ -18,12 +18,16 @@ database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 migrations_dir = "../../migrations"
 
 [triggers]
-# 0 */3 * * * : 3 時間ごと (UTC 00,03,...,21) — RSS 収集 + Slack 日次 (00:00 のみ) + retention (17:00 のみ)
+# 0 */6 * * * : 6 時間ごと (UTC 00,06,12,18) — RSS 収集 + Slack 日次 (00:00 のみ)
+# Medium 等の外部レート制限と Worker 1 invocation あたりの subrequest 上限を緩和するため
+# 3h → 6h に頻度を下げている。新着の取り込みは最大 6 時間遅れる。
 # Slack 投稿には SLACK_WEBHOOK_URL を `wrangler secret put SLACK_WEBHOOK_URL` で登録する
-crons = ["0 */3 * * *"]
+crons = ["0 */6 * * *"]
 
 [vars]
-COLLECTOR_CONCURRENCY = "4"
+# 並列 1: 同一ホスト (Medium) への並列アクセスで 429 を多発させないため。
+# fetch の wallclock は Cron の wall-time 上限内で十分収まる。
+COLLECTOR_CONCURRENCY = "1"
 COLLECTOR_TIMEOUT_MS = "10000"
 COLLECTOR_RETRIES = "2"
 SUMMARY_MAX_LENGTH = "500"
@@ -58,7 +62,7 @@ database_name = "tech-news-bot-db"
 database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 
 [env.preview.vars]
-COLLECTOR_CONCURRENCY = "4"
+COLLECTOR_CONCURRENCY = "1"
 COLLECTOR_TIMEOUT_MS = "10000"
 COLLECTOR_RETRIES = "2"
 SUMMARY_MAX_LENGTH = "500"

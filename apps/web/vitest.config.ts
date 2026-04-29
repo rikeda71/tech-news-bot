@@ -18,6 +18,9 @@ export default defineConfig(async () => {
             ADMIN_TOKEN_NEXT: "test-admin-token-next",
             // フィード収集テストで外部 fetch が失敗するため短くしてタイムアウトを速める
             COLLECTOR_TIMEOUT_MS: "500",
+            // 本番は 1 並列だが、テストでは全 yaml feed を直列に回すと per-feed retry で
+            // 25-30s deadline を超えるため 4 並列に上書きする (Medium レート制限テストではない)
+            COLLECTOR_CONCURRENCY: "4",
           },
         },
       }),
