@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm build)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm format)",
+      "Bash(pnpm format:*)",
+      "Bash(pnpm check)",
+      "Bash(pnpm check:*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm cf-typegen)",
+      "Bash(pnpm migrate:local)",
+      "Bash(pnpm e2e)",
+      "Bash(pnpm --filter @tnb/web:*)",
+      "Bash(pnpm exec vp:*)",
+      "Bash(pnpm exec vitest:*)",
+      "Bash(vp:*)",
+      "Bash(node tools/d1-client/recent.mjs:*)",
+      "Bash(node tools/d1-client/search.mjs:*)",
+      "Bash(git status:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git diff)",
+      "Bash(git log:*)",
+      "Bash(git log)",
+      "Bash(git branch:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git show:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git fetch:*)",
+      "Bash(git fetch)",
+      "Bash(git stash list:*)",
+      "Bash(git remote:*)",
+      "Bash(git config --get:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh issue comment:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh api repos/:*)",
+      "Bash(ls:*)",
+      "Bash(cat .claude/:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find . -name:*)",
+      "Bash(find . -type:*)",
+      "Bash(find apps/:*)",
+      "Bash(find migrations/:*)",
+      "Bash(curl -sSL:*)",
+      "Bash(curl -sI:*)",
+      "Bash(curl -fsSL:*)",
+      "Bash(jq:*)",
+      "Bash(echo:*)",
+      "Bash(pwd)",
+      "Bash(which:*)",
+      "WebFetch(domain:docs.cloudflare.com)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:hono.dev)",
+      "WebFetch(domain:react.dev)",
+      "WebFetch(domain:vitejs.dev)",
+      "WebFetch(domain:viteplus.dev)",
+      "WebFetch(domain:vitest.dev)",
+      "WebFetch(domain:playwright.dev)",
+      "WebFetch(domain:tailwindcss.com)",
+      "WebFetch(domain:zenn.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:code.claude.com)",
+      "WebFetch(domain:docs.claude.com)",
+      "WebFetch(domain:docs.anthropic.com)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git stash:*)",
+      "Bash(git restore:*)",
+      "Bash(git revert:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git tag:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr close:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh pr review:*)",
+      "Bash(gh issue close:*)",
+      "Bash(gh issue edit:*)",
+      "Bash(gh release:*)",
+      "Bash(pnpm deploy)",
+      "Bash(pnpm migrate:prod)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm update:*)",
+      "Bash(npx wrangler deploy:*)",
+      "Bash(npx wrangler secret:*)",
+      "Bash(npx wrangler d1 execute:*)",
+      "Bash(npx wrangler tail:*)",
+      "Bash(wrangler deploy:*)",
+      "Bash(wrangler secret:*)",
+      "Bash(wrangler d1 execute:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(chmod:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -rf $HOME)",
+      "Bash(rm -rf $HOME/*)",
+      "Bash(rm -rf ..:*)",
+      "Bash(:(){:|:&};:)",
+      "Bash(sudo:*)",
+      "Bash(git push --force origin main:*)",
+      "Bash(git push -f origin main:*)",
+      "Bash(git push --force origin master:*)",
+      "Bash(git push -f origin master:*)",
+      "Bash(git commit --no-verify:*)",
+      "Bash(git commit -n:*)",
+      "Bash(git config --global:*)",
+      "Bash(npx wrangler login:*)",
+      "Bash(wrangler login:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./apps/web/.dev.vars)",
+      "Read(./apps/web/.dev.vars.*)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/hosts.yml)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-dangerous.sh",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/format-edited.sh",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-context.sh",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}

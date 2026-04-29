@@ -1,106 +1,56 @@
-# tech-news-bot — Claude 向けプロジェクトガイド
+# tech-news-bot
 
-Cloudflare Workers (無料枠) 上で 3 時間ごとに tech blog の RSS / Atom を収集し、D1 に保存して Web UI と JSON Feed / RSS で配信するアプリケーション。
+Cloudflare Workers (無料枠) 上で 3 時間ごとに tech blog の RSS / Atom を収集し、D1 に保存して Web UI と JSON Feed / RSS で配信する PoC アプリ。
 
-## 必読ルール
+## 必読
 
-ユーザー / プロジェクトのルールは `.claude/rules/` 配下に分割定義。Claude Code は会話開始時に必ず一読すること。
+セッション開始時に以下を必ず読むこと。`.claude/rules/` 配下のファイルは Claude Code が自動ロードする。
 
-## アーキテクチャ概略
-
-```
-tech-news-bot/                         pnpm workspace root
-├── apps/
-│   └── web/                           デプロイ単位 (Cloudflare Worker + SPA)
-│       ├── client/                    React 18 + Vite SPA
-│       │   └── types/api.ts           SPA 内で閉じた型 (worker と独立)
-│       ├── worker/                    Hono ベース API + cron collector
-│       │   ├── api/                   /api/* (articles, stats, feeds, health, admin, syndication)
-│       │   ├── collector/             RSS/Atom 取得・パース・de-dup
-│       │   ├── db/                    D1 アクセス層
-│       │   ├── feeds.yaml             収集対象フィードの定義 (build 時 inline)
-│       │   ├── feed-config.ts         feeds.yaml ローダー
-│       │   ├── types.ts               Env / FeedConfig / Article などの worker 内型
-│       │   └── index.ts               Worker entry (fetch + scheduled)
-│       ├── tests/                     vitest + @cloudflare/vitest-pool-workers
-│       ├── vite.config.ts             @cloudflare/vite-plugin + react + yaml
-│       ├── vitest.config.ts           cloudflareTest plugin
-│       └── wrangler.toml              D1 / cron / assets binding
-├── migrations/                        D1 マイグレーション (リポジトリルートで保持)
-├── tools/d1-client/                   D1 から記事を抽出する CLI (Skill 用)
-├── .claude/                           Claude Code 用 rules / skills
-├── .github/workflows/                 CI (vp check/build/test) / Deploy
-├── pnpm-workspace.yaml                catalog: で vite/vitest を vp に alias
-├── tsconfig.base.json
-├── vite.config.ts                     ルート: oxlint/oxfmt 設定 (vp lint/fmt が読む)
-└── package.json                       root: ワークスペース横断スクリプト
-```
-
-### 構造の方針
-
-PoC 規模 (Worker 1 個) なので `packages/` は廃止し、すべての worker コード (型 / loader / yaml) を `apps/web/worker/` 配下に inline している。
-将来 2 つ目の deploy unit や型を共有する CLI が増えた場合は再度 `packages/` を切り出す。
-
-## 主要コマンド (root から)
-
-ツールチェインは [Vite+](https://viteplus.dev/) (`vp`) ベース。`pnpm` スクリプトは `vp` を呼ぶ thin wrapper。
-
-| 目的                        | コマンド (vp 直)                   | pnpm script          |
-| --------------------------- | ---------------------------------- | -------------------- |
-| dev サーバー起動            | `vp dev` (`apps/web/`)             | `pnpm dev`           |
-| 本番ビルド                  | `vp run build`                     | `pnpm build`         |
-| lint                        | `vp lint`                          | `pnpm lint`          |
-| format                      | `vp fmt --write`                   | `pnpm format`        |
-| typecheck                   | `pnpm -r typecheck`                | `pnpm typecheck`     |
-| 全部まとめて                | `vp check`                         | `pnpm check`         |
-| テスト                      | `vp test run` (`apps/web/` で実行) | `pnpm test`          |
-| Cloudflare 型生成           | —                                  | `pnpm cf-typegen`    |
-| D1 マイグレーション (local) | —                                  | `pnpm migrate:local` |
-| D1 マイグレーション (prod)  | —                                  | `pnpm migrate:prod`  |
-| デプロイ                    | —                                  | `pnpm deploy`        |
-| e2e テスト (Playwright)     | —                                  | `pnpm e2e`           |
-
-`vp` インストール: `curl -fsSL https://vite.plus | bash`
-
-設定:
-
-- **lint/format ルール**: ルート `vite.config.ts` の `defineConfig({ lint, fmt })`
-- **vite/vitest の本体**: `pnpm-workspace.yaml` の `catalog` で `@voidzero-dev/vite-plus-{core,test}` に alias、`overrides` で全 transitive dep にも適用
-- **テストランナー**: vitest 由来の API は `vite-plus/test` から import (`apps/web/tests/setup.ts`)。Cloudflare の `cloudflare:test` (`applyD1Migrations`, `env`, `SELF`) はそのまま使える
-
-## 規約
-
-- **言語**: TypeScript strict、`target: ES2023`、`module: ESNext`、`moduleResolution: bundler`。
-- **Lint/Format**: oxlint + oxfmt (`vp lint` / `vp fmt`)。ESLint/Prettier は使用しない。
-- **テスト**: `vite-plus/test` (= vp 同梱の vitest 4 系) + `@cloudflare/vitest-pool-workers` v0.15。テストごとに `reset()` + `applyD1Migrations` (`apps/web/tests/setup.ts`)。
-- **import スタイル**: すべて相対 path (`../db/articles`, `../types`)。workspace alias は使わない (packages 廃止済み)
-- **commit / push**: ユーザーから明示指示がない限り行わない。
-- **新機能のテスト**: 既存 vitest スイート (`apps/web/tests/`) に追加。
-
-## Cloudflare 固有事項
-
-- **D1**: `wrangler.toml` の `database_id` は本番作成後に差し替え。マイグレーション dir は root の `migrations/` を相対パス (`../../migrations`) で参照。
-- **Static Assets**: ハッシュ付き `/assets/*` は `immutable, max-age=31536000`、それ以外 (HTML/SPA fallback) は `no-cache`。
-- **Cron**: `0 */3 * * *` で `scheduled()` → `collectAll()` を起動。
-- **Secrets** (GitHub Actions): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` を repository secrets に登録すること (Deploy 失敗時はここ要確認)。
-
-## フィード設定 (feeds.yaml) の追加・更新
-
-1. `apps/web/worker/feeds.yaml` を編集
-2. `id` は kebab-case でユニーク、`category` は `bigtech | ai | jp | zenn`、`lang` は `ja | en`
-3. 追加前に `curl -sSL <url>` で 200 + 妥当な RSS/Atom を返すこと確認
-4. PR を作る (CI が build/test を実行)
-
-YAML は `@modyfi/vite-plugin-yaml` により build 時に JSON へ変換され Worker bundle に inline される。runtime 依存は無し。
+| ルール                                   | 適用範囲                                  |
+| ---------------------------------------- | ----------------------------------------- |
+| `.claude/rules/00-overview.md`           | 常時 (アーキ図 + 主要コマンド)            |
+| `.claude/rules/01-typescript.md`         | `**/*.{ts,tsx}` 編集時                    |
+| `.claude/rules/05-task-flow.md`          | 常時 (issue-first フロー)                 |
+| `.claude/rules/10-hono.md`               | `apps/web/worker/api/**` 編集時           |
+| `.claude/rules/11-cloudflare-workers.md` | `apps/web/worker/**` 編集時               |
+| `.claude/rules/12-react.md`              | `apps/web/client/**` 編集時               |
+| `.claude/rules/13-d1-sql.md`             | `apps/web/worker/db/**` / `migrations/**` |
+| `.claude/rules/04-feed-config.md`        | `apps/web/worker/feeds.yaml` 編集時       |
+| `.claude/rules/20-testing-overview.md`   | 全テスト共通                              |
+| `.claude/rules/21-testing-worker.md`     | `apps/web/tests/worker/**`                |
+| `.claude/rules/22-testing-client.md`     | `apps/web/tests/client/**`                |
+| `.claude/rules/23-testing-e2e.md`        | `apps/web/e2e/**`                         |
 
 ## Skills
 
-D1 の記事を活用する Claude Skills。詳細は各 SKILL.md 参照。
+### D1 の記事活用 skill
 
-| Skill               | 用途                                                                      | SKILL.md                                    |
-| ------------------- | ------------------------------------------------------------------------- | ------------------------------------------- |
-| `tech-news-digest`  | 今日・今週・任意期間の記事をリスト形式でダイジェスト                      | `.claude/skills/tech-news-digest/SKILL.md`  |
-| `tech-news-weekly`  | 週次・月次をストーリー形式のレポートとして生成                            | `.claude/skills/tech-news-weekly/SKILL.md`  |
-| `tech-news-search`  | 特定キーワードで FTS5 全文検索し深掘り解説を生成                          | `.claude/skills/tech-news-search/SKILL.md`  |
-| `tech-news-related` | ピボット記事 1 本を起点に関連記事を D1 から探して関係性・文脈マップを生成 | `.claude/skills/tech-news-related/SKILL.md` |
-| `tech-news-summary` | 単一の記事 URL を渡して本文ベースで深く日本語要約                         | `.claude/skills/tech-news-summary/SKILL.md` |
+| Skill               | 用途                                                                |
+| ------------------- | ------------------------------------------------------------------- |
+| `tech-news-digest`  | 今日・今週・任意期間の記事をリスト形式でダイジェスト                |
+| `tech-news-weekly`  | 週次・月次をストーリー形式のレポートとして生成                      |
+| `tech-news-search`  | 特定キーワードで FTS5 全文検索し深掘り解説                          |
+| `tech-news-related` | ピボット記事 1 本を起点に関連記事を D1 から探して関係性マップを生成 |
+| `tech-news-summary` | 単一の記事 URL を渡して本文ベースで深く日本語要約                   |
+
+### 開発支援 skill
+
+| Skill         | 用途                                                                         |
+| ------------- | ---------------------------------------------------------------------------- |
+| `test-design` | t-wada 流テスト設計 / レビュー (TDD / AAA / FIRST / 古典派 / モック過剰検出) |
+
+各 skill の手順 / モードは `.claude/skills/<name>/SKILL.md` を参照。
+
+## Agents
+
+| Agent           | 用途                                                                            |
+| --------------- | ------------------------------------------------------------------------------- |
+| `code-reviewer` | 並行 subagent / 共同作業者の生成コードを本プロジェクト規約でレビュー (信頼度別) |
+
+`Agent({ subagent_type: "code-reviewer", prompt: "..." })` で起動。詳細は `.claude/agents/code-reviewer.md`。
+
+## hooks / settings
+
+- `.claude/settings.json` … プロジェクト共有 (permissions / hooks)。コミット対象。
+- `.claude/settings.local.json` … 個人用 override (gitignore 済)。`.claude/settings.local.json.example` を参考に作成。
+- `.claude/hooks/*.sh` … 危険コマンドガード / 編集後の自動 oxfmt / セッション開始コンテキスト注入。

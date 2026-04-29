@@ -1,0 +1,25 @@
+{
+  "$comment": "個人用 override。.claude/settings.local.json (gitignore 済) にコピーして使う。",
+
+  "permissions": {
+    "allow": [
+      "Bash(open:*)",
+      "Bash(code:*)",
+      "Bash(zed:*)"
+    ],
+    "ask": []
+  },
+
+  "$exampleEnv": {
+    "env": {
+      "EDITOR": "zed"
+    }
+  },
+
+  "$exampleStatusLine": {
+    "statusLine": {
+      "type": "command",
+      "command": "echo \"$(git branch --show-current)\""
+    }
+  }
+}
