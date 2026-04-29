@@ -44,11 +44,12 @@ export function ReportsList({ onSelectReport }: Props) {
       </h2>
 
       {/* kind フィルタ chip */}
-      <div className="flex flex-wrap gap-[var(--space-2)] mb-[var(--space-4)]">
+      <div role="group" aria-label="レポートの種別フィルタ" className="flex flex-wrap gap-[var(--space-2)] mb-[var(--space-4)]">
         {chips.map(({ label, value }) => (
           <button
             key={label}
             type="button"
+            aria-pressed={kindFilter === value}
             className={`inline-flex items-center px-[var(--space-3)] py-[5px] rounded-full text-[var(--font-size-sm)] font-medium border-none font-[inherit] cursor-pointer whitespace-nowrap transition-[background,color] duration-100 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2${
               kindFilter === value
                 ? " bg-[var(--accent-soft)] text-[var(--accent)] font-semibold"
@@ -62,11 +63,11 @@ export function ReportsList({ onSelectReport }: Props) {
       </div>
 
       {loading && (
-        <p className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">読み込み中...</p>
+        <p role="status" aria-live="polite" className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">読み込み中...</p>
       )}
 
       {error && (
-        <p className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">エラー: {error}</p>
+        <p role="alert" className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">エラー: {error}</p>
       )}
 
       {!loading && !error && reports.length === 0 && (

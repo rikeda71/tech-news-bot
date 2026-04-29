@@ -89,6 +89,28 @@ describe("ReportsList", () => {
     }
   });
 
+  it("kind フィルタ chip は選択状態を aria-pressed で表す", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeListResponse([])));
+
+    const user = userEvent.setup();
+    render(<ReportsList onSelectReport={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("読み込み中...")).toBeNull();
+    });
+
+    // 初期状態: 「すべて」が選択中
+    const allButton = screen.getByRole("button", { name: "すべて" });
+    expect(allButton.getAttribute("aria-pressed")).toBe("true");
+
+    // 「日次」クリック後: aria-pressed が切り替わる
+    await user.click(screen.getByRole("button", { name: "日次" }));
+    expect(screen.getByRole("button", { name: "日次" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "すべて" }).getAttribute("aria-pressed")).toBe(
+      "false",
+    );
+  });
+
   it("kind フィルタ chip をクリックすると fetch URL が変わる", async () => {
     const mockFetch = vi
       .fn<() => Promise<Response>>()

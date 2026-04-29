@@ -59,6 +59,7 @@ export function FilterBar({
       <select
         className={`${inputClass} min-w-[130px]`}
         value={category}
+        aria-label="カテゴリ"
         onChange={(e) => onCategoryChange(e.target.value as FeedCategory | "")}
       >
         <option value="">All categories</option>
@@ -71,6 +72,7 @@ export function FilterBar({
       <select
         className={`${inputClass} min-w-[130px]`}
         value={lang}
+        aria-label="言語"
         onChange={(e) => onLangChange(e.target.value as FeedLang | "")}
       >
         <option value="">All langs</option>
@@ -81,6 +83,7 @@ export function FilterBar({
       <select
         className={`${inputClass} min-w-[130px]`}
         value={feedId}
+        aria-label="フィード"
         onChange={(e) => onFeedChange(e.target.value)}
       >
         <option value="">All feeds</option>
