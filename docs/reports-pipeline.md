@@ -15,11 +15,13 @@ Claude Code
    ↓ 2. tools/d1-client/recent.mjs --target=remote で記事取得
 D1 (本番) ── articles
    ↓ 3. WebFetch で本文取得 + markdown 生成
-/tmp/report.md, /tmp/report-meta.json
+/tmp/report.md, /tmp/report-meta.json, /tmp/slack-message.md
    ↓ 4. curl POST /api/admin/reports (Bearer ADMIN_TOKEN)
 Worker (Hono)
-   ↓ 5. upsertReport
+   ↓ 5. upsertReport → レスポンス { ok, id } を /tmp/post-resp.json に保存
 D1 (本番) ── reports
+   ↓ 6. GH Actions → Slack (LLM が生成した /tmp/slack-message.md に viewer URL を付与して webhook に投稿)
+Slack
 ```
 
 Worker の cron trigger は無料枠で 1 個までしか持てない (#230 の collector で消費済み) ため、
@@ -176,6 +178,7 @@ repository secrets に以下を登録する。
 | `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                  | `openssl rand -hex 32` などで生成 (GH 側で管理) |
 | `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要      | Cloudflare dashboard → API Tokens               |
 | `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                         | Cloudflare dashboard                            |
+| `SLACK_WEBHOOK_URL`       | Slack 投稿 (incoming webhook)                        | Slack ワークスペースで incoming webhook を作成  |
 
 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` は既に deploy workflow で使っている
 ものを流用できる。
@@ -234,17 +237,24 @@ UNIQUE index が `(kind, period, category)` で張られているため、catego
 
 ## Slack 通知
 
-`POST /api/admin/reports` で upsert が成功すると、`SLACK_WEBHOOK_URL` に設定した incoming webhook へ通知が飛ぶ。
-通知には保存されたレポートの kind / period / category / lang / source_skill / content サイズが含まれる。
+Slack への投稿は Worker ではなく GitHub Actions 側で行う。
 
-- リクエスト遅延を避けるため `c.executionCtx.waitUntil(...)` で非同期送信する
-- Slack 投稿が失敗 (non-2xx / timeout 5s) しても POST 自体の応答は 200 のまま (D1 への保存は成功済み)
-- `SLACK_WEBHOOK_URL` が未設定の場合は no-op (通知なし)
+フロー:
+
+1. Skill (Claude Code) が `/tmp/slack-message.md` を生成 (Slack mrkdwn 形式、6000 文字以内)
+2. `Save report to D1` ステップで POST レスポンス (`{ ok, id }`) を `/tmp/post-resp.json` に保存
+3. `Post to Slack` ステップが `id` から viewer URL を組み立て、`/tmp/slack-message.md` の末尾に付与して Slack incoming webhook に投稿
+
+特性:
+
+- `SLACK_WEBHOOK_URL` が未設定の場合は no-op でスキップ (投稿しないだけで workflow は正常終了)
+- `continue-on-error: true` を付けているため、Slack 投稿が失敗 (non-2xx / timeout) しても workflow 全体が fail しない
+- webhook URL リテラルをコードに埋め込まない。`${{ secrets.SLACK_WEBHOOK_URL }}` 経由でのみ参照する
 
 ### 設定方法
 
 ```bash
-wrangler secret put SLACK_WEBHOOK_URL
+gh secret set SLACK_WEBHOOK_URL
 # プロンプトに Slack incoming webhook URL を入力
 ```
 

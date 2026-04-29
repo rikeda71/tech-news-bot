@@ -77,6 +77,13 @@ jobs:
             - 最終 markdown 出力以外のアシスタント発話は最小限に抑えてください。
             - WebFetch が失敗した記事には (summary based) を末尾に付けてください。
 
+            加えて、Slack 投稿用のメッセージを /tmp/slack-message.md に書き出してください。
+            - Slack mrkdwn 記法 (*bold*, _italic_, <URL|label>)
+            - 全体で 6000 文字以内
+            - 冒頭にレポート概要を 1〜2 文
+            - その後に「主要トピック」「カテゴリ別ハイライト」「注目記事 (各記事は 1 行、リンク付き)」を Slack で読みやすく整形
+            - 末尾に viewer URL は付けない (Actions 側で自動付与される)
+
       - name: Save report to D1 via admin API
         env:
           ADMIN_TOKEN: ${{ secrets.WORKER_ADMIN_TOKEN }}
@@ -109,4 +116,36 @@ jobs:
           curl -fsS -X POST "$WORKER_URL/api/admin/reports" \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
             -H "Content-Type: application/json" \
+            -o /tmp/post-resp.json \
             --data-binary @/tmp/report-payload.json
+
+      - name: Post to Slack
+        if: ${{ success() }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          WORKER_URL: https://tech-news-bot.rikeda71.workers.dev
+        run: |
+          set -euo pipefail
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL not set – skipping Slack notification"
+            exit 0
+          fi
+          if [ ! -f /tmp/slack-message.md ] || [ ! -f /tmp/post-resp.json ]; then
+            echo "Slack message or post response missing – skipping Slack notification"
+            exit 0
+          fi
+          REPORT_ID=$(jq -r '.id' /tmp/post-resp.json)
+          if [ -z "$REPORT_ID" ] || [ "$REPORT_ID" = "null" ]; then
+            echo "Could not determine report id – skipping Slack notification"
+            exit 0
+          fi
+          VIEWER_URL="$WORKER_URL/reports/$REPORT_ID"
+          {
+            cat /tmp/slack-message.md
+            printf '\n\n— <%s|レポート全文を Web で開く>\n' "$VIEWER_URL"
+          } > /tmp/slack-final.md
+          jq -Rs '{ text: . }' /tmp/slack-final.md > /tmp/slack-payload.json
+          curl -fsS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/slack-payload.json
