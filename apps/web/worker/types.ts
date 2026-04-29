@@ -28,23 +28,6 @@ export interface Env {
 export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";
 export type FeedLang = "ja" | "en";
 
-/**
- * Branded string types — DB / API 境界を越えても id と guid が混在しないことを型で保証する。
- * 実体は string なので JSON シリアライズや D1 bind でそのまま使える。
- */
-export type FeedId = string & { readonly __brand: "FeedId" };
-export type ArticleGuid = string & { readonly __brand: "ArticleGuid" };
-
-/** raw string を FeedId に昇格させる境界ファクトリ (feeds.yaml / D1 読み込み時に使う) */
-export function asFeedId(s: string): FeedId {
-  return s as FeedId;
-}
-
-/** raw string を ArticleGuid に昇格させる境界ファクトリ */
-export function asArticleGuid(s: string): ArticleGuid {
-  return s as ArticleGuid;
-}
-
 export interface FeedConfig {
   id: string;
   name: string;
@@ -74,23 +57,6 @@ export interface Article {
   lang: FeedLang;
 }
 
-export interface ArticlesResponse {
-  articles: Article[];
-  nextCursor: string | null;
-}
-
-export interface FeedSummary {
-  id: string;
-  name: string;
-  url: string;
-  category: FeedCategory;
-  lang: FeedLang;
-  enabled: boolean;
-  last_fetched_at: string | null;
-  last_status: string | null;
-  article_count: number;
-}
-
 export interface HealthCronRun {
   id: number;
   started_at: string;
@@ -99,21 +65,6 @@ export interface HealthCronRun {
   feeds_ok: number;
   feeds_failed: number;
   articles_inserted: number;
-}
-
-export interface HealthResponse {
-  ok: boolean;
-  version: string;
-  now: string;
-  feeds: {
-    total: number;
-    enabled: number;
-  };
-  articles: {
-    total: number;
-    last_24h: number;
-  };
-  last_cron_run: HealthCronRun | null;
 }
 
 export interface FeedHealth {
