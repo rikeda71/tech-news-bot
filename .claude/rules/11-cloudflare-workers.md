@@ -9,10 +9,14 @@ paths:
 
 ## 無料枠の制約 (常に意識)
 
-- **D1**: 5 GB / 5M reads/day / 100K writes/day / 50ms CPU per query
-- **Workers**: 100K req/day / 10ms CPU per req (Cron / Queue は 30s)
-- **Static Assets**: 100K req/day
-- **R2 / KV (使用していないが将来用)**: 10 GB / 1M Class A ops / 10M Class B ops per month
+公式ドキュメントを正とする。具体値はプラットフォーム変更で動くため、定期的に確認する (last verified: 2026-04-29):
+
+- **Workers**: <https://developers.cloudflare.com/workers/platform/limits/> (Free plan: 100K requests/day、HTTP request / Cron Trigger ごとに 10ms CPU、Cron 内の処理は最長 30s 継続できる)
+- **D1**: <https://developers.cloudflare.com/d1/platform/limits/> (Free plan: 5M rows read/day、100K rows written/day、5 GB / account、Worker 1 invocation あたり 50 queries まで。per-query の固定 CPU 上限は無く、Worker の CPU 制限と SQL 実行 30s 上限に従う)
+- **Static Assets**: <https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/> (Free plan: 静的ファイル配信のリクエスト課金は **無し**。Worker script の invocation のみ Workers の req/day を消費)
+- **R2 / KV (使用していないが将来用)**: <https://developers.cloudflare.com/r2/pricing/> / <https://developers.cloudflare.com/kv/platform/limits/>
+
+このプロジェクトで日々ヒットしやすいのは **Workers の 10ms CPU per invocation** と **D1 の 100K writes/day**。collector の並列度 / リトライ回数を上げる前にここを試算する。
 
 ## Env binding と型
 

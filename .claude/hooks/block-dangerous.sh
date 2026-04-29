@@ -37,11 +37,18 @@ if echo "$CMD" | grep -Eq '(^|[[:space:]])rm[[:space:]]+(-[[:alnum:]]*[rRfF][[:a
 fi
 
 # 2) main / master ブランチへの force push
+#    - 直接形式: `git push -f origin main`
+#    - 後置形式: `git push origin main --force`
+#    - refspec 形式: `git push --force origin HEAD:main` / `git push origin foo:master -f`
 if echo "$CMD" | grep -Eq 'git[[:space:]]+push[[:space:]]+(-f|--force(-with-lease)?)([[:space:]]+[^[:space:]]+)*[[:space:]]+(main|master)([[:space:]]|$)'; then
   block "force push to main/master is forbidden"
 fi
 if echo "$CMD" | grep -Eq 'git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(main|master)[[:space:]]+(-f|--force(-with-lease)?)'; then
   block "force push to main/master is forbidden"
+fi
+if echo "$CMD" | grep -Eq 'git[[:space:]]+push[[:space:]].*(-f|--force(-with-lease)?)' && \
+   echo "$CMD" | grep -Eq '[^[:space:]]+:(main|master)([[:space:]]|$)'; then
+  block "force push to main/master via refspec is forbidden"
 fi
 
 # 3) commit hook の skip (--no-verify / -n)

@@ -60,7 +60,7 @@ PoC 規模 (Worker 1 個) のため `packages/` は廃止し、すべての work
 | D1 マイグレーション (prod)  | —                                              | `pnpm migrate:prod`  |
 | デプロイ                    | —                                              | `pnpm deploy`        |
 
-`vp` インストール: `curl -fsSL https://vite.plus | bash`
+`vp` インストール手順は公式ドキュメント https://viteplus.dev/ を参照 (curl を直接 shell に pipe する形式は `.claude/hooks/block-dangerous.sh` でブロックされるため、スクリプトを取得 → 中身を確認 → 実行、の手順を踏む)
 
 ## Git / commit / push
 

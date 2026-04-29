@@ -9,7 +9,7 @@ paths:
 
 ## 言語仕様
 
-- **strict mode**: `tsc --strict` 相当を維持。`tsconfig.base.json` の `strict: true`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes` を尊重
+- **strict mode**: `tsc --strict` 相当を維持。`tsconfig.base.json` で有効な厳格化フラグは `strict: true` / `noUnusedLocals` / `noUnusedParameters` / `noFallthroughCasesInSwitch` / `noImplicitOverride`。さらに `noUncheckedIndexedAccess` / `exactOptionalPropertyTypes` を増やしたい場合は別 PR で導入し、既存違反を一掃してから rule に追記する
 - **target**: ES2023、**module**: ESNext、**moduleResolution**: bundler
 - Node 24+ / Cloudflare Workers ランタイムを前提。Node 専用 API (`fs`, `path`) は CLI ツール (`tools/`) のみ。Worker 側で使うと build/runtime で壊れる
 - `import type { ... }` を積極的に使い、型オンリーの import を value import から分離する (oxfmt が部分的に整列するが、`type` 修飾は手動で付ける)
