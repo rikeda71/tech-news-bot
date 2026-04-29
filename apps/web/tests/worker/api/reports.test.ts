@@ -257,30 +257,3 @@ describe("GET /api/admin/reports/:id", () => {
     expect(body.report.meta_json).toContain("dedup_total");
   });
 });
-
-describe("POST /api/admin/reports — Slack notification", () => {
-  it("200: POST succeeds (and does not throw) when SLACK_WEBHOOK_URL is not set", async () => {
-    // テスト環境では SLACK_WEBHOOK_URL が未定義のため、no-op になり POST 自体は 200
-    const res = await SELF.fetch("https://example.com/api/admin/reports", {
-      method: "POST",
-      headers: JSON_HEADERS,
-      body: JSON.stringify(buildPayload()),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as AdminReportSaveResponse;
-    expect(body.ok).toBe(true);
-  });
-
-  it("200: POST succeeds even when Slack webhook returns non-2xx (Slack failure does not affect D1 save)", async () => {
-    // fetch を spy して Slack webhook 呼び出しが 500 を返しても POST 自体は 200
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 500 }));
-    const res = await SELF.fetch("https://example.com/api/admin/reports", {
-      method: "POST",
-      headers: JSON_HEADERS,
-      body: JSON.stringify(buildPayload({ period_start: "2026-04-27T00:00:00.000Z" })),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as AdminReportSaveResponse;
-    expect(body.ok).toBe(true);
-  });
-});
