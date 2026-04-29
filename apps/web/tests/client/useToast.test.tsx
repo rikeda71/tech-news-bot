@@ -96,16 +96,16 @@ describe("useToast / ToastContainer", () => {
       }
     });
 
-    // .toast-msg 要素のみで判定 (ボタンのテキストは除外)
-    const toastMsgs = document.querySelectorAll(".toast-msg");
-    const msgs = [...toastMsgs].map((el) => el.textContent);
+    // role="status" を持つ Toast 要素のみで判定 (トリガーボタンは除外)
+    const toasts = screen.getAllByRole("status");
+    const msgs = toasts.map((el) => el.textContent ?? "");
 
     // 最新 3 件のみ残り、最古の「通知1」は消える
-    expect(msgs).not.toContain("通知1");
-    expect(msgs).toContain("通知2");
-    expect(msgs).toContain("通知3");
-    expect(msgs).toContain("通知4");
-    expect(toastMsgs).toHaveLength(3);
+    expect(msgs.some((m) => m.includes("通知1"))).toBe(false);
+    expect(msgs.some((m) => m.includes("通知2"))).toBe(true);
+    expect(msgs.some((m) => m.includes("通知3"))).toBe(true);
+    expect(msgs.some((m) => m.includes("通知4"))).toBe(true);
+    expect(toasts).toHaveLength(3);
   });
 
   it("toast 要素に aria-live='polite' と role='status' が設定されている", () => {
