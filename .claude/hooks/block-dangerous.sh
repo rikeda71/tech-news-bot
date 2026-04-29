@@ -76,4 +76,11 @@ if echo "$CMD" | grep -Eq 'curl[[:space:]]+[^|]*\|[[:space:]]*(sh|bash|zsh)([[:s
   block "piping curl into a shell is forbidden"
 fi
 
+# 7) fork bomb (関数定義 + 自己再帰 pipe & background の典型形)
+#    例: `:(){:|:&};:` `bomb(){bomb|bomb&};bomb` など
+#    permissions.deny は `(`/`)` を含むパターンを表現できないので、こちらで拾う。
+if echo "$CMD" | grep -Eq '[a-zA-Z_:][a-zA-Z0-9_:]*[[:space:]]*\(\)[[:space:]]*\{[^}]*\|[^}]*&[^}]*\}[[:space:]]*;'; then
+  block "fork bomb-like recursive function is forbidden"
+fi
+
 exit 0
