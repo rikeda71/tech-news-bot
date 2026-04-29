@@ -8,6 +8,7 @@ import feeds from "./feeds";
 import health from "./health";
 import stats from "./stats";
 import admin from "./admin";
+import reports from "./reports";
 import docs from "./docs";
 import { catalogHandler } from "./catalog";
 
@@ -38,6 +39,9 @@ api.route("/categories", categories);
 api.route("/feeds", feeds);
 api.route("/health", health);
 api.route("/stats", stats);
+// /admin/reports は別ハンドラに分離 (admin の中で /reports をルーティングしない設計)。
+// Hono は path matching が前方一致でなく完全一致なので衝突しない。
+api.route("/admin/reports", reports);
 api.route("/admin", admin);
 api.route("/", docs);
 
