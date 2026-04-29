@@ -127,6 +127,13 @@ feeds:
     lang: en
     enabled: true
 
+  - id: microsoft-ai-blog
+    name: Microsoft AI Blog
+    url: https://blogs.microsoft.com/ai/feed/
+    category: ai
+    lang: en
+    enabled: true
+
   # ─────────── AI labs ───────────
   - id: openai-blog
     name: OpenAI News
@@ -175,6 +182,13 @@ feeds:
   - id: cyberagent-developers
     name: CyberAgent Developers Blog
     url: https://developers.cyberagent.co.jp/blog/feed/
+    category: jp
+    lang: ja
+    enabled: true
+
+  - id: cyberagent-research
+    name: CyberAgent AI Lab Research Blog
+    url: https://research.cyberagent.ai/feed/
     category: jp
     lang: ja
     enabled: true
