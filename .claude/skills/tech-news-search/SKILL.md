@@ -28,7 +28,7 @@ D1 の FTS5 (`articles_fts`, trigram tokenizer) で全文検索し、3 ステー
 - `--q=<keyword>` (必須) — 検索キーワード。複数単語はスペース区切りで `"AI agent"` のようにクォート
 - `--since=<today|week|month|N>` (デフォルト `month`) — 対象期間
 - `--target=<local|remote>` (省略時 `local`)
-- `--category=<bigtech|ai|jp|zenn>` (任意)
+- `--category=<bigtech|ai|jp>` (任意)
 - `--lang=<ja|en>` (任意)
 - `--limit=<N>` (デフォルト 100)
 
@@ -53,24 +53,24 @@ stdout に出る JSON 形式:
     {
       "id": 456,
       "guid": "...",
-      "feed_id": "zenn-trending",
-      "feed_name": "Zenn トレンド",
+      "feed_id": "google-developers",
+      "feed_name": "Google Developers Blog",
       "title": "MCP で Claude が何でもできるようになった話",
-      "url": "https://zenn.dev/...",
+      "url": "https://developers.googleblog.com/...",
       "summary": "<= 500 char excerpt>",
       "author": "...",
       "published_at": "2026-04-20T...",
-      "category": "zenn",
+      "category": "bigtech",
       "lang": "ja"
     }
   ],
-  "by_category": { "ai": 8, "zenn": 6, "bigtech": 3, "jp": 1 },
-  "by_feed": { "zenn-trending": 5 },
+  "by_category": { "ai": 8, "bigtech": 3, "jp": 1 },
+  "by_feed": { "google-developers": 5 },
   "by_lang": { "ja": 10, "en": 8 }
 }
 ```
 
-**URL による de-dup (Zenn 対策)**:
+**URL による de-dup**:
 
 Stage 1 完了後、`articles` を `url` でグループ化し、重複 URL は最も古い `published_at` のものを 1 件だけ残す:
 
@@ -123,9 +123,9 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、キーワー�
 
 ```
 バッチ計画例 (3 ホスト、各 2 記事):
-  batch[github.com]   → batch[zenn.dev]   → batch[aws.amazon.com]
-  ↓ parallel          ↓ parallel           ↓ parallel
-  [gh-1, gh-2]        [zenn-1, zenn-2]     [aws-1, aws-2]
+  batch[github.com]   → batch[aws.amazon.com]   → batch[developers.googleblog.com]
+  ↓ parallel          ↓ parallel                  ↓ parallel
+  [gh-1, gh-2]        [aws-1, aws-2]               [google-1, google-2]
 ```
 
 注意:
@@ -144,7 +144,7 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、キーワー�
 ```md
 # Tech News Search — "<キーワード>"
 
-期間: <ISO start> 〜 <ISO end> / 検索ヒット (de-dup 後): <total> 件 / カテゴリ: bigtech=N, ai=N, jp=N, zenn=N
+期間: <ISO start> 〜 <ISO end> / 検索ヒット (de-dup 後): <total> 件 / カテゴリ: bigtech=N, ai=N, jp=N
 
 ## 深掘り解説
 
@@ -162,7 +162,6 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、キーワー�
 | bigtech  | N    |
 | ai       | N    |
 | jp       | N    |
-| zenn     | N    |
 ```
 
 ## ガードレール
