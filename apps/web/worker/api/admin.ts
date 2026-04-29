@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { MiddlewareHandler } from "hono";
 import type { Env } from "../types";
 import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
@@ -12,6 +13,7 @@ import type {
   AdminFeedsDiagnosticsResponse,
   AdminRunDetailResponse,
   AdminRunListResponse,
+  ErrorResponse,
 } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -37,18 +39,25 @@ function isValidAdminToken(
   return false;
 }
 
-app.post("/feeds/validate", async (c) => {
+// すべての admin ルートに適用する認証 middleware。
+// ADMIN_TOKEN 未設定なら 503、token 不正なら 401 を返す。
+const adminAuthMiddleware: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
   const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
+  const nextToken = c.env.ADMIN_TOKEN_NEXT;
   if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
+    return c.json<ErrorResponse>({ error: "ADMIN_TOKEN is not configured" }, 503);
   }
   const auth = c.req.header("authorization") ?? "";
   const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
+  if (!token || !isValidAdminToken(token, current, nextToken)) {
+    return c.json<ErrorResponse>({ error: "unauthorized" }, 401);
   }
+  return await next();
+};
 
+app.use("*", adminAuthMiddleware);
+
+app.post("/feeds/validate", async (c) => {
   const rawBody = await c.req.text().catch(() => "");
   let parsed: unknown;
   try {
@@ -102,16 +111,6 @@ app.post("/collect", async (c) => {
   if (c.env.READONLY === "1") {
     return c.json({ error: "read-only mode" }, 403);
   }
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
 
   // body は任意。不正 JSON は 400 を返す。
   const rawBody = await c.req.text().catch(() => "");
@@ -164,16 +163,6 @@ app.post("/collect", async (c) => {
 app.post("/collector/run", async (c) => {
   if (c.env.READONLY === "1") {
     return c.json({ error: "read-only mode" }, 403);
-  }
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
   }
 
   // body が空 or 省略された場合は全 enabled feed を対象にする
@@ -247,16 +236,6 @@ app.post("/feeds/:id/enabled", async (c) => {
   if (c.env.READONLY === "1") {
     return c.json({ error: "read-only mode" }, 403);
   }
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
 
   const body = await c.req.json().catch(() => null);
   if (!body || typeof (body as Record<string, unknown>).enabled !== "boolean") {
@@ -273,17 +252,6 @@ app.post("/feeds/:id/enabled", async (c) => {
 });
 
 app.get("/runs", async (c) => {
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-
   const limitParam = Number(c.req.query("limit") ?? "20");
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
   const runs = await listRuns(c.env.DB, limit);
@@ -291,17 +259,6 @@ app.get("/runs", async (c) => {
 });
 
 app.get("/runs/:id", async (c) => {
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-
   const idParam = Number(c.req.param("id"));
   if (!Number.isFinite(idParam) || idParam <= 0) {
     return c.json({ error: "invalid id" }, 400);
@@ -323,34 +280,12 @@ app.get("/runs/:id", async (c) => {
 });
 
 app.get("/feeds/diagnostics", async (c) => {
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-
   const feeds = await getFeedsDiagnostics(c.env.DB);
   c.header("Cache-Control", "private, max-age=30");
   return c.json<AdminFeedsDiagnosticsResponse>({ feeds, count: feeds.length });
 });
 
 app.get("/cron-health", async (c) => {
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-
   const daysParam = c.req.query("days") ?? "7";
   const daysNum = Number(daysParam);
   if (daysNum !== 7 && daysNum !== 30) {
