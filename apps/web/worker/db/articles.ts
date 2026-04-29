@@ -9,10 +9,9 @@ const ARTICLES_SELECT_FIELDS = `a.id, a.guid, a.feed_id, f.name AS feed_name, a.
            a.author, a.published_at, a.fetched_at, a.category, a.lang`;
 
 /** articles + feeds の FROM / JOIN 句 */
-const ARTICLES_FROM_JOIN = `FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id`;
+const ARTICLES_FROM_JOIN = "FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id";
 
-type Cursor = { publishedAt: string; id: number };
+export type Cursor = { publishedAt: string; id: number };
 
 /**
  * cursor 条件を conds / binds に追記する。
@@ -108,12 +107,12 @@ export interface ListArticlesParams {
   dateFrom?: string;
   dateTo?: string;
   limit: number;
-  cursor?: { publishedAt: string; id: number } | null;
+  cursor?: Cursor | null;
 }
 
 export interface ListArticlesResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 export async function listArticles(
@@ -559,7 +558,7 @@ export async function countArticlesByMonth(
 
 export interface GetArticlesByFeedResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** feed_id で記事を published_at DESC で取得。cursor は listArticles / getArticlesByAuthor と同形式 */
@@ -567,7 +566,7 @@ export async function getArticlesByFeed(
   db: D1Database,
   feedId: string,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByFeedResult> {
   const conds: string[] = [`a.feed_id = ?1`];
   const binds: unknown[] = [feedId];
@@ -593,7 +592,7 @@ export async function getArticlesByFeed(
 
 export interface GetArticlesByAuthorResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** 著者名で記事を published_at DESC で取得。cursor は listArticles と同形式 */
@@ -601,7 +600,7 @@ export async function getArticlesByAuthor(
   db: D1Database,
   author: string,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByAuthorResult> {
   const conds: string[] = [`a.author = ?1`];
   const binds: unknown[] = [author];
@@ -668,7 +667,7 @@ export async function getArticlesCalendar(
 
 export interface GetArticlesByCategoryResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** category で記事を published_at DESC で取得。cursor は getArticlesByFeed / getArticlesByAuthor と同形式 */
@@ -676,7 +675,7 @@ export async function getArticlesByCategory(
   db: D1Database,
   category: FeedCategory,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByCategoryResult> {
   const conds: string[] = [`a.category = ?1`];
   const binds: unknown[] = [category];
@@ -702,7 +701,7 @@ export async function getArticlesByCategory(
 
 export interface GetArticlesByDayResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** 指定日 (UTC 00:00:00 〜 翌日 00:00:00) の記事を published_at DESC で取得。cursor は既存と同形式 */
@@ -711,7 +710,7 @@ export async function getArticlesByDay(
   startIso: string,
   endIso: string,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByDayResult> {
   const conds: string[] = [`a.published_at >= ?1`, `a.published_at < ?2`];
   const binds: unknown[] = [startIso, endIso];
@@ -750,7 +749,7 @@ export async function countArticlesByDay(
 
 export interface SearchArticlesResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /**
@@ -762,7 +761,7 @@ export async function searchArticles(
   db: D1Database,
   tokens: string[],
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<SearchArticlesResult> {
   const conds: string[] = [];
   const binds: unknown[] = [];
