@@ -120,6 +120,13 @@ feeds:
     lang: en
     enabled: true
 
+  - id: langchain-blog
+    name: LangChain Blog
+    url: https://blog.langchain.dev/rss.xml
+    category: ai
+    lang: en
+    enabled: true
+
   # ─────────── AI labs ───────────
   - id: openai-blog
     name: OpenAI News
@@ -259,6 +266,13 @@ feeds:
   - id: wantedly-engineering
     name: Wantedly Engineering (Medium)
     url: https://medium.com/feed/wantedly-engineering
+    category: jp
+    lang: ja
+    enabled: true
+
+  - id: pfn-tech-blog
+    name: Preferred Networks Tech Blog
+    url: https://tech.preferred.jp/ja/feed/
     category: jp
     lang: ja
     enabled: true
