@@ -23,7 +23,8 @@ app.use("*", async (c, next) => {
     [
       "default-src 'self'",
       "img-src 'self' data: https:",
-      "style-src 'self' 'unsafe-inline'",
+      // fonts.googleapis.com の CSS は <link rel="stylesheet"> 経由で読み込むため style-src の対象
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "script-src 'self'",
       "connect-src 'self'",
       "frame-ancestors 'none'",

@@ -132,7 +132,7 @@ export function ArticleCard({
           onClick={() => onFilterByCategory(article.category)}
           title={`${CATEGORY_LABEL[article.category] ?? article.category} で絞り込む`}
         >
-          <span aria-hidden="true" style={{ marginRight: "3px" }}>
+          <span aria-hidden="true" className="mr-[3px]">
             {CATEGORY_ICON[article.category] ?? ""}
           </span>
           {CATEGORY_LABEL[article.category] ?? article.category}
