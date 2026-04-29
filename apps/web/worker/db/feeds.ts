@@ -70,6 +70,22 @@ export async function syncFeeds(db: D1Database, feeds: FeedConfig[]): Promise<vo
   for (let i = 0; i < stmts.length; i += BATCH_SIZE) {
     await db.batch(stmts.slice(i, i + BATCH_SIZE));
   }
+
+  // yaml に存在しない id を soft-delete する。
+  // 完全 DELETE は articles の CASCADE で副作用が大きいため enabled=0 で無効化する。
+  // yaml に再登場した場合は上記 UPSERT で enabled が復活する。
+  const activeIds = feeds.map((f) => f.id);
+  const placeholders = activeIds.map((_, i) => `?${i + 1}`).join(",");
+  await db
+    .prepare(
+      `UPDATE feeds
+       SET enabled = 0,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE id NOT IN (${placeholders})
+         AND enabled = 1`,
+    )
+    .bind(...activeIds)
+    .run();
 }
 
 export async function recordFetchSuccess(

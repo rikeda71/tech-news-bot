@@ -78,10 +78,11 @@ const handler: ExportedHandler<Env> = {
         }),
       );
     }
-    // Run retention once per day at UTC 17:00 to avoid peak write hours
+    // Run retention once per day at UTC 17:00 to avoid peak write hours.
+    // collectAll 内では retention を実行しないため、ここが唯一の実行箇所。
     if (utcHour === 17) {
       ctx.waitUntil(
-        pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "0")).then((r) => {
+        pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "90") || 90).then((r) => {
           console.log(`[retention] deleted=${r.deleted}`);
           return r;
         }),
