@@ -88,6 +88,9 @@ function parseInput(
   if (!isISO8601(body.period_end)) {
     return { ok: false, error: "period_end must be ISO 8601 string" };
   }
+  if (new Date(body.period_end).getTime() <= new Date(body.period_start).getTime()) {
+    return { ok: false, error: "period_end must be after period_start" };
+  }
   if (!isISO8601(body.generated_at)) {
     return { ok: false, error: "generated_at must be ISO 8601 string" };
   }

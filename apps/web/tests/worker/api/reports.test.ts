@@ -179,6 +179,38 @@ describe("POST /api/admin/reports", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("400: rejects period_start == period_end", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          period_start: "2026-04-29T00:00:00.000Z",
+          period_end: "2026-04-29T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("period_end must be after period_start");
+  });
+
+  it("400: rejects period_start > period_end", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          period_start: "2026-04-29T00:00:00.000Z",
+          period_end: "2026-04-28T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("period_end must be after period_start");
+  });
 });
 
 describe("GET /api/admin/reports", () => {
