@@ -17,7 +17,7 @@ describe("GET /api/articles/by-category/:cat", () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai");
     expect.soft(res.status).toBe(200);
     const body = await res.json<{ articles: { category: string }[]; next_cursor: string | null }>();
-    expect.soft(Array.isArray(body.articles)).toBe(true);
+    expect(Array.isArray(body.articles)).toBe(true);
     expect.soft(body.articles.length).toBe(2);
     for (const article of body.articles) {
       expect.soft(article.category).toBe("ai");
@@ -147,7 +147,7 @@ describe("GET /api/articles/by-category/:cat", () => {
       articles: { guid: string }[];
       next_cursor: string | null;
     }>();
-    expect.soft(body2.articles.length).toBe(2);
+    expect(body2.articles.length).toBe(2);
     expect.soft(body2.next_cursor).toBeNull();
 
     // 2 ページ合わせて全 guid が揃う

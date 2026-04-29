@@ -12,7 +12,7 @@ describe("GET /api/articles/random", () => {
     expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("Cache-Control")).toBe("no-store");
     const body = await res.json<{ articles: unknown[] }>();
-    expect.soft(Array.isArray(body.articles)).toBe(true);
+    expect(Array.isArray(body.articles)).toBe(true);
     // DB に 3 件しかないので 3 件以下
     expect.soft(body.articles.length).toBeLessThanOrEqual(3);
   });

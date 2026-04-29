@@ -179,7 +179,7 @@ describe("GET /api/articles/by-day/:date", () => {
       next_cursor: string | null;
       total: number;
     }>();
-    expect.soft(body2.articles.length).toBe(1);
+    expect(body2.articles.length).toBe(1);
     expect.soft(body2.next_cursor).toBeNull();
     // total は cursor 跨ぎでも同じ値
     expect.soft(body2.total).toBe(3);

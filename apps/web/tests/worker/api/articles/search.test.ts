@@ -75,7 +75,7 @@ describe("GET /api/articles/search", () => {
     }>();
     expect.soft(body.query).toBe("article");
     expect.soft(body.tokens).toEqual(["article"]);
-    expect.soft(Array.isArray(body.articles)).toBe(true);
+    expect(Array.isArray(body.articles)).toBe(true);
     expect.soft("next_cursor" in body).toBe(true);
   });
 
@@ -154,7 +154,7 @@ describe("GET /api/articles/search", () => {
       articles: { guid: string }[];
       next_cursor: string | null;
     }>();
-    expect.soft(body2.articles.length).toBe(1);
+    expect(body2.articles.length).toBe(1);
     expect.soft(body2.next_cursor).toBeNull();
 
     const allGuids = [...body1.articles.map((a) => a.guid), ...body2.articles.map((a) => a.guid)];

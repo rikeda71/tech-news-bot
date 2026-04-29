@@ -12,7 +12,7 @@ describe("GET /api/articles/by-author/:author", () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-author/Author%20A");
     expect.soft(res.status).toBe(200);
     const body = await res.json<{ articles: { author: string }[]; next_cursor: string | null }>();
-    expect.soft(Array.isArray(body.articles)).toBe(true);
+    expect(Array.isArray(body.articles)).toBe(true);
     expect(body.articles.length).toBe(1);
     expect.soft(body.articles[0].author).toBe("Author A");
     expect.soft(body.next_cursor).toBeNull();
@@ -133,7 +133,7 @@ describe("GET /api/articles/by-author/:author", () => {
       articles: { guid: string }[];
       next_cursor: string | null;
     }>();
-    expect.soft(body2.articles.length).toBe(1);
+    expect(body2.articles.length).toBe(1);
     expect.soft(body2.next_cursor).toBeNull();
 
     // 2 ページ合わせて全 guid が揃うことを確認
