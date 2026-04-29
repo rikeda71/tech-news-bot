@@ -29,6 +29,14 @@ const FEEDS: FeedConfig[] = [
     lang: "ja",
     enabled: true,
   },
+  {
+    id: "zenn-trending",
+    name: "Zenn トレンド",
+    url: "https://x.test/z",
+    category: "zenn",
+    lang: "ja",
+    enabled: true,
+  },
 ];
 
 // "now" から n 日前の ISO 文字列を返す
@@ -368,6 +376,45 @@ describe("GET /api/stats — top_authors_30d", () => {
       top_authors_30d: { author: string; count: number }[];
     };
     expect(body.top_authors_30d.length).toBeLessThanOrEqual(10);
+  });
+
+  it("excludes Zenn authors (category = 'zenn') from the ranking", async () => {
+    // Zenn 投稿 5 件 (本来なら count=5 で 1 位になるはず)
+    const zennPosts = Array.from({ length: 5 }, (_, i) => ({
+      guid: `zenn-post-${i}`,
+      feed_id: "zenn-trending",
+      title: `Zenn Post ${i}`,
+      url: `https://zenn.dev/x/${i}`,
+      summary: null as null,
+      author: "Zenn Heavy Poster",
+      published_at: daysAgo(2),
+      category: "zenn" as const,
+      lang: "ja" as const,
+    }));
+    // 比較用に bigtech から 1 件
+    await insertArticles(env.DB, [
+      ...zennPosts,
+      {
+        guid: "bigtech-author-1",
+        feed_id: "openai-blog",
+        title: "Bigtech Author Article",
+        url: "https://x.test/o/bigtech-1",
+        summary: null,
+        author: "Bigtech Author",
+        published_at: daysAgo(2),
+        category: "ai",
+        lang: "en",
+      },
+    ]);
+
+    const res = await SELF.fetch("https://example.com/api/stats");
+    const body = (await res.json()) as {
+      top_authors_30d: { author: string; count: number }[];
+    };
+    // Zenn の author は除外される
+    expect(body.top_authors_30d.some((a) => a.author === "Zenn Heavy Poster")).toBe(false);
+    // bigtech の author は含まれる
+    expect(body.top_authors_30d.some((a) => a.author === "Bigtech Author")).toBe(true);
   });
 });
 
