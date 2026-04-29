@@ -18,12 +18,12 @@ D1 からデータを抽出する Node.js CLI スクリプト群。Claude skills
 node tools/d1-client/recent.mjs --since=<today|week|month|N> [options]
 ```
 
-| オプション   | デフォルト | 説明                                                                                 |
-| ------------ | ---------- | ------------------------------------------------------------------------------------ |
-| `--since`    | (必須)     | `today` / `week` / `month` / `N`                                                     |
-| `--target`   | `local`    | `local` または `remote`                                                              |
-| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`。カンマ区切りで複数指定可 (例: `bigtech,ai,jp`)    |
-| `--lang`     | なし       | `ja` または `en`                                                                     |
+| オプション   | デフォルト | 説明                                                                              |
+| ------------ | ---------- | --------------------------------------------------------------------------------- |
+| `--since`    | (必須)     | `today` / `week` / `month` / `N`                                                  |
+| `--target`   | `local`    | `local` または `remote`                                                           |
+| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`。カンマ区切りで複数指定可 (例: `bigtech,ai,jp`) |
+| `--lang`     | なし       | `ja` または `en`                                                                  |
 | `--limit`    | `200`      | 最大取得件数 (上限 1000 — D1 の 1 invocation あたり 50 queries 制限に基づく実装上限) |
 
 例:
