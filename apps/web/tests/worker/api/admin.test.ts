@@ -122,6 +122,22 @@ describe("POST /api/admin/collector/run", () => {
     }
   }, 60_000);
 
+  it("200: /collector/run 経由でも collector_runs に run が記録される", async () => {
+    const res = await SELF.fetch("https://example.com/api/admin/collector/run", {
+      method: "POST",
+      headers: { ...AUTH_HEADER, "content-type": "application/json" },
+      body: JSON.stringify({ feed_ids: [REAL_FEED_ID] }),
+    });
+    expect(res.status).toBe(200);
+
+    // 同期実行なので応答が返った時点で collector_runs に行が存在するはず
+    const runs = await listRuns(env.DB, 10);
+    expect(runs.length).toBeGreaterThan(0);
+    // 最新 run は completed_at が設定されている
+    const latest = runs[0];
+    expect(latest.completed_at).toBeTruthy();
+  }, 60_000);
+
   it("401: 認証なし → 401", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/collector/run", {
       method: "POST",
