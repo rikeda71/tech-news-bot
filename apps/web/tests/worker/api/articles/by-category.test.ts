@@ -15,60 +15,60 @@ describe("GET /api/articles/by-category/:cat", () => {
 
   it("returns 200 with articles for ai category", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ articles: { category: string }[]; next_cursor: string | null }>();
-    expect(Array.isArray(body.articles)).toBe(true);
-    expect(body.articles.length).toBe(2);
+    expect.soft(Array.isArray(body.articles)).toBe(true);
+    expect.soft(body.articles.length).toBe(2);
     for (const article of body.articles) {
-      expect(article.category).toBe("ai");
+      expect.soft(article.category).toBe("ai");
     }
-    expect(body.next_cursor).toBeNull();
+    expect.soft(body.next_cursor).toBeNull();
   });
 
   it("returns 200 with empty array when category has no articles", async () => {
     // zenn カテゴリの記事は beforeEach では挿入されない
     const res = await SELF.fetch("https://example.com/api/articles/by-category/zenn");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ articles: unknown[]; next_cursor: string | null }>();
-    expect(body.articles).toEqual([]);
-    expect(body.next_cursor).toBeNull();
+    expect.soft(body.articles).toEqual([]);
+    expect.soft(body.next_cursor).toBeNull();
   });
 
   it("returns 400 for invalid category", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/foo");
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toMatch(/category/);
+    expect.soft(body.error).toMatch(/category/);
   });
 
   it("returns 400 when limit=0", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai?limit=0");
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toMatch(/limit/);
+    expect.soft(body.error).toMatch(/limit/);
   });
 
   it("returns 400 when limit=51", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai?limit=51");
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toMatch(/limit/);
+    expect.soft(body.error).toMatch(/limit/);
   });
 
   it("returns 400 when limit is non-numeric", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai?limit=abc");
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toMatch(/limit/);
+    expect.soft(body.error).toMatch(/limit/);
   });
 
   it("returns 400 when cursor is malformed", async () => {
     const res = await SELF.fetch(
       "https://example.com/api/articles/by-category/ai?cursor=not-valid-base64!!!",
     );
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toMatch(/cursor/);
+    expect.soft(body.error).toMatch(/cursor/);
   });
 
   it("returns articles in published_at DESC, id DESC order", async () => {
@@ -89,15 +89,15 @@ describe("GET /api/articles/by-category/:cat", () => {
     ]);
     // o-ai-2 も SAME_AT (2024-04-03) なので tie → id DESC が効く
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ articles: { published_at: string; id: number }[] }>();
     const dates = body.articles.map((a) => a.published_at);
     const sorted = dates.toSorted((a, b) => b.localeCompare(a));
-    expect(dates).toEqual(sorted);
+    expect.soft(dates).toEqual(sorted);
     // 同一 published_at 内は id DESC
     const sameAt = body.articles.filter((a) => a.published_at === SAME_AT);
     if (sameAt.length >= 2) {
-      expect(sameAt[0].id).toBeGreaterThan(sameAt[1].id);
+      expect.soft(sameAt[0].id).toBeGreaterThan(sameAt[1].id);
     }
   });
 
@@ -130,7 +130,7 @@ describe("GET /api/articles/by-category/:cat", () => {
 
     // 1 ページ目: limit=2
     const res1 = await SELF.fetch("https://example.com/api/articles/by-category/ai?limit=2");
-    expect(res1.status).toBe(200);
+    expect.soft(res1.status).toBe(200);
     const body1 = await res1.json<{
       articles: { guid: string }[];
       next_cursor: string | null;
@@ -142,35 +142,35 @@ describe("GET /api/articles/by-category/:cat", () => {
     const res2 = await SELF.fetch(
       `https://example.com/api/articles/by-category/ai?limit=2&cursor=${body1.next_cursor}`,
     );
-    expect(res2.status).toBe(200);
+    expect.soft(res2.status).toBe(200);
     const body2 = await res2.json<{
       articles: { guid: string }[];
       next_cursor: string | null;
     }>();
-    expect(body2.articles.length).toBe(2);
-    expect(body2.next_cursor).toBeNull();
+    expect.soft(body2.articles.length).toBe(2);
+    expect.soft(body2.next_cursor).toBeNull();
 
     // 2 ページ合わせて全 guid が揃う
     const allGuids = [...body1.articles.map((a) => a.guid), ...body2.articles.map((a) => a.guid)];
-    expect(allGuids).toContain("o-ai-1");
-    expect(allGuids).toContain("o-ai-2");
-    expect(allGuids).toContain("o-page-1");
-    expect(allGuids).toContain("o-page-2");
+    expect.soft(allGuids).toContain("o-ai-1");
+    expect.soft(allGuids).toContain("o-ai-2");
+    expect.soft(allGuids).toContain("o-page-1");
+    expect.soft(allGuids).toContain("o-page-2");
   });
 
   it("does not mix articles from different categories", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/bigtech");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ articles: { category: string }[] }>();
     expect(body.articles.length).toBeGreaterThan(0);
     for (const article of body.articles) {
-      expect(article.category).toBe("bigtech");
+      expect.soft(article.category).toBe("bigtech");
     }
   });
 
   it("returns Cache-Control: public, max-age=300", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=300");
   });
 });
