@@ -29,16 +29,19 @@ description: ピボット記事 1 本を起点に D1 から関連記事を探し
 
 ### Stage 1: ピボット解決 — 記事を D1 で特定
 
-`tools/d1-client/recent.mjs` を Node から実行してピボット記事を特定する。
+**URL 入力の場合**: まず `tools/d1-client/search.mjs` で URL を照合する (1 クエリで完結するため効率的):
+
+```sh
+node tools/d1-client/search.mjs --q=<URL> --since=month --target=remote
+```
+
+`search.mjs` でヒットしない場合のみ、`tools/d1-client/recent.mjs` で全件取得して `articles[].url` と完全一致で検索するフォールバックに切り替える:
 
 ```sh
 node tools/d1-client/recent.mjs --since=month --target=remote
 ```
 
-取得した JSON の `articles` 配列から以下の方法でピボット記事を照合する:
-
-- **URL 入力の場合**: `articles[].url` と完全一致で検索する
-- **タイトル文字列の場合**: `articles[].title` と大文字小文字を区別せず部分一致で検索する
+**タイトル文字列の場合**: `recent.mjs` で全件取得し、`articles[].title` と大文字小文字を区別せず部分一致で検索する。
 
 照合できない場合:
 
@@ -166,7 +169,8 @@ D1 に未収録の記事をピボットとした場合は、冒頭に `> この�
 
 ## 関連ファイル
 
-- 実装: `tools/d1-client/recent.mjs`
+- 実装: `tools/d1-client/search.mjs` (Stage 1 URL 照合のメイン)
+- 実装: `tools/d1-client/recent.mjs` (Stage 1 フォールバック・全件取得)
 - スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds` テーブル)
 - 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
 - 関連 skill: `.claude/skills/tech-news-digest/SKILL.md` (期間ベースのダイジェスト)

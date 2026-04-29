@@ -78,15 +78,20 @@ Step 1・Step 2 のチェックを通過した場合、WebFetch で URL を取�
 
 ### Step 5: 関連記事の検索 (detailed モードのみ)
 
-`tools/d1-client/recent.mjs --since=month --target=remote` を実行し、`articles[]` から関連記事を探す。
+元記事のタイトルまたは `summary` から主要キーワードを 1〜2 個抽出し、`tools/d1-client/search.mjs` で D1 を検索する:
+
+```sh
+node tools/d1-client/search.mjs --q=<keyword> --since=month --target=remote
+```
 
 選定基準:
 
-- 元記事のタイトルまたは `summary` に含まれる主要キーワードが `title` または `summary` に含まれる
 - 元記事と URL が異なる
 - 元記事とタイトルが一致しない (同一記事の重複を除く)
 
-条件を満たす記事が見つかれば 1〜3 件を「コメント / 注意点 / 関連性」セクションに含める。見つからなければ「関連記事なし」と記載する。
+条件を満たす記事が見つかれば 1〜3 件を「コメント / 注意点 / 関連性」セクションに含める。
+
+**フォールバック**: `search.mjs` でヒットしない場合のみ、`tools/d1-client/recent.mjs --since=month --target=remote` で全件取得して in-memory キーワード一致で再検索する。それでも見つからなければ「関連記事なし」と記載する。
 
 ## 出力フォーマット
 
@@ -164,7 +169,8 @@ _元記事: <URL>_ <(D1 summary ベース — WebFetch ブロック対象ホス�
 
 ## 関連ファイル
 
-- D1 検索: `tools/d1-client/recent.mjs` (関連記事検索・D1 フォールバック)
+- D1 検索: `tools/d1-client/search.mjs` (関連記事検索 — Step 5 のメイン)
+- D1 フォールバック: `tools/d1-client/recent.mjs` (search.mjs ヒットなし時の全件フォールバック・D1 フォールバック)
 - スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds` テーブル)
 - 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
 - 関連 skill: `.claude/skills/tech-news-digest/SKILL.md` (期間ベースのダイジェスト)
