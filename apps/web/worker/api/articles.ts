@@ -52,7 +52,7 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 // YYYY-MM-DD または YYYY-MM-DDTHH:MM:SS 形式を受け付ける
 const DATE_RANGE_RE = /^\d{4}-\d{2}-\d{2}/;
 
-function decodeCursor(input: string | undefined): { publishedAt: string; id: number } | null {
+function decodeCursor(input: string | undefined): Cursor | null {
   if (!input) return null;
   try {
     const decoded = atob(input);
@@ -97,10 +97,7 @@ function parseListQuery(
   if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > maxLimit) {
     return {
       ok: false,
-      response: c.json(
-        { error: `limit must be an integer between 1 and ${maxLimit}` },
-        400,
-      ) as Response,
+      response: c.json({ error: `limit must be an integer between 1 and ${maxLimit}` }, 400),
     };
   }
 
@@ -108,7 +105,7 @@ function parseListQuery(
   const cursor = decodeCursor(cursorRaw);
   // cursor が指定されているのに decode に失敗した場合は 400
   if (cursorRaw && !cursor) {
-    return { ok: false, response: c.json({ error: "invalid cursor" }, 400) as Response };
+    return { ok: false, response: c.json({ error: "invalid cursor" }, 400) };
   }
 
   return { ok: true, limit: limitNum, cursor };
