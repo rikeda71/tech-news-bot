@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import type { Env } from "../types";
 import { getReport, listReports, upsertReport } from "../db/reports";
 import type { ReportInput, ReportKind } from "../db/reports";
+import { postReportNotification } from "../notify/slack-report";
 import type {
   AdminReportDetailResponse,
   AdminReportListResponse,
@@ -163,6 +164,21 @@ app.post("/", async (c) => {
   }
 
   const { id } = await upsertReport(c.env.DB, validated.input);
+
+  // Slack 通知: waitUntil でレスポンスをブロックせずに投げる。失敗しても D1 への保存は成功済みなので無視。
+  const notifyPromise = postReportNotification(c.env.SLACK_WEBHOOK_URL, {
+    kind: validated.input.kind,
+    period_start: validated.input.period_start,
+    period_end: validated.input.period_end,
+    category: validated.input.category,
+    lang: validated.input.lang,
+    source_skill: validated.input.source_skill,
+    generated_at: validated.input.generated_at,
+    content_bytes: validated.input.content.length,
+    viewer_url: undefined,
+  });
+  c.executionCtx?.waitUntil(notifyPromise);
+
   return c.json<AdminReportSaveResponse>({ ok: true, id });
 });
 
