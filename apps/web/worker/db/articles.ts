@@ -1,5 +1,50 @@
 import type { Article, FeedCategory, FeedLang } from "../types";
 
+// ---------------------------------------------------------------------------
+// 共通定数 / ヘルパー (内部使用のみ)
+// ---------------------------------------------------------------------------
+
+/** cursor ページネーションで使う SELECT カラム一覧 */
+const ARTICLES_SELECT_FIELDS = `a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+           a.author, a.published_at, a.fetched_at, a.category, a.lang`;
+
+/** articles + feeds の FROM / JOIN 句 */
+const ARTICLES_FROM_JOIN = "FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id";
+
+export type Cursor = { publishedAt: string; id: number };
+
+/**
+ * cursor 条件を conds / binds に追記する。
+ * cursor がない場合は何もしない。
+ */
+function appendCursorCondition(
+  conds: string[],
+  binds: unknown[],
+  cursor: Cursor | null | undefined,
+): void {
+  if (!cursor) return;
+  conds.push(
+    `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
+  );
+  binds.push(cursor.publishedAt, cursor.id);
+}
+
+/**
+ * DB から取得した rows を limit と比較して { articles, nextCursor } に変換する。
+ * DB には limit+1 件をリクエストしており、超えていればカーソルを生成して slice する。
+ */
+function extractWithCursor(
+  rows: Article[],
+  limit: number,
+): { articles: Article[]; nextCursor: Cursor | null } {
+  if (rows.length <= limit) {
+    return { articles: rows, nextCursor: null };
+  }
+  const articles = rows.slice(0, limit);
+  const last = articles[articles.length - 1];
+  return { articles, nextCursor: { publishedAt: last.published_at, id: last.id } };
+}
+
 export interface InsertableArticle {
   guid: string;
   feed_id: string;
@@ -62,12 +107,12 @@ export interface ListArticlesParams {
   dateFrom?: string;
   dateTo?: string;
   limit: number;
-  cursor?: { publishedAt: string; id: number } | null;
+  cursor?: Cursor | null;
 }
 
 export interface ListArticlesResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 export async function listArticles(
@@ -98,14 +143,7 @@ export async function listArticles(
     conds.push(`a.published_at <= ?${binds.length + 1}`);
     binds.push(params.dateTo);
   }
-  if (params.cursor) {
-    conds.push(
-      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
-    );
-    binds.push(params.cursor.publishedAt, params.cursor.id);
-  }
-
-  let sql: string;
+  appendCursorCondition(conds, binds, params.cursor);
   if (params.q && params.q.trim()) {
     conds.push(
       `a.id IN (SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?${binds.length + 1})`,
@@ -114,11 +152,9 @@ export async function listArticles(
   }
 
   const where = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
-  sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+  const sql = `
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY a.published_at DESC, a.id DESC
     LIMIT ?${binds.length + 1}
@@ -129,16 +165,7 @@ export async function listArticles(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
-  const rows = result.results ?? [];
-  let nextCursor: { publishedAt: string; id: number } | null = null;
-  let articles = rows;
-  if (rows.length > limit) {
-    articles = rows.slice(0, limit);
-    const last = articles[articles.length - 1];
-    nextCursor = { publishedAt: last.published_at, id: last.id };
-  }
-  return { articles, nextCursor };
+  return extractWithCursor(result.results ?? [], limit);
 }
 
 export interface GetRandomArticlesParams {
@@ -170,10 +197,8 @@ export async function getRandomArticles(
 
   const where = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
   const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY RANDOM()
     LIMIT ?${binds.length + 1}
@@ -184,17 +209,14 @@ export async function getRandomArticles(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
   return result.results ?? [];
 }
 
 export async function getArticleById(db: D1Database, id: number): Promise<Article | null> {
   const result = await db
     .prepare(
-      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-              a.author, a.published_at, a.fetched_at, a.category, a.lang
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
+      `SELECT ${ARTICLES_SELECT_FIELDS}
+       ${ARTICLES_FROM_JOIN}
        WHERE a.id = ?1
        LIMIT 1`,
     )
@@ -206,10 +228,8 @@ export async function getArticleById(db: D1Database, id: number): Promise<Articl
 export async function findArticleByGuid(db: D1Database, guid: string): Promise<Article | null> {
   const result = await db
     .prepare(
-      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-              a.author, a.published_at, a.fetched_at, a.category, a.lang
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
+      `SELECT ${ARTICLES_SELECT_FIELDS}
+       ${ARTICLES_FROM_JOIN}
        WHERE a.guid = ?1
        LIMIT 1`,
     )
@@ -234,10 +254,8 @@ export async function getRelatedArticles(
   // 同じ feed_id の記事を published_at 降順で n 件取得 (対象自身除外)
   const sameFeedRows = await db
     .prepare(
-      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-              a.author, a.published_at, a.fetched_at, a.category, a.lang
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
+      `SELECT ${ARTICLES_SELECT_FIELDS}
+       ${ARTICLES_FROM_JOIN}
        WHERE a.feed_id = ?1 AND a.guid != ?2
        ORDER BY a.published_at DESC
        LIMIT ?3`,
@@ -256,10 +274,8 @@ export async function getRelatedArticles(
   const placeholders = excludeGuids.map((_, i) => `?${i + 3}`).join(",");
   const sameCategoryRows = await db
     .prepare(
-      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-              a.author, a.published_at, a.fetched_at, a.category, a.lang
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
+      `SELECT ${ARTICLES_SELECT_FIELDS}
+       ${ARTICLES_FROM_JOIN}
        WHERE a.category = ?1 AND a.feed_id != ?2 AND a.guid NOT IN (${placeholders})
        ORDER BY a.published_at DESC
        LIMIT ?${excludeGuids.length + 3}`,
@@ -289,10 +305,8 @@ export async function getNeighbors(db: D1Database, guid: string): Promise<Neighb
   const [prevResult, nextResult] = await Promise.all([
     db
       .prepare(
-        `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-                a.author, a.published_at, a.fetched_at, a.category, a.lang
-         FROM articles a
-         LEFT JOIN feeds f ON f.id = a.feed_id
+        `SELECT ${ARTICLES_SELECT_FIELDS}
+         ${ARTICLES_FROM_JOIN}
          WHERE a.feed_id = ?1
            AND (a.published_at < ?2 OR (a.published_at = ?2 AND a.guid < ?3))
          ORDER BY a.published_at DESC, a.guid DESC
@@ -302,10 +316,8 @@ export async function getNeighbors(db: D1Database, guid: string): Promise<Neighb
       .first<Article>(),
     db
       .prepare(
-        `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-                a.author, a.published_at, a.fetched_at, a.category, a.lang
-         FROM articles a
-         LEFT JOIN feeds f ON f.id = a.feed_id
+        `SELECT ${ARTICLES_SELECT_FIELDS}
+         ${ARTICLES_FROM_JOIN}
          WHERE a.feed_id = ?1
            AND (a.published_at > ?2 OR (a.published_at = ?2 AND a.guid > ?3))
          ORDER BY a.published_at ASC, a.guid ASC
@@ -492,10 +504,8 @@ export async function getArticlesByMonth(
 
   const where = `WHERE ${conds.join(" AND ")}`;
   const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY a.published_at DESC, a.id DESC
     LIMIT ?${binds.length + 1}
@@ -506,7 +516,6 @@ export async function getArticlesByMonth(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
   return result.results ?? [];
 }
 
@@ -549,7 +558,7 @@ export async function countArticlesByMonth(
 
 export interface GetArticlesByFeedResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** feed_id で記事を published_at DESC で取得。cursor は listArticles / getArticlesByAuthor と同形式 */
@@ -557,24 +566,17 @@ export async function getArticlesByFeed(
   db: D1Database,
   feedId: string,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByFeedResult> {
   const conds: string[] = [`a.feed_id = ?1`];
   const binds: unknown[] = [feedId];
 
-  if (cursor) {
-    conds.push(
-      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
-    );
-    binds.push(cursor.publishedAt, cursor.id);
-  }
+  appendCursorCondition(conds, binds, cursor);
 
   const where = `WHERE ${conds.join(" AND ")}`;
   const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY a.published_at DESC, a.id DESC
     LIMIT ?${binds.length + 1}
@@ -585,21 +587,12 @@ export async function getArticlesByFeed(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
-  const rows = result.results ?? [];
-  let nextCursor: { publishedAt: string; id: number } | null = null;
-  let articles = rows;
-  if (rows.length > limit) {
-    articles = rows.slice(0, limit);
-    const last = articles[articles.length - 1];
-    nextCursor = { publishedAt: last.published_at, id: last.id };
-  }
-  return { articles, nextCursor };
+  return extractWithCursor(result.results ?? [], limit);
 }
 
 export interface GetArticlesByAuthorResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** 著者名で記事を published_at DESC で取得。cursor は listArticles と同形式 */
@@ -607,24 +600,17 @@ export async function getArticlesByAuthor(
   db: D1Database,
   author: string,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByAuthorResult> {
   const conds: string[] = [`a.author = ?1`];
   const binds: unknown[] = [author];
 
-  if (cursor) {
-    conds.push(
-      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
-    );
-    binds.push(cursor.publishedAt, cursor.id);
-  }
+  appendCursorCondition(conds, binds, cursor);
 
   const where = `WHERE ${conds.join(" AND ")}`;
   const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY a.published_at DESC, a.id DESC
     LIMIT ?${binds.length + 1}
@@ -635,16 +621,7 @@ export async function getArticlesByAuthor(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
-  const rows = result.results ?? [];
-  let nextCursor: { publishedAt: string; id: number } | null = null;
-  let articles = rows;
-  if (rows.length > limit) {
-    articles = rows.slice(0, limit);
-    const last = articles[articles.length - 1];
-    nextCursor = { publishedAt: last.published_at, id: last.id };
-  }
-  return { articles, nextCursor };
+  return extractWithCursor(result.results ?? [], limit);
 }
 
 export interface CalendarItem {
@@ -690,7 +667,7 @@ export async function getArticlesCalendar(
 
 export interface GetArticlesByCategoryResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** category で記事を published_at DESC で取得。cursor は getArticlesByFeed / getArticlesByAuthor と同形式 */
@@ -698,24 +675,17 @@ export async function getArticlesByCategory(
   db: D1Database,
   category: FeedCategory,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByCategoryResult> {
   const conds: string[] = [`a.category = ?1`];
   const binds: unknown[] = [category];
 
-  if (cursor) {
-    conds.push(
-      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
-    );
-    binds.push(cursor.publishedAt, cursor.id);
-  }
+  appendCursorCondition(conds, binds, cursor);
 
   const where = `WHERE ${conds.join(" AND ")}`;
   const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY a.published_at DESC, a.id DESC
     LIMIT ?${binds.length + 1}
@@ -726,21 +696,12 @@ export async function getArticlesByCategory(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
-  const rows = result.results ?? [];
-  let nextCursor: { publishedAt: string; id: number } | null = null;
-  let articles = rows;
-  if (rows.length > limit) {
-    articles = rows.slice(0, limit);
-    const last = articles[articles.length - 1];
-    nextCursor = { publishedAt: last.published_at, id: last.id };
-  }
-  return { articles, nextCursor };
+  return extractWithCursor(result.results ?? [], limit);
 }
 
 export interface GetArticlesByDayResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /** 指定日 (UTC 00:00:00 〜 翌日 00:00:00) の記事を published_at DESC で取得。cursor は既存と同形式 */
@@ -749,24 +710,17 @@ export async function getArticlesByDay(
   startIso: string,
   endIso: string,
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<GetArticlesByDayResult> {
   const conds: string[] = [`a.published_at >= ?1`, `a.published_at < ?2`];
   const binds: unknown[] = [startIso, endIso];
 
-  if (cursor) {
-    conds.push(
-      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
-    );
-    binds.push(cursor.publishedAt, cursor.id);
-  }
+  appendCursorCondition(conds, binds, cursor);
 
   const where = `WHERE ${conds.join(" AND ")}`;
   const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY a.published_at DESC, a.id DESC
     LIMIT ?${binds.length + 1}
@@ -777,16 +731,7 @@ export async function getArticlesByDay(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
-  const rows = result.results ?? [];
-  let nextCursor: { publishedAt: string; id: number } | null = null;
-  let articles = rows;
-  if (rows.length > limit) {
-    articles = rows.slice(0, limit);
-    const last = articles[articles.length - 1];
-    nextCursor = { publishedAt: last.published_at, id: last.id };
-  }
-  return { articles, nextCursor };
+  return extractWithCursor(result.results ?? [], limit);
 }
 
 /** 指定日 (UTC) の総記事数を返す */
@@ -804,7 +749,7 @@ export async function countArticlesByDay(
 
 export interface SearchArticlesResult {
   articles: Article[];
-  nextCursor: { publishedAt: string; id: number } | null;
+  nextCursor: Cursor | null;
 }
 
 /**
@@ -816,7 +761,7 @@ export async function searchArticles(
   db: D1Database,
   tokens: string[],
   limit: number,
-  cursor: { publishedAt: string; id: number } | null,
+  cursor: Cursor | null,
 ): Promise<SearchArticlesResult> {
   const conds: string[] = [];
   const binds: unknown[] = [];
@@ -830,19 +775,12 @@ export async function searchArticles(
     binds.push(`%${escaped}%`);
   }
 
-  if (cursor) {
-    conds.push(
-      `(a.published_at < ?${binds.length + 1} OR (a.published_at = ?${binds.length + 1} AND a.id < ?${binds.length + 2}))`,
-    );
-    binds.push(cursor.publishedAt, cursor.id);
-  }
+  appendCursorCondition(conds, binds, cursor);
 
   const where = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
   const sql = `
-    SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-           a.author, a.published_at, a.fetched_at, a.category, a.lang
-    FROM articles a
-    LEFT JOIN feeds f ON f.id = a.feed_id
+    SELECT ${ARTICLES_SELECT_FIELDS}
+    ${ARTICLES_FROM_JOIN}
     ${where}
     ORDER BY a.published_at DESC, a.id DESC
     LIMIT ?${binds.length + 1}
@@ -853,16 +791,7 @@ export async function searchArticles(
     .prepare(sql)
     .bind(...binds)
     .all<Article>();
-
-  const rows = result.results ?? [];
-  let nextCursor: { publishedAt: string; id: number } | null = null;
-  let articles = rows;
-  if (rows.length > limit) {
-    articles = rows.slice(0, limit);
-    const last = articles[articles.length - 1];
-    nextCursor = { publishedAt: last.published_at, id: last.id };
-  }
-  return { articles, nextCursor };
+  return extractWithCursor(result.results ?? [], limit);
 }
 
 function escapeFtsQuery(input: string): string {
