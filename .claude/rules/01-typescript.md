@@ -42,6 +42,26 @@ type CollectResult =
 - 早期 return を優先しネストを浅く保つ
 - 1 ファイルに複数 export しても良いが、責務が違うものは分ける (例: `articles-query.ts` と `articles-write.ts`)
 
+## ヘルパーの配置 (utils/ の濫用禁止)
+
+ヘルパー関数を **反射的に `utils/` に置かない**。`utils/` は「**実際に複数ファイルから import されている、責務が独立した関数**」のための置き場であって、「いつか共通化されるかも」のバッファではない。
+
+| 状況                               | 置く場所                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| 1 ファイルでしか使わない           | **そのファイル内** (export せずローカル関数 / 同ファイルの top-level 関数)           |
+| 1 ディレクトリ内の 2-3 ファイル    | そのディレクトリ内に `helpers.ts` や `<domain>.ts` を作る (例: `collector/parse.ts`) |
+| 2 つ以上の独立ドメインから使われる | `worker/utils/<name>.ts` または `client/utils/<name>.ts`                             |
+| 型だけの定義                       | 単一ファイルなら使う場所、複数なら `worker/types.ts` / `client/types/api.ts` に集約  |
+
+判断ルール:
+
+- **新規 helper を `utils/` に置きたくなったら、まず "import 元が現在 2 ファイル以上あるか" を確認**。1 つしかないなら呼び出し側に inline する
+- **dead code は速やかに削除**。「将来使うかも」の helper を置かない (YAGNI)。型エイリアス (`NonEmptyArray<T>` 等) も使われていないなら削除
+- **既存の `utils/` を増やすな**。ファイル名が抽象的 (`utils.ts`, `helpers.ts`) になりがちで責務が膨らむ。代わりに具体的なドメイン名 (`xml.ts`, `etag.ts`) で切る
+- **テストヘルパーも同じ**。`tests/fixtures/` は seed データ専用。テストロジックの共通化は `tests/<area>/_helpers.ts` のような具体名で
+
+例: `worker/api/articles.ts` の list endpoint で limit/cursor を parse する `parseListQuery(c)` は **articles.ts 内のローカル関数で OK**。他の API ファイルから使うようになって初めて `worker/api/_helpers.ts` などに昇格させる。
+
 ## コメント
 
 - 「**なぜ**」を書く。「何を」はコードで読めるので書かない

@@ -82,6 +82,24 @@ CI では `vp check` (lint+format+typecheck) → `pnpm build` → `pnpm test` �
 
 - **新機能 / バグ修正は基本テストを追加してから PR を出す**。テスト追加が困難なケース (UI のごく些細な視覚変更等) は PR description にその旨を明記
 - **assertion は具体的に**。`expect(result).toBeTruthy()` でなく `expect(result).toEqual({ status: "ok", saved: 3 })`
+- **複数の独立した観点を検証する場合は soft assertion (`expect.soft(...)`) を使う**。1 つ目の失敗で fail-fast せず、すべての観点の失敗を 1 回の実行で集約できる:
+
+  ```ts
+  it("GET /api/articles returns paginated list", async () => {
+    const res = await SELF.fetch("https://x.test/api/articles?limit=2");
+    const body = await res.json<ArticlesResponse>();
+
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age");
+    expect.soft(body.articles).toHaveLength(2);
+    expect.soft(body.next_cursor).toBeTypeOf("string");
+  });
+  ```
+
+  - 「同じ対象の **独立した側面** (status / header / body の各キー)」を 1 テストでまとめて見る場合に有効
+  - 一方、後続の assert が前の assert の前提に依存する (例: `body.articles[0]` を見るには `articles.length > 0` 必須) ケースは通常の `expect` を使い fail-fast させる
+  - **assert を 5 件以上書くなら 1 テストとして肥大化していないか見直す**。観点が独立しすぎているなら `it` を分ける方が良い
+
 - **テストの独立性**: 1 テストが他のテストに依存しない。順序を変えても通ること
 - **flaky なテストは即修正**。retry でごまかさない (Playwright の `retries: 2` は CI 限定の保険)
 - **import 規約**:
