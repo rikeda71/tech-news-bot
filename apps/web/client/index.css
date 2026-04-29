@@ -235,65 +235,75 @@
 
 /* ============================================================
    リセット / ベーススタイル
+   @layer base でラップすることで Tailwind utilities より低い優先度に置く。
+   `:root` / `[data-theme="dark"]` は CSS variable 定義のため layer 外に残す。
    ============================================================ */
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-  background: var(--bg-base);
-  color: var(--fg-primary);
-}
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    background: var(--bg-base);
+    color: var(--fg-primary);
+  }
 
-/* スムーズなテーマ切替 */
-html {
-  transition:
-    background-color var(--transition-base),
-    color var(--transition-base);
-}
+  /* スムーズなテーマ切替 */
+  html {
+    transition:
+      background-color var(--transition-base),
+      color var(--transition-base);
+  }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
 
-a:hover {
-  text-decoration: underline;
-}
+  a:hover {
+    text-decoration: underline;
+  }
 
-a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
-}
+  a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 
-mark {
-  background: var(--mark-bg);
-  color: inherit;
-  padding: 0 2px;
-  border-radius: 2px;
-}
+  mark {
+    background: var(--mark-bg);
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
 
-kbd {
-  display: inline-block;
-  padding: 1px var(--space-2);
-  background: var(--bg-overlay);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  font-size: var(--font-size-xs);
+  kbd {
+    display: inline-block;
+    padding: 1px var(--space-2);
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: var(--font-size-xs);
+  }
 }
 
 /* ============================================================
-   Toast 通知 — slide-in アニメーション (Toast.tsx の任意値で参照)
+   Toast 通知 — slide-in アニメーション
+   @theme inline で animate-toast-in utility として登録する。
+   @keyframes は @theme の外に置くのが Tailwind v4 の推奨。
    ============================================================ */
+
+@theme inline {
+  --animate-toast-in: toast-in 0.2s ease;
+}
 
 @keyframes toast-in {
   from {

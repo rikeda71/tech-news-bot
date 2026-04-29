@@ -21,7 +21,7 @@ function kindMsgClass(kind: ToastData["kind"]) {
 export function Toast({ toast, onDismiss }: Props) {
   return (
     <div
-      className={`flex items-center gap-[var(--space-3)] px-[var(--space-4)] py-[var(--space-3)] bg-[var(--bg-elevated)] border rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] text-[var(--font-size-base)] min-w-[220px] max-w-[360px] pointer-events-auto [animation:toast-in_0.2s_ease] ${kindBorderClass(toast.kind)}`}
+      className={`flex items-center gap-[var(--space-3)] px-[var(--space-4)] py-[var(--space-3)] bg-[var(--bg-elevated)] border rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] text-[var(--font-size-base)] min-w-[220px] max-w-[360px] pointer-events-auto animate-toast-in ${kindBorderClass(toast.kind)}`}
       role="status"
       aria-live="polite"
       aria-atomic="true"
