@@ -63,7 +63,7 @@ const handler: ExportedHandler<Env> = {
       return;
     }
 
-    // 3 時間ごとの cron (0 */3 * * *): RSS 収集
+    // 6 時間ごとの cron (0 */6 * * *): RSS 収集
     ctx.waitUntil(
       collectAll(env).catch((err) => {
         console.error("[scheduled] collectAll failed", err);

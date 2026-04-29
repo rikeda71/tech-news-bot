@@ -161,19 +161,20 @@ pnpm exec wrangler secret put COLLECTOR_ALERT_WEBHOOK
 | 変数名                      | デフォルト | 説明                                     |
 | --------------------------- | ---------- | ---------------------------------------- |
 | `COLLECTOR_CONCURRENCY`     | `"1"`      | 並列フィード取得数                       |
-| `COLLECTOR_TIMEOUT_MS`      | `"5000"`   | フィード取得タイムアウト (ms)            |
+| `COLLECTOR_TIMEOUT_MS`      | `"10000"`  | フィード取得タイムアウト (ms)            |
 | `COLLECTOR_ALERT_THRESHOLD` | `"5"`      | アラートを発火するフィード失敗数の閾値   |
-| `ALERT_MIN_FAILURES`        | —          | アラート通知の最小失敗数                 |
-| `ALERT_FEED_STREAK`         | —          | 連続失敗でアラートを発火するストリーク数 |
+| `ALERT_MIN_FAILURES`        | `"3"`      | アラート通知の最小失敗数                 |
+| `ALERT_FEED_STREAK`         | `"5"`      | 連続失敗でアラートを発火するストリーク数 |
 
 **Worker の Secrets (`wrangler secret put` で登録)**
 
-| Secret 名           | 必須 | 説明                                                                                |
-| ------------------- | ---- | ----------------------------------------------------------------------------------- |
-| `ADMIN_TOKEN`       | 任意 | `/api/admin/*` の Bearer 認証トークン                                               |
-| `ADMIN_TOKEN_NEXT`  | 任意 | ローテーション中の次世代トークン (詳細は `docs/operations/admin-token-rotation.md`) |
-| `ALERT_WEBHOOK_URL` | 任意 | フィード収集失敗アラート用の Webhook URL                                            |
-| `SLACK_WEBHOOK_URL` | 任意 | 日次ダイジェスト通知用の Slack Incoming Webhook URL                                 |
+| Secret 名                 | 必須 | 説明                                                                                   |
+| ------------------------- | ---- | -------------------------------------------------------------------------------------- |
+| `ADMIN_TOKEN`             | 任意 | `/api/admin/*` の Bearer 認証トークン                                                  |
+| `ADMIN_TOKEN_NEXT`        | 任意 | ローテーション中の次世代トークン (詳細は `docs/operations/admin-token-rotation.md`)    |
+| `ALERT_WEBHOOK_URL`       | 任意 | フィード収集失敗アラート用の Webhook URL (高機能アラート)                              |
+| `COLLECTOR_ALERT_WEBHOOK` | 任意 | シンプルな閾値アラート用の Webhook URL (`wrangler secret put COLLECTOR_ALERT_WEBHOOK`) |
+| `SLACK_WEBHOOK_URL`       | 任意 | 日次ダイジェスト通知用の Slack Incoming Webhook URL                                    |
 
 ### GitHub Actions による自動デプロイ
 
