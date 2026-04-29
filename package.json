@@ -20,7 +20,8 @@
     "check:fix": "vp check --fix",
     "cf-typegen": "pnpm --filter @tnb/web cf-typegen",
     "migrate:local": "pnpm --filter @tnb/web migrate:local",
-    "migrate:prod": "pnpm --filter @tnb/web migrate:prod"
+    "migrate:prod": "pnpm --filter @tnb/web migrate:prod",
+    "e2e": "pnpm --filter @tnb/web e2e"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

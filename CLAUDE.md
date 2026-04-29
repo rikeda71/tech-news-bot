@@ -58,6 +58,7 @@ PoC 規模 (Worker 1 個) なので `packages/` は廃止し、すべての work
 | D1 マイグレーション (local) | —                                  | `pnpm migrate:local` |
 | D1 マイグレーション (prod)  | —                                  | `pnpm migrate:prod`  |
 | デプロイ                    | —                                  | `pnpm deploy`        |
+| e2e テスト (Playwright)     | —                                  | `pnpm e2e`           |
 
 `vp` インストール: `curl -fsSL https://vite.plus | bash`
 
