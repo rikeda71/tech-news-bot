@@ -30,7 +30,7 @@ export const SearchInput = forwardRef<HTMLInputElement, Props>(function SearchIn
     <input
       ref={ref}
       type="search"
-      className="search-input"
+      className="w-full px-[var(--space-3)] py-[var(--space-2)] bg-[var(--bg-overlay)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[var(--fg-primary)] text-[var(--font-size-base)] font-[inherit] transition-[border-color] duration-100 placeholder:text-[var(--fg-muted)] focus:outline-none focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]"
       placeholder="記事を検索 (タイトル / 概要)"
       value={local}
       onChange={(e) => setLocal(e.target.value)}
