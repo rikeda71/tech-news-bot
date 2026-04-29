@@ -105,7 +105,8 @@ export interface FeedHealthRunDbRow {
   last_error_at: string | null;
   last_error_message: string | null;
   avg_duration_ms: number | null;
-  articles_inserted_total: number;
+  /** SUM は対象行が 0 件の場合 NULL を返すため nullable */
+  articles_inserted_total: number | null;
 }
 
 /** getFeedsDiagnostics クエリ結果 */
@@ -142,4 +143,18 @@ export interface FeedHealthFeedsDbRow {
   last_failure_at: string | null;
   consecutive_failures: number;
   articles_last_7d: number;
+}
+
+/** getHealthSummary — articles 集計クエリ結果 */
+export interface HealthArticleStatsDbRow {
+  articles_total: number;
+  latest_published_at: string | null;
+  latest_fetched_at: string | null;
+}
+
+/** getHealthSummary — feeds 集計クエリ結果 */
+export interface HealthFeedStatsDbRow {
+  feeds_total: number;
+  /** SUM(CASE WHEN enabled = 1 ...) は行が 0 件の場合 NULL を返す */
+  feeds_enabled: number | null;
 }

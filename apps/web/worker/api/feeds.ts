@@ -124,7 +124,7 @@ app.get("/:id/health", async (c) => {
     last_run_status: lastRunStatus,
     last_error: lastError,
     avg_duration_ms: health.avg_duration_ms !== null ? Math.round(health.avg_duration_ms) : null,
-    articles_inserted_total: health.articles_inserted_total,
+    articles_inserted_total: health.articles_inserted_total ?? 0,
   });
 });
 
