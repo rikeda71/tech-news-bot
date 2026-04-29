@@ -19,7 +19,6 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       # devDependencies を除外して本番依存のみ監査。
-      # 脆弱性があっても merge を止めない (warning として記録するだけ)。
+      # high 以上の severity で CI を blocking する (moderate 以下は false positive が多いため除外)。
       - name: pnpm audit (prod only)
-        run: pnpm audit --prod
-        continue-on-error: true
+        run: pnpm audit --audit-level=high --prod

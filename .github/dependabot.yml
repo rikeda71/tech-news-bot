@@ -1,10 +1,10 @@
 version: 2
 updates:
-  # pnpm workspace 全体の依存を月次で自動 PR
+  # pnpm workspace 全体の依存を週次で自動 PR (security fix の遅延を最大 1 週間に抑える)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
     ignore:
       # Node.js LTS 24 を当面利用するため、@types/node の major bump は対象外にする
       - dependency-name: "@types/node"
@@ -29,8 +29,8 @@ updates:
           - "@cloudflare/*"
           - "wrangler"
 
-  # GitHub Actions のバージョンを月次で自動 PR
+  # GitHub Actions のバージョンを週次で自動 PR
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
