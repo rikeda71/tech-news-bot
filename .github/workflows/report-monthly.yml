@@ -1,0 +1,104 @@
+name: Report Monthly
+
+# 毎月 2 日 JST 07:00 (= UTC 1 日 22:00) に tech-news-weekly skill を since=month で起動し、
+# 過去 30 日分のレポートを生成して D1 reports テーブルに保存する。
+# GitHub Actions cron は L (月末) 非対応なので "翌月 2 日 07:00 JST に直近 30 日" で
+# 暦月とほぼ等価のレポートを得る。詳細は docs/reports-pipeline.md 参照。
+on:
+  schedule:
+    - cron: "0 22 1 * *" # UTC 1 日 22:00 = JST 2 日 07:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  generate-and-save:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: report-monthly
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run tech-news-weekly skill (monthly)
+        uses: anthropics/claude-code-base-action@v1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_tools: "Bash,Read,Write,WebFetch,Skill"
+          # monthly digest 生成プロンプト。tech-news-weekly skill を since=month で起動する。
+          prompt: |
+            あなたは tech-news-bot の自動レポート生成エージェントです。
+
+            tech-news-weekly skill を以下の引数で起動してください:
+            - since=month
+            - target=remote
+            - limit=500
+            - category 指定なし (全カテゴリ)
+            - lang 指定なし
+
+            Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
+            書き出してください。
+            合わせて以下の JSON を /tmp/report-meta.json に書き出してください:
+
+            {
+              "kind": "monthly",
+              "period_start": "<実行時刻 -30 日 の ISO 8601>",
+              "period_end":   "<実行時刻の ISO 8601>",
+              "category": null,
+              "lang": null,
+              "source_skill": "tech-news-weekly",
+              "generated_at": "<実行時刻の ISO 8601>",
+              "dedup_total": <number>,
+              "by_category": <object>,
+              "by_feed": <object>
+            }
+
+            注意:
+            - recent.mjs を呼ぶときは --target=remote と --limit=500 を必ず指定してください。
+            - 最終 markdown 出力以外のアシスタント発話は最小限に抑えてください。
+            - WebFetch が失敗した記事には (summary based) を末尾に付けてください。
+
+      - name: Save report to D1 via admin API
+        env:
+          ADMIN_TOKEN: ${{ secrets.WORKER_ADMIN_TOKEN }}
+          WORKER_URL: https://tech-news-bot.rikeda71.workers.dev
+        run: |
+          set -euo pipefail
+          if [ ! -f /tmp/report.md ] || [ ! -f /tmp/report-meta.json ]; then
+            echo "Skill did not produce required output files; aborting."
+            exit 1
+          fi
+
+          jq \
+            --rawfile content /tmp/report.md \
+            '{
+              kind: .kind,
+              period_start: .period_start,
+              period_end: .period_end,
+              category: .category,
+              lang: .lang,
+              source_skill: .source_skill,
+              generated_at: .generated_at,
+              content: $content,
+              meta: { dedup_total: .dedup_total, by_category: .by_category, by_feed: .by_feed }
+            }' /tmp/report-meta.json > /tmp/report-payload.json
+
+          curl -fsS -X POST "$WORKER_URL/api/admin/reports" \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/report-payload.json

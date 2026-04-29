@@ -16,6 +16,7 @@ import type {
   ByLang30d,
 } from "../db/articles";
 import type { FeedWithStats, CategorySummary } from "../db/feeds";
+import type { ReportDetailRow, ReportRow } from "../db/reports";
 import type { RunRow, RunFeedRow } from "../db/runs";
 
 // ---- /api/articles ----
@@ -188,6 +189,19 @@ export interface AdminCronHealthResponse {
 export interface AdminFeedEnabledResponse {
   id: string;
   enabled: boolean;
+}
+
+export interface AdminReportSaveResponse {
+  ok: true;
+  id: number;
+}
+
+export interface AdminReportListResponse {
+  reports: ReportRow[];
+}
+
+export interface AdminReportDetailResponse {
+  report: ReportDetailRow;
 }
 
 export interface AdminCollectorRunResponse {
