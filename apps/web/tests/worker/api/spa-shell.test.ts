@@ -113,7 +113,9 @@ describe("SPA shell rewrite: GET /author/:author", () => {
 
     expect.soft(extractMeta(html, "title")).toContain("Author A");
     expect.soft(extractMeta(html, '[property="og:title"]')).toContain("Author A");
-    expect.soft(extractMeta(html, 'link[rel="canonical"]')).toContain("/author/");
+    expect
+      .soft(extractMeta(html, 'link[rel="canonical"]'))
+      .toBe("https://example.com/author/Author%20A");
   });
 });
 
@@ -192,6 +194,37 @@ describe("SPA shell rewrite: article with null summary", () => {
     const html = await res.text();
     // description は DEFAULT_DESCRIPTION にフォールバック
     const desc = extractMeta(html, '[name="description"]');
-    expect(desc).toBeTruthy();
+    expect(desc).toBe("海外 big tech / AI / 国内企業の tech blog 記事を集約");
+  });
+});
+
+describe("SPA shell rewrite: duplicate meta tag regression", () => {
+  it("does not duplicate og:title when index.html already has one", async () => {
+    const row = await env.DB.prepare("SELECT id FROM articles WHERE guid = ?1")
+      .bind("g-bt-1")
+      .first<{ id: number }>();
+    const id = row?.id;
+
+    const res = await SELF.fetch(`https://example.com/articles/${id}`);
+    expect(res.status).toBe(200);
+
+    const html = await res.text();
+    // head.onEndTag を使うことで、index.html 既存の og:title を element() で書き換え済みの場合に
+    // onEndTag 内では ogTitleDone=true となり、重複挿入されないことを検証する
+    const matches = html.match(/<meta[^>]+property="og:title"/gi) ?? [];
+    expect(matches).toHaveLength(1);
+  });
+
+  it("does not duplicate og:description when index.html already has one", async () => {
+    const row = await env.DB.prepare("SELECT id FROM articles WHERE guid = ?1")
+      .bind("g-bt-1")
+      .first<{ id: number }>();
+    const id = row?.id;
+
+    const res = await SELF.fetch(`https://example.com/articles/${id}`);
+    const html = await res.text();
+
+    const matches = html.match(/<meta[^>]+property="og:description"/gi) ?? [];
+    expect(matches).toHaveLength(1);
   });
 });

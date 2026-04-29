@@ -90,7 +90,6 @@ interface PageMeta {
  */
 function applyMetaRewriter(response: Response, meta: PageMeta): Response {
   // 書き換え済みフラグ (クロージャで複数ハンドラ間で共有)
-  let titleDone = false;
   let canonicalDone = false;
   let ogTitleDone = false;
   let ogDescDone = false;
@@ -103,13 +102,8 @@ function applyMetaRewriter(response: Response, meta: PageMeta): Response {
 
   return new HTMLRewriter()
     .on("title", {
-      text(chunk) {
-        if (!titleDone && chunk.lastInTextNode) {
-          chunk.replace(escapeHtml(meta.title), { html: true });
-          titleDone = true;
-        } else if (!titleDone) {
-          chunk.remove();
-        }
+      element(el) {
+        el.setInnerContent(escapeHtml(meta.title), { html: true });
       },
     })
     .on("meta", {
@@ -156,44 +150,49 @@ function applyMetaRewriter(response: Response, meta: PageMeta): Response {
     })
     .on("head", {
       element(el) {
-        // </head> 直前に不足しているタグを追加する
-        const missing: string[] = [];
+        // </head> の直前 (= 子要素がすべて処理済みの時点) に不足しているタグを追加する。
+        // element() コールバックは <head> 開始タグ検出時に呼ばれるため、その時点では
+        // 子の <meta> ハンドラがまだ実行されておらず *Done フラグが立っていない。
+        // onEndTag() を使うことでチャイルドハンドラ完了後に評価できる。
+        el.onEndTag((endTag) => {
+          const missing: string[] = [];
 
-        if (!canonicalDone) {
-          missing.push(`<link rel="canonical" href="${escapeHtml(meta.canonical)}" />`);
-        }
-        if (!ogTitleDone) {
-          missing.push(`<meta property="og:title" content="${escapeHtml(meta.title)}" />`);
-        }
-        if (!ogDescDone) {
-          missing.push(
-            `<meta property="og:description" content="${escapeHtml(meta.description)}" />`,
-          );
-        }
-        if (!ogTypeDone) {
-          missing.push(`<meta property="og:type" content="${meta.ogType}" />`);
-        }
-        if (!ogUrlDone) {
-          missing.push(`<meta property="og:url" content="${escapeHtml(meta.canonical)}" />`);
-        }
-        if (!ogSiteNameDone) {
-          missing.push(`<meta property="og:site_name" content="${escapeHtml(SITE_NAME)}" />`);
-        }
-        if (!twitterCardDone) {
-          missing.push(`<meta name="twitter:card" content="summary" />`);
-        }
-        if (!twitterTitleDone) {
-          missing.push(`<meta name="twitter:title" content="${escapeHtml(meta.title)}" />`);
-        }
-        if (!twitterDescDone) {
-          missing.push(
-            `<meta name="twitter:description" content="${escapeHtml(meta.description)}" />`,
-          );
-        }
+          if (!canonicalDone) {
+            missing.push(`<link rel="canonical" href="${escapeHtml(meta.canonical)}" />`);
+          }
+          if (!ogTitleDone) {
+            missing.push(`<meta property="og:title" content="${escapeHtml(meta.title)}" />`);
+          }
+          if (!ogDescDone) {
+            missing.push(
+              `<meta property="og:description" content="${escapeHtml(meta.description)}" />`,
+            );
+          }
+          if (!ogTypeDone) {
+            missing.push(`<meta property="og:type" content="${meta.ogType}" />`);
+          }
+          if (!ogUrlDone) {
+            missing.push(`<meta property="og:url" content="${escapeHtml(meta.canonical)}" />`);
+          }
+          if (!ogSiteNameDone) {
+            missing.push(`<meta property="og:site_name" content="${escapeHtml(SITE_NAME)}" />`);
+          }
+          if (!twitterCardDone) {
+            missing.push(`<meta name="twitter:card" content="summary" />`);
+          }
+          if (!twitterTitleDone) {
+            missing.push(`<meta name="twitter:title" content="${escapeHtml(meta.title)}" />`);
+          }
+          if (!twitterDescDone) {
+            missing.push(
+              `<meta name="twitter:description" content="${escapeHtml(meta.description)}" />`,
+            );
+          }
 
-        if (missing.length > 0) {
-          el.prepend(missing.join("\n    "), { html: true });
-        }
+          if (missing.length > 0) {
+            endTag.before(`\n    ${missing.join("\n    ")}\n  `, { html: true });
+          }
+        });
       },
     })
     .transform(response);
