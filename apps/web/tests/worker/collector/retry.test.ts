@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { fetchFeed, isRetryableError } from "../../../worker/collector/index";
+import { classifyError, fetchFeed, isRetryableError } from "../../../worker/collector/index";
 
 // fetchFeedOnce が内部で setTimeout を使うので fake timers で制御する
 // vi.useFakeTimers は cloudflare worker pool 環境でも setTimeout を置き換える
@@ -46,6 +46,51 @@ describe("isRetryableError", () => {
     expect(isRetryableError("string error")).toBe(false);
     expect(isRetryableError(null)).toBe(false);
     expect(isRetryableError(42)).toBe(false);
+  });
+});
+
+describe("classifyError", () => {
+  it("classifies AbortError as timeout", () => {
+    const err = new DOMException("timeout", "AbortError");
+    expect(classifyError(err)).toBe("timeout");
+  });
+
+  it("classifies TypeError as network", () => {
+    expect(classifyError(new TypeError("Failed to fetch"))).toBe("network");
+  });
+
+  it("classifies HTTP 503 as http_server", () => {
+    expect(classifyError(new Error("HTTP 503 Service Unavailable"))).toBe("http_server");
+  });
+
+  it("classifies HTTP 500 as http_server", () => {
+    expect(classifyError(new Error("HTTP 500 Internal Server Error"))).toBe("http_server");
+  });
+
+  it("classifies HTTP 429 as http_server", () => {
+    expect(classifyError(new Error("HTTP 429 Too Many Requests"))).toBe("http_server");
+  });
+
+  it("classifies HTTP 404 as http_client", () => {
+    expect(classifyError(new Error("HTTP 404 Not Found"))).toBe("http_client");
+  });
+
+  it("classifies HTTP 403 as http_client", () => {
+    expect(classifyError(new Error("HTTP 403 Forbidden"))).toBe("http_client");
+  });
+
+  it("classifies HTTP 400 as http_client", () => {
+    expect(classifyError(new Error("HTTP 400 Bad Request"))).toBe("http_client");
+  });
+
+  it("classifies generic Error as unknown", () => {
+    expect(classifyError(new Error("Feed body too large: 9999 bytes"))).toBe("unknown");
+  });
+
+  it("classifies non-Error values as unknown", () => {
+    expect(classifyError("string error")).toBe("unknown");
+    expect(classifyError(null)).toBe("unknown");
+    expect(classifyError(42)).toBe("unknown");
   });
 });
 

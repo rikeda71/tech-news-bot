@@ -29,6 +29,7 @@ const errResult = (id: string, error = "HTTP 503"): CollectResult => ({
   inserted: 0,
   parsed: 0,
   error,
+  errorKind: "http_server",
 });
 
 const TEST_FEEDS: FeedConfig[] = [
