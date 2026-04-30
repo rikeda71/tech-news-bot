@@ -75,16 +75,16 @@ beforeEach(async () => {
 describe("/feed.json", () => {
   it("returns JSON Feed v1.1 with all items in desc order", async () => {
     const res = await SELF.fetch("https://example.com/feed.json");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
     const body = (await res.json()) as {
       version: string;
       feed_url: string;
       items: { id: string; title: string; url: string }[];
     };
-    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/feed+json");
+    expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
     expect(body.items.map((i) => i.id)).toEqual(["g-bigtech", "g-jp", "g-ai"]);
-    expect(body.items[2].title).toBe("AI <Article> & friends");
+    expect.soft(body.items[2].title).toBe("AI <Article> & friends");
   });
 
   it("filters by category", async () => {
@@ -103,17 +103,17 @@ describe("/feed.json", () => {
 describe("/feed.xml", () => {
   it("returns RSS 2.0 with escaped XML", async () => {
     const res = await SELF.fetch("https://example.com/feed.xml");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
     const text = await res.text();
-    expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain('<rss version="2.0"');
-    expect(text).toContain("AI &lt;Article&gt; &amp; friends");
-    expect(text).toContain('<guid isPermaLink="false">g-ai</guid>');
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    expect.soft(text.startsWith("<?xml")).toBe(true);
+    expect.soft(text).toContain('<rss version="2.0"');
+    expect.soft(text).toContain("AI &lt;Article&gt; &amp; friends");
+    expect.soft(text).toContain('<guid isPermaLink="false">g-ai</guid>');
     // 並び順: 最新が先
     const ai = text.indexOf("g-ai");
     const jp = text.indexOf("g-jp");
-    expect(jp).toBeLessThan(ai);
+    expect.soft(jp).toBeLessThan(ai);
   });
 
   it("filters by category", async () => {
@@ -127,13 +127,13 @@ describe("/feed.xml", () => {
 describe("/feeds/:id.xml (per-feed RSS)", () => {
   it("returns 200 with only articles from the specified feed_id", async () => {
     const res = await SELF.fetch("https://example.com/feeds/openai-blog.xml");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
     const text = await res.text();
-    expect(text).toContain("g-ai");
-    expect(text).not.toContain("g-jp");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    expect.soft(text).toContain("g-ai");
+    expect.soft(text).not.toContain("g-jp");
     // channel.title には feeds.yaml の name が入る
-    expect(text).toContain("<title>OpenAI News</title>");
+    expect.soft(text).toContain("<title>OpenAI News</title>");
   });
 
   it("returns 404 for unknown feed_id", async () => {
@@ -145,13 +145,13 @@ describe("/feeds/:id.xml (per-feed RSS)", () => {
     const res1 = await SELF.fetch("https://example.com/feeds/openai-blog.xml");
     expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/openai-blog.xml", {
       headers: { "If-None-Match": etag },
     });
-    expect(res2.status).toBe(304);
-    expect(res2.headers.get("ETag")).toBe(etag);
+    expect.soft(res2.status).toBe(304);
+    expect.soft(res2.headers.get("ETag")).toBe(etag);
   });
 
   // enabled: false のフィードでも feeds.yaml に id が定義されていれば 200 を返すことを確認する。
@@ -193,17 +193,17 @@ describe("/feeds/:id.xml (per-feed RSS)", () => {
 describe("/feeds/:id.json (per-feed JSON Feed)", () => {
   it("returns 200 with JSON Feed v1.1 for the specified feed_id", async () => {
     const res = await SELF.fetch("https://example.com/feeds/cyberagent-developers.json");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
     const body = (await res.json()) as {
       version: string;
       title: string;
       items: { id: string }[];
     };
-    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/feed+json");
+    expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
     // title には feeds.yaml の name が入る
-    expect(body.title).toBe("CyberAgent Developers Blog");
-    expect(body.items.map((i) => i.id)).toEqual(["g-jp"]);
+    expect.soft(body.title).toBe("CyberAgent Developers Blog");
+    expect.soft(body.items.map((i) => i.id)).toEqual(["g-jp"]);
   });
 
   it("returns 404 for unknown feed_id", async () => {
@@ -215,27 +215,27 @@ describe("/feeds/:id.json (per-feed JSON Feed)", () => {
 describe("/feeds/category/:cat.json", () => {
   it("returns 200 with correct Content-Type for ai category", async () => {
     const res = await SELF.fetch("https://example.com/feeds/category/ai.json");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
     const body = (await res.json()) as {
       version: string;
       title: string;
       items: { id: string }[];
     };
-    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
-    expect(body.title).toBe("Tech News Bot — AI Labs");
-    expect(body.items.map((i) => i.id)).toEqual(["g-ai"]);
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/feed+json");
+    expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect.soft(body.title).toBe("Tech News Bot — AI Labs");
+    expect.soft(body.items.map((i) => i.id)).toEqual(["g-ai"]);
   });
 
   it("returns 200 and only jp articles for jp category", async () => {
     const res = await SELF.fetch("https://example.com/feeds/category/jp.json");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { title: string; items: { id: string }[] };
-    expect(body.title).toBe("Tech News Bot — 国内エンジニアリング");
-    expect(body.items.map((i) => i.id)).toEqual(["g-jp"]);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.title).toBe("Tech News Bot — 国内エンジニアリング");
+    expect.soft(body.items.map((i) => i.id)).toEqual(["g-jp"]);
     // 別カテゴリの記事が混入しないこと
-    expect(body.items.find((i) => i.id === "g-ai")).toBeUndefined();
-    expect(body.items.find((i) => i.id === "g-bigtech")).toBeUndefined();
+    expect.soft(body.items.find((i) => i.id === "g-ai")).toBeUndefined();
+    expect.soft(body.items.find((i) => i.id === "g-bigtech")).toBeUndefined();
   });
 
   it("returns 404 for invalid category", async () => {
@@ -246,36 +246,36 @@ describe("/feeds/category/:cat.json", () => {
   it("returns 304 on ETag round-trip", async () => {
     const first = await SELF.fetch("https://example.com/feeds/category/ai.json");
     const etag = first.headers.get("ETag");
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const second = await SELF.fetch("https://example.com/feeds/category/ai.json", {
       headers: { "If-None-Match": etag! },
     });
-    expect(second.status).toBe(304);
+    expect.soft(second.status).toBe(304);
   });
 });
 
 describe("/feeds/category/:cat.xml", () => {
   it("returns 200 with correct Content-Type for bigtech category", async () => {
     const res = await SELF.fetch("https://example.com/feeds/category/bigtech.xml");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
     const text = await res.text();
-    expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain('<rss version="2.0"');
-    expect(text).toContain("Tech News Bot — Big Tech");
-    expect(text).toContain("g-bigtech");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    expect.soft(text.startsWith("<?xml")).toBe(true);
+    expect.soft(text).toContain('<rss version="2.0"');
+    expect.soft(text).toContain("Tech News Bot — Big Tech");
+    expect.soft(text).toContain("g-bigtech");
   });
 
   it("returns 200 and only ai articles for ai category", async () => {
     const res = await SELF.fetch("https://example.com/feeds/category/ai.xml");
-    expect(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain("Tech News Bot — AI Labs");
-    expect(text).toContain("g-ai");
+    expect.soft(res.status).toBe(200);
+    expect.soft(text).toContain("Tech News Bot — AI Labs");
+    expect.soft(text).toContain("g-ai");
     // 別カテゴリの記事が混入しないこと
-    expect(text).not.toContain("g-jp");
-    expect(text).not.toContain("g-bigtech");
+    expect.soft(text).not.toContain("g-jp");
+    expect.soft(text).not.toContain("g-bigtech");
   });
 
   it("returns 404 for invalid category", async () => {
@@ -286,58 +286,58 @@ describe("/feeds/category/:cat.xml", () => {
   it("returns 304 on ETag round-trip", async () => {
     const first = await SELF.fetch("https://example.com/feeds/category/jp.xml");
     const etag = first.headers.get("ETag");
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const second = await SELF.fetch("https://example.com/feeds/category/jp.xml", {
       headers: { "If-None-Match": etag! },
     });
-    expect(second.status).toBe(304);
+    expect.soft(second.status).toBe(304);
   });
 });
 
 describe("/feed.atom", () => {
   it("returns 200 with Atom 1.0 feed and entries in desc order", async () => {
     const res = await SELF.fetch("https://example.com/feed.atom");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
     const text = await res.text();
-    expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    expect.soft(text.startsWith("<?xml")).toBe(true);
+    expect.soft(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
     // XML エスケープが正しく行われること
-    expect(text).toContain("AI &lt;Article&gt; &amp; friends");
+    expect.soft(text).toContain("AI &lt;Article&gt; &amp; friends");
     // 並び順: 最新が先 (bigtech: 2024-04-04 > jp: 2024-04-03 > ai: 2024-04-02)
     const bigtech = text.indexOf("g-bigtech");
     const jp = text.indexOf("g-jp");
     const ai = text.indexOf("g-ai");
-    expect(bigtech).toBeLessThan(jp);
-    expect(jp).toBeLessThan(ai);
+    expect.soft(bigtech).toBeLessThan(jp);
+    expect.soft(jp).toBeLessThan(ai);
     // JSON Feed の version 文字列が混入しないこと
-    expect(text).not.toContain("jsonfeed.org");
+    expect.soft(text).not.toContain("jsonfeed.org");
   });
 
   it("filters by category=ai", async () => {
     const res = await SELF.fetch("https://example.com/feed.atom?category=ai");
-    expect(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain("g-ai");
-    expect(text).not.toContain("g-jp");
-    expect(text).not.toContain("g-bigtech");
+    expect.soft(res.status).toBe(200);
+    expect.soft(text).toContain("g-ai");
+    expect.soft(text).not.toContain("g-jp");
+    expect.soft(text).not.toContain("g-bigtech");
   });
 });
 
 describe("/feeds/:id.atom (per-feed Atom)", () => {
   it("returns 200 with only articles from the specified feed_id", async () => {
     const res = await SELF.fetch("https://example.com/feeds/openai-blog.atom");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
     const text = await res.text();
-    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(text).toContain("g-ai");
-    expect(text).not.toContain("g-jp");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    expect.soft(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect.soft(text).toContain("g-ai");
+    expect.soft(text).not.toContain("g-jp");
     // title には feeds.yaml の name が入る
-    expect(text).toContain("<title>OpenAI News</title>");
+    expect.soft(text).toContain("<title>OpenAI News</title>");
     // summary が存在する場合 summary 要素が出力される
-    expect(text).toContain('<summary type="html">');
+    expect.soft(text).toContain('<summary type="html">');
   });
 
   it("returns 404 for unknown feed_id", async () => {
@@ -349,46 +349,46 @@ describe("/feeds/:id.atom (per-feed Atom)", () => {
     const res1 = await SELF.fetch("https://example.com/feeds/openai-blog.atom");
     expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/openai-blog.atom", {
       headers: { "If-None-Match": etag },
     });
-    expect(res2.status).toBe(304);
-    expect(res2.headers.get("ETag")).toBe(etag);
+    expect.soft(res2.status).toBe(304);
+    expect.soft(res2.headers.get("ETag")).toBe(etag);
   });
 
   it("omits summary element when article has no summary", async () => {
     const res = await SELF.fetch("https://example.com/feeds/cyberagent-developers.atom");
-    expect(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain("g-jp");
+    expect.soft(res.status).toBe(200);
+    expect.soft(text).toContain("g-jp");
     // summary が null の場合 summary 要素が出力されないこと
-    expect(text).not.toContain("<summary");
+    expect.soft(text).not.toContain("<summary");
   });
 });
 
 describe("/feeds/category/:cat.atom", () => {
   it("returns 200 with correct Content-Type for ai category", async () => {
     const res = await SELF.fetch("https://example.com/feeds/category/ai.atom");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
     const text = await res.text();
-    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(text).toContain("<title>Tech News Bot — AI Labs</title>");
-    expect(text).toContain("g-ai");
-    expect(text).not.toContain("g-jp");
-    expect(text).not.toContain("g-bigtech");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    expect.soft(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect.soft(text).toContain("<title>Tech News Bot — AI Labs</title>");
+    expect.soft(text).toContain("g-ai");
+    expect.soft(text).not.toContain("g-jp");
+    expect.soft(text).not.toContain("g-bigtech");
   });
 
   it("returns 200 and only jp articles for jp category", async () => {
     const res = await SELF.fetch("https://example.com/feeds/category/jp.atom");
-    expect(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain("Tech News Bot — 国内エンジニアリング");
-    expect(text).toContain("g-jp");
-    expect(text).not.toContain("g-ai");
-    expect(text).not.toContain("g-bigtech");
+    expect.soft(res.status).toBe(200);
+    expect.soft(text).toContain("Tech News Bot — 国内エンジニアリング");
+    expect.soft(text).toContain("g-jp");
+    expect.soft(text).not.toContain("g-ai");
+    expect.soft(text).not.toContain("g-bigtech");
   });
 
   it("returns 404 for invalid category", async () => {
@@ -399,27 +399,27 @@ describe("/feeds/category/:cat.atom", () => {
   it("returns 304 on ETag round-trip", async () => {
     const first = await SELF.fetch("https://example.com/feeds/category/ai.atom");
     const etag = first.headers.get("ETag");
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const second = await SELF.fetch("https://example.com/feeds/category/ai.atom", {
       headers: { "If-None-Match": etag! },
     });
-    expect(second.status).toBe(304);
+    expect.soft(second.status).toBe(304);
   });
 });
 
 describe("/feeds/author/:author.xml (author RSS)", () => {
   it("returns 200 with application/rss+xml and channel title", async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
     const text = await res.text();
-    expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain('<rss version="2.0"');
-    expect(text).toContain("<title>Sam - tech-news-bot</title>");
-    expect(text).toContain("g-ai");
-    expect(text).not.toContain("g-jp");
-    expect(text).not.toContain("g-bigtech");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    expect.soft(text.startsWith("<?xml")).toBe(true);
+    expect.soft(text).toContain('<rss version="2.0"');
+    expect.soft(text).toContain("<title>Sam - tech-news-bot</title>");
+    expect.soft(text).toContain("g-ai");
+    expect.soft(text).not.toContain("g-jp");
+    expect.soft(text).not.toContain("g-bigtech");
   });
 
   it("returns 200 with empty feed for unknown author", async () => {
@@ -461,8 +461,8 @@ describe("/feeds/author/:author.xml (author RSS)", () => {
     const res2 = await SELF.fetch("https://example.com/feeds/author/Sam.xml", {
       headers: { "If-None-Match": etag },
     });
-    expect(res2.status).toBe(304);
-    expect(res2.headers.get("ETag")).toBe(etag);
+    expect.soft(res2.status).toBe(304);
+    expect.soft(res2.headers.get("ETag")).toBe(etag);
   });
 
   it("returns articles in published_at DESC order", async () => {
@@ -517,16 +517,16 @@ describe("/feeds/author/:author.xml (author RSS)", () => {
 describe("/feeds/author/:author.json (author JSON Feed)", () => {
   it("returns 200 with application/feed+json and items array", async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/Sam.json");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
     const body = (await res.json()) as {
       version: string;
       title: string;
       items: { id: string }[];
     };
-    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
-    expect(body.title).toBe("Sam - tech-news-bot");
-    expect(body.items.map((i) => i.id)).toContain("g-ai");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/feed+json");
+    expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect.soft(body.title).toBe("Sam - tech-news-bot");
+    expect.soft(body.items.map((i) => i.id)).toContain("g-ai");
   });
 
   it("returns 200 with empty items for unknown author", async () => {
@@ -552,10 +552,10 @@ describe("/feeds/author/:author.json (author JSON Feed)", () => {
       },
     ]);
     const res = await SELF.fetch("https://example.com/feeds/author/Author%20A.json");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { title: string; items: { id: string }[] };
-    expect(body.title).toBe("Author A - tech-news-bot");
-    expect(body.items.map((i) => i.id)).toContain("g-author-a");
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.title).toBe("Author A - tech-news-bot");
+    expect.soft(body.items.map((i) => i.id)).toContain("g-author-a");
   });
 
   it("returns Cache-Control: public, max-age=600", async () => {
@@ -567,13 +567,13 @@ describe("/feeds/author/:author.json (author JSON Feed)", () => {
 describe("/feeds/author/:author.atom (author Atom)", () => {
   it("returns 200 with application/atom+xml", async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/Sam.atom");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
     const text = await res.text();
-    expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(text).toContain("<title>Sam - tech-news-bot</title>");
-    expect(text).toContain("g-ai");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    expect.soft(text.startsWith("<?xml")).toBe(true);
+    expect.soft(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect.soft(text).toContain("<title>Sam - tech-news-bot</title>");
+    expect.soft(text).toContain("g-ai");
   });
 
   it("returns 200 with empty feed for unknown author", async () => {
@@ -594,40 +594,40 @@ describe("/feeds/author/:author.atom (author Atom)", () => {
     const res1 = await SELF.fetch("https://example.com/feeds/author/Sam.atom");
     expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/author/Sam.atom", {
       headers: { "If-None-Match": etag },
     });
-    expect(res2.status).toBe(304);
+    expect.soft(res2.status).toBe(304);
   });
 });
 
 describe("/feeds/lang/:lang.xml (lang RSS)", () => {
   it("returns 200 with application/rss+xml for ja", async () => {
     const res = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
     const text = await res.text();
-    expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain('<rss version="2.0"');
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    expect.soft(text.startsWith("<?xml")).toBe(true);
+    expect.soft(text).toContain('<rss version="2.0"');
     // title に「日本語」を含む
-    expect(text).toContain("日本語");
+    expect.soft(text).toContain("日本語");
     // ja 記事のみ
-    expect(text).toContain("g-jp");
-    expect(text).not.toContain("g-ai");
-    expect(text).not.toContain("g-bigtech");
+    expect.soft(text).toContain("g-jp");
+    expect.soft(text).not.toContain("g-ai");
+    expect.soft(text).not.toContain("g-bigtech");
   });
 
   it("returns 200 with application/rss+xml for en", async () => {
     const res = await SELF.fetch("https://example.com/feeds/lang/en.xml");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
     const text = await res.text();
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/rss+xml");
     // en 記事のみ
-    expect(text).toContain("g-ai");
-    expect(text).toContain("g-bigtech");
-    expect(text).not.toContain("g-jp");
+    expect.soft(text).toContain("g-ai");
+    expect.soft(text).toContain("g-bigtech");
+    expect.soft(text).not.toContain("g-jp");
   });
 
   it("returns 404 for invalid lang (fr)", async () => {
@@ -649,13 +649,13 @@ describe("/feeds/lang/:lang.xml (lang RSS)", () => {
     const res1 = await SELF.fetch("https://example.com/feeds/lang/ja.xml");
     expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/lang/ja.xml", {
       headers: { "If-None-Match": etag },
     });
-    expect(res2.status).toBe(304);
-    expect(res2.headers.get("ETag")).toBe(etag);
+    expect.soft(res2.status).toBe(304);
+    expect.soft(res2.headers.get("ETag")).toBe(etag);
   });
 
   it("returns articles in published_at DESC order", async () => {
@@ -686,25 +686,25 @@ describe("/feeds/lang/:lang.json (lang JSON Feed)", () => {
   it("returns 200 with application/feed+json for ja with correct item count", async () => {
     // beforeEach: ja=1 (g-jp), en=2 (g-ai, g-bigtech)
     const res = await SELF.fetch("https://example.com/feeds/lang/ja.json");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/feed+json");
     const body = (await res.json()) as {
       version: string;
       title: string;
       items: { id: string }[];
     };
-    expect(body.version).toBe("https://jsonfeed.org/version/1.1");
-    expect(body.items.length).toBe(1);
-    expect(body.items.map((i) => i.id)).toContain("g-jp");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/feed+json");
+    expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
+    expect.soft(body.items.length).toBe(1);
+    expect.soft(body.items.map((i) => i.id)).toContain("g-jp");
   });
 
   it("returns correct item count for en (2 articles)", async () => {
     const res = await SELF.fetch("https://example.com/feeds/lang/en.json");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { items: { id: string }[] };
-    expect(body.items.length).toBe(2);
-    expect(body.items.map((i) => i.id)).toContain("g-ai");
-    expect(body.items.map((i) => i.id)).toContain("g-bigtech");
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.items.length).toBe(2);
+    expect.soft(body.items.map((i) => i.id)).toContain("g-ai");
+    expect.soft(body.items.map((i) => i.id)).toContain("g-bigtech");
   });
 
   it("returns 404 for invalid lang", async () => {
@@ -722,22 +722,22 @@ describe("/feeds/lang/:lang.json (lang JSON Feed)", () => {
     const resEn = await SELF.fetch("https://example.com/feeds/lang/en.json");
     const etagJa = resJa.headers.get("ETag");
     const etagEn = resEn.headers.get("ETag");
-    expect(etagJa).not.toBeNull();
-    expect(etagEn).not.toBeNull();
-    expect(etagJa).not.toBe(etagEn);
+    expect.soft(etagJa).not.toBeNull();
+    expect.soft(etagEn).not.toBeNull();
+    expect.soft(etagJa).not.toBe(etagEn);
   });
 });
 
 describe("/feeds/lang/:lang.atom (lang Atom)", () => {
   it("returns 200 with application/atom+xml for ja", async () => {
     const res = await SELF.fetch("https://example.com/feeds/lang/ja.atom");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/atom+xml");
     const text = await res.text();
-    expect(text.startsWith("<?xml")).toBe(true);
-    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
-    expect(text).toContain("g-jp");
-    expect(text).not.toContain("g-ai");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/atom+xml");
+    expect.soft(text.startsWith("<?xml")).toBe(true);
+    expect.soft(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect.soft(text).toContain("g-jp");
+    expect.soft(text).not.toContain("g-ai");
   });
 
   it("returns 404 for invalid lang", async () => {
@@ -754,11 +754,11 @@ describe("/feeds/lang/:lang.atom (lang Atom)", () => {
     const res1 = await SELF.fetch("https://example.com/feeds/lang/en.atom");
     expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag")!;
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const res2 = await SELF.fetch("https://example.com/feeds/lang/en.atom", {
       headers: { "If-None-Match": etag },
     });
-    expect(res2.status).toBe(304);
+    expect.soft(res2.status).toBe(304);
   });
 });

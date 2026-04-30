@@ -102,11 +102,11 @@ beforeEach(async () => {
 describe("GET /api/stats — category_trend_30d", () => {
   it("returns exactly 30 entries", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       category_trend_30d: { date: string; ai: number; bigtech: number; jp: number; zenn: number }[];
     };
-    expect(body.category_trend_30d).toHaveLength(30);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.category_trend_30d).toHaveLength(30);
   });
 
   it("each entry has date, ai, bigtech, jp, zenn fields", async () => {
@@ -115,11 +115,11 @@ describe("GET /api/stats — category_trend_30d", () => {
       category_trend_30d: { date: string; ai: number; bigtech: number; jp: number; zenn: number }[];
     };
     const point = body.category_trend_30d[0];
-    expect(typeof point.date).toBe("string");
-    expect(typeof point.ai).toBe("number");
-    expect(typeof point.bigtech).toBe("number");
-    expect(typeof point.jp).toBe("number");
-    expect(typeof point.zenn).toBe("number");
+    expect.soft(typeof point.date).toBe("string");
+    expect.soft(typeof point.ai).toBe("number");
+    expect.soft(typeof point.bigtech).toBe("number");
+    expect.soft(typeof point.jp).toBe("number");
+    expect.soft(typeof point.zenn).toBe("number");
   });
 
   it("counts match inserted articles for days with data", async () => {
@@ -135,17 +135,17 @@ describe("GET /api/stats — category_trend_30d", () => {
     const d3str = d3.toISOString().slice(0, 10);
     const point3 = body.category_trend_30d.find((p) => p.date === d3str);
     expect(point3).toBeDefined();
-    expect(point3!.bigtech).toBe(2);
-    expect(point3!.ai).toBe(1);
-    expect(point3!.jp).toBe(0);
+    expect.soft(point3!.bigtech).toBe(2);
+    expect.soft(point3!.ai).toBe(1);
+    expect.soft(point3!.jp).toBe(0);
 
     const d1 = new Date(today);
     d1.setUTCDate(today.getUTCDate() - 1);
     const d1str = d1.toISOString().slice(0, 10);
     const point1 = body.category_trend_30d.find((p) => p.date === d1str);
     expect(point1).toBeDefined();
-    expect(point1!.jp).toBe(1);
-    expect(point1!.bigtech).toBe(0);
+    expect.soft(point1!.jp).toBe(1);
+    expect.soft(point1!.bigtech).toBe(0);
   });
 
   it("days with no articles have all counts as 0", async () => {
@@ -159,17 +159,16 @@ describe("GET /api/stats — category_trend_30d", () => {
     const todayStr = today.toISOString().slice(0, 10);
     const todayPoint = body.category_trend_30d.find((p) => p.date === todayStr);
     expect(todayPoint).toBeDefined();
-    expect(todayPoint!.ai).toBe(0);
-    expect(todayPoint!.bigtech).toBe(0);
-    expect(todayPoint!.jp).toBe(0);
-    expect(todayPoint!.zenn).toBe(0);
+    expect.soft(todayPoint!.ai).toBe(0);
+    expect.soft(todayPoint!.bigtech).toBe(0);
+    expect.soft(todayPoint!.jp).toBe(0);
+    expect.soft(todayPoint!.zenn).toBe(0);
   });
 });
 
 describe("GET /api/stats — feed_activity", () => {
   it("returns feed_activity array", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       feed_activity: {
         feed_id: string;
@@ -178,7 +177,8 @@ describe("GET /api/stats — feed_activity", () => {
         last_published_at: string | null;
       }[];
     };
-    expect(Array.isArray(body.feed_activity)).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(Array.isArray(body.feed_activity)).toBe(true);
   });
 
   it("counts articles per feed correctly", async () => {
@@ -189,9 +189,9 @@ describe("GET /api/stats — feed_activity", () => {
     const google = body.feed_activity.find((f) => f.feed_id === "google-research");
     const openai = body.feed_activity.find((f) => f.feed_id === "openai-blog");
     const cyberagent = body.feed_activity.find((f) => f.feed_id === "cyberagent-developers");
-    expect(google?.articles_30d).toBe(2);
-    expect(openai?.articles_30d).toBe(1);
-    expect(cyberagent?.articles_30d).toBe(1);
+    expect.soft(google?.articles_30d).toBe(2);
+    expect.soft(openai?.articles_30d).toBe(1);
+    expect.soft(cyberagent?.articles_30d).toBe(1);
   });
 
   it("is sorted by articles_30d descending", async () => {
@@ -250,6 +250,7 @@ describe("GET /api/stats — feed_activity", () => {
 
 describe("GET /api/stats — top_authors_30d", () => {
   it("returns top_authors_30d array sorted by count descending", async () => {
+    // TODO: 独立観点が多いため将来 it() 分割を検討
     await insertArticles(env.DB, [
       {
         guid: "author-a1",
@@ -308,19 +309,19 @@ describe("GET /api/stats — top_authors_30d", () => {
       },
     ]);
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       top_authors_30d: { author: string; count: number }[];
     };
+    expect.soft(res.status).toBe(200);
     expect(Array.isArray(body.top_authors_30d)).toBe(true);
     const authorA = body.top_authors_30d.find((a) => a.author === "Author A");
     const authorB = body.top_authors_30d.find((a) => a.author === "Author B");
-    expect(authorA?.count).toBe(3);
-    expect(authorB?.count).toBe(2);
+    expect.soft(authorA?.count).toBe(3);
+    expect.soft(authorB?.count).toBe(2);
     // 件数降順になっていること
     const counts = body.top_authors_30d.map((a) => a.count);
     for (let i = 1; i < counts.length; i++) {
-      expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
+      expect.soft(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
     }
   });
 
@@ -412,26 +413,26 @@ describe("GET /api/stats — top_authors_30d", () => {
       top_authors_30d: { author: string; count: number }[];
     };
     // Zenn の author は除外される
-    expect(body.top_authors_30d.some((a) => a.author === "Zenn Heavy Poster")).toBe(false);
+    expect.soft(body.top_authors_30d.some((a) => a.author === "Zenn Heavy Poster")).toBe(false);
     // bigtech の author は含まれる
-    expect(body.top_authors_30d.some((a) => a.author === "Bigtech Author")).toBe(true);
+    expect.soft(body.top_authors_30d.some((a) => a.author === "Bigtech Author")).toBe(true);
   });
 });
 
 describe("GET /api/stats — top_publishers_30d", () => {
   it("returns top_publishers_30d array sorted by count descending", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       top_publishers_30d: { feed_id: string; feed_name: string; count: number }[];
     };
+    expect.soft(res.status).toBe(200);
     expect(Array.isArray(body.top_publishers_30d)).toBe(true);
     // beforeEach で google-research=2, openai-blog=1, cyberagent-developers=1
     const google = body.top_publishers_30d.find((p) => p.feed_id === "google-research");
-    expect(google?.count).toBe(2);
+    expect.soft(google?.count).toBe(2);
     const counts = body.top_publishers_30d.map((p) => p.count);
     for (let i = 1; i < counts.length; i++) {
-      expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
+      expect.soft(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
     }
   });
 
@@ -481,18 +482,18 @@ describe("GET /api/stats — by_lang_30d", () => {
     // ja のみのシナリオを確認するため en 記事がない新 DB 状態が必要だが、
     // setup.ts の beforeEach がリセットするため、この test では ja=1 en=3 で検証する
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { by_lang_30d: { ja: number; en: number } };
-    expect(typeof body.by_lang_30d.ja).toBe("number");
-    expect(typeof body.by_lang_30d.en).toBe("number");
+    expect.soft(res.status).toBe(200);
+    expect.soft(typeof body.by_lang_30d.ja).toBe("number");
+    expect.soft(typeof body.by_lang_30d.en).toBe("number");
   });
 
   it("counts ja and en articles correctly", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as { by_lang_30d: { ja: number; en: number } };
     // beforeEach: en=3 (bt-1, bt-2, ai-1), ja=1 (jp-1)
-    expect(body.by_lang_30d.en).toBe(3);
-    expect(body.by_lang_30d.ja).toBe(1);
+    expect.soft(body.by_lang_30d.en).toBe(3);
+    expect.soft(body.by_lang_30d.ja).toBe(1);
   });
 
   it("articles older than 30 days are not counted in by_lang_30d", async () => {
@@ -512,8 +513,8 @@ describe("GET /api/stats — by_lang_30d", () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as { by_lang_30d: { ja: number; en: number } };
     // 31 日前の en 記事は含まれない → en は 3 のまま
-    expect(body.by_lang_30d.en).toBe(3);
-    expect(body.by_lang_30d.ja).toBe(1);
+    expect.soft(body.by_lang_30d.en).toBe(3);
+    expect.soft(body.by_lang_30d.ja).toBe(1);
   });
 
   it("returns en: 0 when no en articles in 30d window", async () => {
@@ -536,7 +537,7 @@ describe("GET /api/stats — by_lang_30d", () => {
     ]);
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as { by_lang_30d: { ja: number; en: number } };
-    expect(body.by_lang_30d.ja).toBe(2);
-    expect(body.by_lang_30d.en).toBe(3);
+    expect.soft(body.by_lang_30d.ja).toBe(2);
+    expect.soft(body.by_lang_30d.en).toBe(3);
   });
 });

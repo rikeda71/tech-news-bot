@@ -28,17 +28,17 @@ beforeEach(async () => {
 describe("getEnabledFeedIds + setFeedEnabled (D1 runtime toggle)", () => {
   it("returns all feeds when both are enabled", async () => {
     const ids = await getEnabledFeedIds(env.DB);
-    expect(ids.has("feed-a")).toBe(true);
-    expect(ids.has("feed-b")).toBe(true);
+    expect.soft(ids.has("feed-a")).toBe(true);
+    expect.soft(ids.has("feed-b")).toBe(true);
   });
 
   it("excludes a feed disabled via setFeedEnabled", async () => {
     await setFeedEnabled(env.DB, "feed-b", false);
 
     const ids = await getEnabledFeedIds(env.DB);
-    expect(ids.has("feed-a")).toBe(true);
+    expect.soft(ids.has("feed-a")).toBe(true);
     // feed-b は D1 で disabled にされたため含まれない
-    expect(ids.has("feed-b")).toBe(false);
+    expect.soft(ids.has("feed-b")).toBe(false);
   });
 
   it("re-enables a feed and it appears again in getEnabledFeedIds", async () => {

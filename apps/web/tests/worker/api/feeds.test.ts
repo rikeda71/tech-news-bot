@@ -104,7 +104,6 @@ beforeEach(async () => {
 describe("GET /api/feeds - basic", () => {
   it("returns feeds array with articles_30d and last_published_at fields", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: {
         id: string;
@@ -113,12 +112,13 @@ describe("GET /api/feeds - basic", () => {
         enabled: boolean;
       }[];
     };
+    expect.soft(res.status).toBe(200);
     expect(Array.isArray(body.feeds)).toBe(true);
     const openai = body.feeds.find((f) => f.id === "openai-blog");
     expect(openai).toBeDefined();
-    expect(openai!.articles_30d).toBe(2);
-    expect(openai!.last_published_at).not.toBeNull();
-    expect(openai!.enabled).toBe(true);
+    expect.soft(openai!.articles_30d).toBe(2);
+    expect.soft(openai!.last_published_at).not.toBeNull();
+    expect.soft(openai!.enabled).toBe(true);
   });
 
   it("articles_30d counts only articles within 30 days", async () => {
@@ -151,8 +151,8 @@ describe("GET /api/feeds - basic", () => {
     };
     const ca = body.feeds.find((f) => f.id === "cyberagent-blog");
     expect(ca).toBeDefined();
-    expect(ca!.articles_30d).toBe(0);
-    expect(ca!.last_published_at).toBeNull();
+    expect.soft(ca!.articles_30d).toBe(0);
+    expect.soft(ca!.last_published_at).toBeNull();
   });
 
   it("returns feeds sorted by id ASC", async () => {
@@ -166,11 +166,11 @@ describe("GET /api/feeds - basic", () => {
 describe("GET /api/feeds - filter by category", () => {
   it("returns only ai feeds when category=ai", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds?category=ai");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { feeds: { id: string; category: string }[] };
-    expect(body.feeds.every((f) => f.category === "ai")).toBe(true);
-    expect(body.feeds.some((f) => f.id === "openai-blog")).toBe(true);
-    expect(body.feeds.some((f) => f.id === "google-research")).toBe(false);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.feeds.every((f) => f.category === "ai")).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "openai-blog")).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "google-research")).toBe(false);
   });
 
   it("returns 400 for invalid category value", async () => {
@@ -182,10 +182,10 @@ describe("GET /api/feeds - filter by category", () => {
 describe("GET /api/feeds - filter by lang", () => {
   it("returns only ja feeds when lang=ja", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds?lang=ja");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { feeds: { id: string; lang: string }[] };
-    expect(body.feeds.every((f) => f.lang === "ja")).toBe(true);
-    expect(body.feeds.some((f) => f.id === "openai-blog")).toBe(false);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.feeds.every((f) => f.lang === "ja")).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "openai-blog")).toBe(false);
   });
 
   it("returns 400 for invalid lang value", async () => {
@@ -197,19 +197,19 @@ describe("GET /api/feeds - filter by lang", () => {
 describe("GET /api/feeds - filter by enabled", () => {
   it("returns only disabled feeds when enabled=false", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds?enabled=false");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { feeds: { id: string; enabled: boolean }[] };
-    expect(body.feeds.every((f) => !f.enabled)).toBe(true);
-    expect(body.feeds.some((f) => f.id === "zenn-ai")).toBe(true);
-    expect(body.feeds.some((f) => f.id === "openai-blog")).toBe(false);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.feeds.every((f) => !f.enabled)).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "zenn-ai")).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "openai-blog")).toBe(false);
   });
 
   it("returns only enabled feeds when enabled=true", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds?enabled=true");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { feeds: { id: string; enabled: boolean }[] };
-    expect(body.feeds.every((f) => f.enabled)).toBe(true);
-    expect(body.feeds.some((f) => f.id === "zenn-ai")).toBe(false);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.feeds.every((f) => f.enabled)).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "zenn-ai")).toBe(false);
   });
 
   it("returns 400 for invalid enabled value", async () => {
@@ -241,17 +241,17 @@ describe("GET /api/feeds/:id", () => {
 
   it("returns 404 for unknown id", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/no-such-feed");
-    expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("feed not found");
+    expect.soft(res.status).toBe(404);
+    expect.soft(body.error).toBe("feed not found");
   });
 
   it("returns 200 with feed and recent_articles structure", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
-    expect(res.status).toBe(200);
     const body = await res.json<{ feed: unknown; recent_articles: unknown[] }>();
-    expect(body.feed).toBeDefined();
-    expect(Array.isArray(body.recent_articles)).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.feed).toBeDefined();
+    expect.soft(Array.isArray(body.recent_articles)).toBe(true);
   });
 
   it("returns correct feed fields", async () => {
@@ -269,14 +269,14 @@ describe("GET /api/feeds/:id", () => {
       };
       recent_articles: unknown[];
     }>();
-    expect(body.feed.id).toBe("openai-blog");
-    expect(body.feed.name).toBe("OpenAI News");
-    expect(body.feed.category).toBe("ai");
-    expect(body.feed.lang).toBe("en");
-    expect(body.feed.enabled).toBe(true);
+    expect.soft(body.feed.id).toBe("openai-blog");
+    expect.soft(body.feed.name).toBe("OpenAI News");
+    expect.soft(body.feed.category).toBe("ai");
+    expect.soft(body.feed.lang).toBe("en");
+    expect.soft(body.feed.enabled).toBe(true);
     // openai-1 (5d), openai-2 (20d), extra 1-9 (1-9d) = 11件、openai-3 (31d) は窓外
-    expect(body.feed.articles_30d).toBe(11);
-    expect(body.feed.last_published_at).not.toBeNull();
+    expect.soft(body.feed.articles_30d).toBe(11);
+    expect.soft(body.feed.last_published_at).not.toBeNull();
   });
 
   it("returns default 10 recent_articles when recent is not specified", async () => {
@@ -297,37 +297,37 @@ describe("GET /api/feeds/:id", () => {
 
   it("returns empty recent_articles when recent=0", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog?recent=0");
-    expect(res.status).toBe(200);
     const body = await res.json<{ feed: unknown; recent_articles: Article[] }>();
-    expect(body.recent_articles).toEqual([]);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.recent_articles).toEqual([]);
   });
 
   it("returns 400 when recent=51", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog?recent=51");
-    expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toContain("recent must be an integer");
+    expect.soft(res.status).toBe(400);
+    expect.soft(body.error).toContain("recent must be an integer");
   });
 
   it("returns specified number of recent_articles when recent=3", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog?recent=3");
-    expect(res.status).toBe(200);
     const body = await res.json<{ feed: unknown; recent_articles: Article[] }>();
-    expect(body.recent_articles.length).toBe(3);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.recent_articles.length).toBe(3);
   });
 
   it("returns 0 articles_30d and null last_published_at for feed with no articles", async () => {
     // google-research には 30d 以内の記事が 1 件 (beforeEach で投入済み)
     // 新しいフィードで確認するため zenn-ai を使う
     const res = await SELF.fetch("https://example.com/api/feeds/zenn-ai");
-    expect(res.status).toBe(200);
     const body = await res.json<{
       feed: { articles_30d: number; last_published_at: string | null };
       recent_articles: Article[];
     }>();
-    expect(body.feed.articles_30d).toBe(0);
-    expect(body.feed.last_published_at).toBeNull();
-    expect(body.recent_articles).toEqual([]);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.feed.articles_30d).toBe(0);
+    expect.soft(body.feed.last_published_at).toBeNull();
+    expect.soft(body.recent_articles).toEqual([]);
   });
 
   it("sets Cache-Control: public, max-age=300", async () => {
@@ -384,16 +384,16 @@ describe("GET /api/feeds/:id/health", () => {
 
   it("returns 404 for feed not in feeds.yaml", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/no-such-feed/health");
-    expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("feed not found");
+    expect.soft(res.status).toBe(404);
+    expect.soft(body.error).toBe("feed not found");
   });
 
   it("returns 400 for invalid days param", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog/health?days=abc");
-    expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("invalid days");
+    expect.soft(res.status).toBe(400);
+    expect.soft(body.error).toBe("invalid days");
   });
 
   it("returns 400 when days exceeds 30", async () => {
@@ -422,21 +422,21 @@ describe("GET /api/feeds/:id/health", () => {
       avg_duration_ms: number | null;
       articles_inserted_total: number;
     }>();
-    expect(body.feed_id).toBe("openai-blog");
-    expect(body.window_days).toBe(7);
-    expect(body.total_runs).toBe(4);
-    expect(body.successful_runs).toBe(3);
-    expect(body.failed_runs).toBe(1);
-    expect(body.success_rate).toBeCloseTo(0.75, 2);
-    expect(body.last_run_at).not.toBeNull();
+    expect.soft(body.feed_id).toBe("openai-blog");
+    expect.soft(body.window_days).toBe(7);
+    expect.soft(body.total_runs).toBe(4);
+    expect.soft(body.successful_runs).toBe(3);
+    expect.soft(body.failed_runs).toBe(1);
+    expect.soft(body.success_rate).toBeCloseTo(0.75, 2);
+    expect.soft(body.last_run_at).not.toBeNull();
     // 最終実行は ok (1日前)
-    expect(body.last_run_status).toBe("success");
+    expect.soft(body.last_run_status).toBe("success");
     // 失敗が存在するので last_error は非 null
     expect(body.last_error).not.toBeNull();
-    expect(body.last_error!.message).toContain("timeout");
-    expect(body.avg_duration_ms).not.toBeNull();
+    expect.soft(body.last_error!.message).toContain("timeout");
+    expect.soft(body.avg_duration_ms).not.toBeNull();
     // 合計記事数: 5+3+10+0=18
-    expect(body.articles_inserted_total).toBe(18);
+    expect.soft(body.articles_inserted_total).toBe(18);
   });
 
   it("returns null last_error when no failures", async () => {
@@ -444,10 +444,10 @@ describe("GET /api/feeds/:id/health", () => {
     // 成功のみのランを別フィードに挿入して確認
     await insertRun("google-research", "ok", { daysAgoN: 1, durationMs: 150, articlesInserted: 2 });
     const res = await SELF.fetch("https://example.com/api/feeds/google-research/health");
-    expect(res.status).toBe(200);
     const body = await res.json<{ last_error: null; last_run_status: string }>();
-    expect(body.last_error).toBeNull();
-    expect(body.last_run_status).toBe("success");
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.last_error).toBeNull();
+    expect.soft(body.last_run_status).toBe("success");
   });
 
   it("returns total_runs=0 when no runs in window", async () => {
@@ -455,15 +455,15 @@ describe("GET /api/feeds/:id/health", () => {
     const res = await SELF.fetch(
       "https://example.com/api/feeds/cyberagent-developers/health?days=7",
     );
-    expect(res.status).toBe(200);
     const body = await res.json<{
       total_runs: number;
       success_rate: number | null;
       last_run_at: string | null;
     }>();
-    expect(body.total_runs).toBe(0);
-    expect(body.success_rate).toBeNull();
-    expect(body.last_run_at).toBeNull();
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.total_runs).toBe(0);
+    expect.soft(body.success_rate).toBeNull();
+    expect.soft(body.last_run_at).toBeNull();
   });
 
   it("uses default days=7 when days param is omitted", async () => {

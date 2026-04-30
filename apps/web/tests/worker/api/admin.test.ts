@@ -29,10 +29,10 @@ describe("POST /api/admin/feeds/:id/enabled", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ enabled: false }),
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string; enabled: boolean };
-    expect(body.id).toBe("test-feed");
-    expect(body.enabled).toBe(false);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.id).toBe("test-feed");
+    expect.soft(body.enabled).toBe(false);
   });
 
   it("200: toggles enabled back to true", async () => {
@@ -47,9 +47,9 @@ describe("POST /api/admin/feeds/:id/enabled", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ enabled: true }),
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string; enabled: boolean };
-    expect(body.enabled).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.enabled).toBe(true);
   });
 
   it("401: rejects unauthenticated request", async () => {
@@ -104,21 +104,21 @@ describe("POST /api/admin/collector/run", () => {
       method: "POST",
       headers: { ...AUTH_HEADER },
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       started_at: string;
       finished_at: string;
       results: { feed_id: string; status: string; new_articles: number }[];
     };
-    expect(typeof body.started_at).toBe("string");
-    expect(typeof body.finished_at).toBe("string");
-    expect(Array.isArray(body.results)).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(typeof body.started_at).toBe("string");
+    expect.soft(typeof body.finished_at).toBe("string");
+    expect.soft(Array.isArray(body.results)).toBe(true);
     // 全 enabled feed に対して results が返る (外部 fetch はテスト環境では失敗するが error として返る)
-    expect(body.results.length).toBeGreaterThan(0);
+    expect.soft(body.results.length).toBeGreaterThan(0);
     for (const r of body.results) {
-      expect(typeof r.feed_id).toBe("string");
-      expect(["ok", "error", "not_modified"]).toContain(r.status);
-      expect(typeof r.new_articles).toBe("number");
+      expect.soft(typeof r.feed_id).toBe("string");
+      expect.soft(["ok", "error", "not_modified"]).toContain(r.status);
+      expect.soft(typeof r.new_articles).toBe("number");
     }
   }, 60_000);
 
@@ -132,10 +132,10 @@ describe("POST /api/admin/collector/run", () => {
 
     // 同期実行なので応答が返った時点で collector_runs に行が存在するはず
     const runs = await listRuns(env.DB, 10);
-    expect(runs.length).toBeGreaterThan(0);
     // 最新 run は completed_at が設定されている
+    expect(runs.length).toBeGreaterThan(0);
     const latest = runs[0];
-    expect(latest.completed_at).toBeTruthy();
+    expect.soft(latest.completed_at).toBeTruthy();
   }, 60_000);
 
   it("401: 認証なし → 401", async () => {
@@ -151,14 +151,14 @@ describe("POST /api/admin/collector/run", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ feed_ids: [REAL_FEED_ID] }),
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       started_at: string;
       finished_at: string;
       results: { feed_id: string }[];
     };
+    expect.soft(res.status).toBe(200);
     expect(body.results).toHaveLength(1);
-    expect(body.results[0].feed_id).toBe(REAL_FEED_ID);
+    expect.soft(body.results[0].feed_id).toBe(REAL_FEED_ID);
   });
 
   it("400: 不明な feed_id を指定 → 400", async () => {
@@ -167,9 +167,9 @@ describe("POST /api/admin/collector/run", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ feed_ids: ["unknown-id-xyz"] }),
     });
-    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/unknown feed_ids/);
+    expect.soft(res.status).toBe(400);
+    expect.soft(body.error).toMatch(/unknown feed_ids/);
   });
 
   it("400: feed_ids が配列でない → 400", async () => {
@@ -178,9 +178,9 @@ describe("POST /api/admin/collector/run", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ feed_ids: "google-research" }),
     });
-    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("feed_ids must be an array of strings");
+    expect.soft(res.status).toBe(400);
+    expect.soft(body.error).toBe("feed_ids must be an array of strings");
   });
 });
 
@@ -206,9 +206,9 @@ describe("POST /api/admin/collect", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: "{ invalid json",
     });
-    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("invalid JSON body");
+    expect.soft(res.status).toBe(400);
+    expect.soft(body.error).toBe("invalid JSON body");
   });
 
   it("404: 存在しない feed_id → 404", async () => {
@@ -217,9 +217,9 @@ describe("POST /api/admin/collect", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ feed_id: "no-such-feed-xyz" }),
     });
-    expect(res.status).toBe(404);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/feed not found/);
+    expect.soft(res.status).toBe(404);
+    expect.soft(body.error).toMatch(/feed not found/);
   });
 
   it("200: body なし (全件) → ok=true と run_id と async=true を返す", async () => {
@@ -227,11 +227,11 @@ describe("POST /api/admin/collect", () => {
       method: "POST",
       headers: { ...AUTH_HEADER },
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; run_id: number; async: boolean };
-    expect(body.ok).toBe(true);
-    expect(typeof body.run_id).toBe("number");
-    expect(body.async).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.ok).toBe(true);
+    expect.soft(typeof body.run_id).toBe("number");
+    expect.soft(body.async).toBe(true);
 
     // waitUntil の完了 (completed_at が設定される) を待ち、collector_runs に行が作られていることを確認する。
     // 完了を待つことで次テストの beforeEach(reset) との競合を防ぐ。
@@ -256,11 +256,11 @@ describe("POST /api/admin/collect", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ feed_id: REAL_FEED_ID }),
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; run_id: number; async: boolean };
-    expect(body.ok).toBe(true);
-    expect(typeof body.run_id).toBe("number");
-    expect(body.async).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.ok).toBe(true);
+    expect.soft(typeof body.run_id).toBe("number");
+    expect.soft(body.async).toBe(true);
 
     // waitUntil が完了するまでポーリングして collector_run_feeds を確認する。
     // テスト環境では waitUntil は外部 fetch のタイムアウト後に完了する。
@@ -289,10 +289,10 @@ describe("GET /api/admin/runs", () => {
     const res = await SELF.fetch("https://example.com/api/admin/runs", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { runs: unknown[] };
-    expect(Array.isArray(body.runs)).toBe(true);
-    expect(body.runs).toHaveLength(0);
+    expect.soft(res.status).toBe(200);
+    expect.soft(Array.isArray(body.runs)).toBe(true);
+    expect.soft(body.runs).toHaveLength(0);
   });
 
   it("200: returns runs list", async () => {
@@ -302,11 +302,11 @@ describe("GET /api/admin/runs", () => {
     const res = await SELF.fetch("https://example.com/api/admin/runs", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as { runs: { id: number; feeds_ok: number }[] };
+    expect.soft(res.status).toBe(200);
     expect(body.runs).toHaveLength(1);
-    expect(body.runs[0].id).toBe(run_id);
-    expect(body.runs[0].feeds_ok).toBe(2);
+    expect.soft(body.runs[0].id).toBe(run_id);
+    expect.soft(body.runs[0].feeds_ok).toBe(2);
   });
 
   it("200: clamps limit to max 100", async () => {
@@ -339,22 +339,22 @@ describe("GET /api/admin/runs/:id", () => {
     const res = await SELF.fetch(`https://example.com/api/admin/runs/${run_id}`, {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toBe("private, max-age=30");
     const body = (await res.json()) as {
       run: { id: number; feeds_ok: number; duration_ms: number | null };
       feeds: { feed_id: string; status: string; error: string | null }[];
     };
-    expect(body.run.id).toBe(run_id);
-    expect(body.run.feeds_ok).toBe(1);
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("cache-control")).toBe("private, max-age=30");
+    expect.soft(body.run.id).toBe(run_id);
+    expect.soft(body.run.feeds_ok).toBe(1);
     // 5s = 5000ms
-    expect(body.run.duration_ms).toBe(5000);
+    expect.soft(body.run.duration_ms).toBe(5000);
     expect(body.feeds).toHaveLength(2);
     const feedA = body.feeds.find((f) => f.feed_id === "feed-a");
-    expect(feedA!.status).toBe("ok");
+    expect.soft(feedA!.status).toBe("ok");
     const feedB = body.feeds.find((f) => f.feed_id === "feed-b");
-    expect(feedB!.status).toBe("failed");
-    expect(feedB!.error).toBe("HTTP 500");
+    expect.soft(feedB!.status).toBe("failed");
+    expect.soft(feedB!.error).toBe("HTTP 500");
   });
 
   it("200: duration_ms is null when run is not yet completed", async () => {
@@ -363,23 +363,23 @@ describe("GET /api/admin/runs/:id", () => {
     const res = await SELF.fetch(`https://example.com/api/admin/runs/${run_id}`, {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       run: { id: number; duration_ms: number | null };
       feeds: unknown[];
     };
-    expect(body.run.id).toBe(run_id);
-    expect(body.run.duration_ms).toBeNull();
-    expect(body.feeds).toHaveLength(0);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.run.id).toBe(run_id);
+    expect.soft(body.run.duration_ms).toBeNull();
+    expect.soft(body.feeds).toHaveLength(0);
   });
 
   it("404: returns 'run not found' for unknown id", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/runs/99999", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(404);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("run not found");
+    expect.soft(res.status).toBe(404);
+    expect.soft(body.error).toBe("run not found");
   });
 
   it("401: rejects unauthenticated request", async () => {

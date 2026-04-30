@@ -27,9 +27,9 @@ const DISABLED_FEED: FeedConfig = {
 describe("/api/health", () => {
   it("returns 200 with ok: true", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as HealthResponse;
-    expect(body.ok).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(body.ok).toBe(true);
   });
 
   it("now is ISO 8601 format", async () => {
@@ -47,15 +47,15 @@ describe("/api/health", () => {
   it("feeds.total and feeds.enabled are 0 when db is empty", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
     const body = (await res.json()) as HealthResponse;
-    expect(body.feeds.total).toBe(0);
-    expect(body.feeds.enabled).toBe(0);
+    expect.soft(body.feeds.total).toBe(0);
+    expect.soft(body.feeds.enabled).toBe(0);
   });
 
   it("articles.total and articles.last_24h are 0 when db is empty", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
     const body = (await res.json()) as HealthResponse;
-    expect(body.articles.total).toBe(0);
-    expect(body.articles.last_24h).toBe(0);
+    expect.soft(body.articles.total).toBe(0);
+    expect.soft(body.articles.last_24h).toBe(0);
   });
 
   it("last_cron_run is null when no runs exist", async () => {
@@ -69,8 +69,8 @@ describe("/api/health", () => {
 
     const res = await SELF.fetch("https://example.com/api/health");
     const body = (await res.json()) as HealthResponse;
-    expect(body.feeds.total).toBe(2);
-    expect(body.feeds.enabled).toBe(1);
+    expect.soft(body.feeds.total).toBe(2);
+    expect.soft(body.feeds.enabled).toBe(1);
   });
 
   it("reflects articles.total and articles.last_24h with fixture data", async () => {
@@ -104,8 +104,8 @@ describe("/api/health", () => {
 
     const res = await SELF.fetch("https://example.com/api/health");
     const body = (await res.json()) as HealthResponse;
-    expect(body.articles.total).toBe(2);
-    expect(body.articles.last_24h).toBe(1);
+    expect.soft(body.articles.total).toBe(2);
+    expect.soft(body.articles.last_24h).toBe(1);
   });
 
   it("last_cron_run returns most recent completed run when 2 runs exist", async () => {
@@ -124,11 +124,11 @@ describe("/api/health", () => {
     const body = (await res.json()) as HealthResponse;
 
     expect(body.last_cron_run).not.toBeNull();
-    expect(body.last_cron_run?.completed_at).toBe(run2CompletedAt);
-    expect(body.last_cron_run?.feeds_total).toBe(41);
-    expect(body.last_cron_run?.feeds_ok).toBe(39);
-    expect(body.last_cron_run?.feeds_failed).toBe(2);
-    expect(body.last_cron_run?.articles_inserted).toBe(15);
+    expect.soft(body.last_cron_run?.completed_at).toBe(run2CompletedAt);
+    expect.soft(body.last_cron_run?.feeds_total).toBe(41);
+    expect.soft(body.last_cron_run?.feeds_ok).toBe(39);
+    expect.soft(body.last_cron_run?.feeds_failed).toBe(2);
+    expect.soft(body.last_cron_run?.articles_inserted).toBe(15);
   });
 
   it("last_cron_run is null when only incomplete runs exist", async () => {
@@ -155,11 +155,11 @@ const ZENN_TRENDING_ID = "zenn-trending";
 describe("GET /api/health/feeds", () => {
   it("returns 200 with an array", async () => {
     const res = await SELF.fetch("https://example.com/api/health/feeds");
-    expect(res.status).toBe(200);
     const body = (await res.json()) as unknown as FeedHealth[];
-    expect(Array.isArray(body)).toBe(true);
+    expect.soft(res.status).toBe(200);
+    expect.soft(Array.isArray(body)).toBe(true);
     // feeds.yaml に定義されたフィード数以上の要素が返る
-    expect(body.length).toBeGreaterThan(0);
+    expect.soft(body.length).toBeGreaterThan(0);
   });
 
   it("returns correct shape for each entry", async () => {
@@ -168,12 +168,12 @@ describe("GET /api/health/feeds", () => {
     // DB 未登録でもゼロ埋めで返る
     const found = body.find((f) => f.feed_id === GOOGLE_DEVELOPERS_ID);
     expect(found).toBeDefined();
-    expect(typeof found?.feed_name).toBe("string");
-    expect(typeof found?.enabled).toBe("boolean");
-    expect(found?.consecutive_failures).toBe(0);
-    expect(found?.articles_last_7d).toBe(0);
-    expect(found?.last_success_at).toBeNull();
-    expect(found?.last_failure_at).toBeNull();
+    expect.soft(typeof found?.feed_name).toBe("string");
+    expect.soft(typeof found?.enabled).toBe("boolean");
+    expect.soft(found?.consecutive_failures).toBe(0);
+    expect.soft(found?.articles_last_7d).toBe(0);
+    expect.soft(found?.last_success_at).toBeNull();
+    expect.soft(found?.last_failure_at).toBeNull();
   });
 
   it("reflects last_success_at after recordFetchSuccess", async () => {
@@ -193,9 +193,9 @@ describe("GET /api/health/feeds", () => {
     const res = await SELF.fetch("https://example.com/api/health/feeds");
     const body = (await res.json()) as unknown as FeedHealth[];
     const found = body.find((f) => f.feed_id === GOOGLE_DEVELOPERS_ID);
-    expect(found?.last_success_at).toBe(successAt);
-    expect(found?.last_failure_at).toBeNull();
-    expect(found?.consecutive_failures).toBe(0);
+    expect.soft(found?.last_success_at).toBe(successAt);
+    expect.soft(found?.last_failure_at).toBeNull();
+    expect.soft(found?.consecutive_failures).toBe(0);
   });
 
   it("reflects last_failure_at and consecutive_failures after recordFetchError", async () => {
@@ -215,9 +215,9 @@ describe("GET /api/health/feeds", () => {
     const res = await SELF.fetch("https://example.com/api/health/feeds");
     const body = (await res.json()) as unknown as FeedHealth[];
     const found = body.find((f) => f.feed_id === GOOGLE_DEVELOPERS_ID);
-    expect(found?.last_failure_at).toBe(failAt);
-    expect(found?.consecutive_failures).toBe(2);
-    expect(found?.last_success_at).toBeNull();
+    expect.soft(found?.last_failure_at).toBe(failAt);
+    expect.soft(found?.consecutive_failures).toBe(2);
+    expect.soft(found?.last_success_at).toBeNull();
   });
 
   it("counts only articles published within the last 7 days", async () => {

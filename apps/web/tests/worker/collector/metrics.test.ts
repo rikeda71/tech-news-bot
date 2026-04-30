@@ -98,9 +98,9 @@ describe("D1CostAccumulator", () => {
     acc.add({ rows_read: 5, rows_written: 1, duration: 2 });
 
     const stats = acc.toStats();
-    expect(stats.rowsRead).toBe(35);
-    expect(stats.rowsWritten).toBe(6);
-    expect(stats.durationTotalMs).toBe(15);
+    expect.soft(stats.rowsRead).toBe(35);
+    expect.soft(stats.rowsWritten).toBe(6);
+    expect.soft(stats.durationTotalMs).toBe(15);
   });
 
   it("treats null/undefined meta as zero", () => {
@@ -109,9 +109,9 @@ describe("D1CostAccumulator", () => {
     acc.add(undefined);
 
     const stats = acc.toStats();
-    expect(stats.rowsRead).toBe(0);
-    expect(stats.rowsWritten).toBe(0);
-    expect(stats.durationTotalMs).toBe(0);
+    expect.soft(stats.rowsRead).toBe(0);
+    expect.soft(stats.rowsWritten).toBe(0);
+    expect.soft(stats.durationTotalMs).toBe(0);
   });
 
   it("treats missing fields in meta as zero", () => {
@@ -119,9 +119,9 @@ describe("D1CostAccumulator", () => {
     acc.add({});
 
     const stats = acc.toStats();
-    expect(stats.rowsRead).toBe(0);
-    expect(stats.rowsWritten).toBe(0);
-    expect(stats.durationTotalMs).toBe(0);
+    expect.soft(stats.rowsRead).toBe(0);
+    expect.soft(stats.rowsWritten).toBe(0);
+    expect.soft(stats.durationTotalMs).toBe(0);
   });
 });
 
