@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useArticles } from "./hooks/useArticles";
 import { useBookmarks } from "./hooks/useBookmarks";
 import { useFilterHandlers } from "./hooks/useFilterHandlers";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useNavHandlers } from "./hooks/useNavHandlers";
 import { useReadState } from "./hooks/useReadState";
 import { useRecentSearches } from "./hooks/useRecentSearches";
 import { useStarredState } from "./hooks/useStarredState";
@@ -55,62 +56,6 @@ function AppInner() {
     { setFeedId, setDateFrom, setDateTo, setUnreadOnly, setStarredOnly, setUrlFilters, setView },
   );
 
-  const handleViewChange = useCallback((next: AppView) => {
-    setView(next);
-    setFeedDetailId("");
-    setAuthorName("");
-    setReportId(0);
-    const path =
-      next === "stats"
-        ? "/stats"
-        : next === "categories"
-          ? "/categories"
-          : next === "reports"
-            ? "/reports"
-            : "/";
-    if (window.location.pathname !== path) {
-      window.history.pushState(null, "", path);
-    }
-  }, []);
-
-  // popstate でブラウザ戻る/進むに追従する (useUrlState が q/category/lang/bookmarksOnly を処理、
-  // feedId/dateFrom/dateTo/unreadOnly/starredOnly はこちらで処理)
-  useEffect(() => {
-    const onPop = () => {
-      const nextView = readViewFromUrl();
-      setView(nextView);
-      if (nextView === "feed") {
-        setFeedDetailId(readFeedDetailFromPath() ?? "");
-        setAuthorName("");
-        setReportId(0);
-        return;
-      }
-      if (nextView === "author") {
-        setAuthorName(readAuthorFromPath() ?? "");
-        setFeedDetailId("");
-        setReportId(0);
-        return;
-      }
-      if (nextView === "report") {
-        setReportId(readReportIdFromPath() ?? 0);
-        setFeedDetailId("");
-        setAuthorName("");
-        return;
-      }
-      setFeedDetailId("");
-      setAuthorName("");
-      setReportId(0);
-      const next = readFromUrl();
-      setFeedId(next.feedId);
-      setDateFrom(next.dateFrom);
-      setDateTo(next.dateTo);
-      setUnreadOnly(next.unreadOnly);
-      setStarredOnly(next.starredOnly);
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
   // filters.q が URL に反映されたタイミングで検索履歴に追加する
   useEffect(() => {
     if (q !== "") {
@@ -119,45 +64,6 @@ function AppInner() {
     // recentSearches.add は安定した参照なので依存配列に含めない
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
-
-  // 記事カードの取得元クリックでフィード詳細へ drill-down する
-  const handleGoToFeedDetail = useCallback((id: string) => {
-    window.history.pushState(null, "", `/feed/${encodeURIComponent(id)}`);
-    setView("feed");
-    setFeedDetailId(id);
-  }, []);
-
-  const handleBackFromFeedDetail = useCallback(() => {
-    window.history.pushState(null, "", "/");
-    window.dispatchEvent(new PopStateEvent("popstate"));
-    setView("articles");
-    setFeedDetailId("");
-  }, []);
-
-  const handleGoToAuthorDetail = useCallback((name: string) => {
-    window.history.pushState(null, "", `/author/${encodeURIComponent(name)}`);
-    setView("author");
-    setAuthorName(name);
-  }, []);
-
-  const handleBackFromAuthorDetail = useCallback(() => {
-    window.history.pushState(null, "", "/");
-    window.dispatchEvent(new PopStateEvent("popstate"));
-    setView("articles");
-    setAuthorName("");
-  }, []);
-
-  const handleSelectReport = useCallback((id: number) => {
-    window.history.pushState(null, "", `/reports/${id}`);
-    setView("report");
-    setReportId(id);
-  }, []);
-
-  const handleBackFromReportDetail = useCallback(() => {
-    window.history.pushState(null, "", "/reports");
-    setView("reports");
-    setReportId(0);
-  }, []);
 
   const query = useMemo(
     () => ({
@@ -201,46 +107,47 @@ function AppInner() {
     return filtered;
   }, [allArticles, unreadOnly, starredOnly, bookmarkedOnly, isRead, isStarred, bookmarks]);
 
-  const handleKbNext = useCallback(() => {
-    setSelectedIndex((prev) => Math.min(prev + 1, articles.length - 1));
-  }, [articles.length]);
-
-  const handleKbPrev = useCallback(() => {
-    setSelectedIndex((prev) => (prev <= 0 ? 0 : prev - 1));
-  }, []);
-
-  const handleKbOpen = useCallback(() => {
-    if (selectedIndex < 0 || selectedIndex >= articles.length) return;
-    const article = articles[selectedIndex];
-    window.open(article.url, "_blank", "noopener,noreferrer");
-  }, [selectedIndex, articles]);
-
-  const handleKbBookmark = useCallback(() => {
-    if (selectedIndex < 0 || selectedIndex >= articles.length) return;
-    toggleBookmark(articles[selectedIndex].guid);
-  }, [selectedIndex, articles, toggleBookmark]);
-
-  const handleKbShowHelp = useCallback(() => setHelpOpen(true), []);
-
-  const handleKbClose = useCallback(() => {
-    if (helpOpen) {
-      setHelpOpen(false);
-    } else {
-      setSelectedIndex(-1);
-    }
-  }, [helpOpen]);
-
-  const handleKbTop = useCallback(() => {
-    setSelectedIndex(articles.length > 0 ? 0 : -1);
-  }, [articles.length]);
-
-  const handleKbBottom = useCallback(() => {
-    setSelectedIndex(articles.length > 0 ? articles.length - 1 : -1);
-  }, [articles.length]);
-
-  const handleSearchFocus = useCallback(() => {
-    searchRef.current?.focus();
-  }, []);
+  // popstate / nav / keyboard shortcut callbacks を hook に委譲する
+  // (useUrlState が q/category/lang/bookmarksOnly を処理、feedId/dateFrom/dateTo/unreadOnly/starredOnly はこちらで処理)
+  const {
+    handleViewChange,
+    handleGoToFeedDetail,
+    handleBackFromFeedDetail,
+    handleGoToAuthorDetail,
+    handleBackFromAuthorDetail,
+    handleSelectReport,
+    handleBackFromReportDetail,
+    handleKbNext,
+    handleKbPrev,
+    handleKbOpen,
+    handleKbBookmark,
+    handleKbShowHelp,
+    handleKbClose,
+    handleKbTop,
+    handleKbBottom,
+    handleSearchFocus,
+  } = useNavHandlers(
+    {
+      setView,
+      setFeedDetailId,
+      setAuthorName,
+      setReportId,
+      setFeedId,
+      setDateFrom,
+      setDateTo,
+      setUnreadOnly,
+      setStarredOnly,
+    },
+    {
+      articles,
+      selectedIndex,
+      helpOpen,
+      setSelectedIndex,
+      setHelpOpen,
+      toggleBookmark,
+      searchRef,
+    },
+  );
 
   useKeyboardShortcuts({
     onNext: handleKbNext,
