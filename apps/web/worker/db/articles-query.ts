@@ -182,6 +182,8 @@ export async function getRelatedArticles(
   if (!target) return null;
 
   // sameFeed と sameCategory を並列発行 (ラウンドトリップ削減)
+  // sameCategory は sameFeed の結果を待たずに発行するため LIMIT n を使う。
+  // 実際の採用上限は最終的な slice(0, n) で制御する。
   const [sameFeedRows, sameCategoryRows] = await Promise.all([
     db
       .prepare(
@@ -208,15 +210,15 @@ export async function getRelatedArticles(
   const sameFeedArticles = sameFeedRows.results ?? [];
   const remaining = n - sameFeedArticles.length;
 
-  if (remaining <= 0) return sameFeedArticles;
+  if (remaining <= 0) return sameFeedArticles.slice(0, n);
 
-  // sameFeed の guid を Set にしてアプリ側で重複除去し、必要数だけ切り出す
+  // sameFeed の guid を Set にしてアプリ側で重複除去し、結合後に n 件で打ち切る
   const sameFeedGuids = new Set(sameFeedArticles.map((a) => a.guid));
-  const sameCategoryArticles = (sameCategoryRows.results ?? [])
-    .filter((a) => !sameFeedGuids.has(a.guid))
-    .slice(0, remaining);
+  const sameCategoryFiltered = (sameCategoryRows.results ?? []).filter(
+    (a) => !sameFeedGuids.has(a.guid),
+  );
 
-  return [...sameFeedArticles, ...sameCategoryArticles];
+  return [...sameFeedArticles, ...sameCategoryFiltered].slice(0, n);
 }
 
 // ---------------------------------------------------------------------------
