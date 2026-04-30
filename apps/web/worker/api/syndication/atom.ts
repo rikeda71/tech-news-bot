@@ -1,19 +1,22 @@
-import { escapeXml } from "./shared";
+import { escapeXml, feedUpdatedAt, toIso8601 } from "./shared";
 import type { FeedMeta } from "./shared";
 
 export function renderAtomFeed(meta: FeedMeta): { contentType: string; body: string } {
-  const updated = meta.articles[0]?.published_at ?? new Date().toISOString();
+  const updated = toIso8601(feedUpdatedAt(meta.articles));
 
   const entries = meta.articles
     .map((a) => {
       const authorName = a.author ?? a.feed_name ?? "";
+      // toIso8601 で無効な日付文字列を安全な RFC 3339 値に変換する。
+      // 素通しにすると XML パーサーが壊れる可能性がある。
+      const publishedIso = toIso8601(a.published_at);
       const parts = [
         `<entry>`,
         `<title>${escapeXml(a.title)}</title>`,
         `<id>${escapeXml(a.guid)}</id>`,
         `<link href="${escapeXml(a.url)}" rel="alternate"/>`,
-        `<updated>${a.published_at}</updated>`,
-        `<published>${a.published_at}</published>`,
+        `<updated>${publishedIso}</updated>`,
+        `<published>${publishedIso}</published>`,
       ];
       if (authorName) parts.push(`<author><name>${escapeXml(authorName)}</name></author>`);
       parts.push(`<category term="${escapeXml(a.category)}"/>`);

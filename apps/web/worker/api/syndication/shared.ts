@@ -43,6 +43,27 @@ export function toRfc822(iso: string): string {
   return d.toUTCString();
 }
 
+/**
+ * ISO 8601 / RFC 3339 形式の日時文字列を返す。
+ * 入力が無効な場合は現在時刻の ISO 文字列にフォールバックする。
+ * Atom の <updated> / <published> は必ず有効な RFC 3339 値が必要なため、
+ * DB から来た published_at を素通しにすると XML パーサーが壊れる。
+ */
+export function toIso8601(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return new Date().toISOString();
+  return d.toISOString();
+}
+
+/**
+ * フィードの <updated> / <lastBuildDate> に使う基準時刻を返す。
+ * 空フィード時に毎回異なる現在時刻を使うと ETag が安定しないため、
+ * 記事が 0 件の場合は固定の epoch 値を使って ETag キャッシュを有効にする。
+ */
+export function feedUpdatedAt(articles: { published_at: string }[]): string {
+  return articles[0]?.published_at ?? "1970-01-01T00:00:00.000Z";
+}
+
 function siteOrigin(reqUrl: string): string {
   try {
     const u = new URL(reqUrl);
