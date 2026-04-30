@@ -47,9 +47,9 @@ describe("useCategories", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.categories).toHaveLength(2);
-    expect(result.current.categories?.[0].id).toBe("bigtech");
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.categories).toHaveLength(2);
+    expect.soft(result.current.categories?.[0].id).toBe("bigtech");
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("HTTP エラー時に error を返す", async () => {
@@ -67,8 +67,8 @@ describe("useCategories", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBeTruthy();
-    expect(result.current.categories).toBeNull();
+    expect.soft(result.current.error).toBeTruthy();
+    expect.soft(result.current.categories).toBeNull();
   });
 
   it("初期状態では isLoading が true", () => {
@@ -76,9 +76,9 @@ describe("useCategories", () => {
 
     const { result } = renderHook(() => useCategories());
 
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.categories).toBeNull();
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.isLoading).toBe(true);
+    expect.soft(result.current.categories).toBeNull();
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("/api/categories を fetch する", async () => {

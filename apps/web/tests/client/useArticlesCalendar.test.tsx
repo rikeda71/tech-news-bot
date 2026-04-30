@@ -30,10 +30,10 @@ describe("useArticlesCalendar", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.items).toHaveLength(2);
-    expect(result.current.items[0]?.date).toBe("2026-04-28");
-    expect(result.current.items[0]?.count).toBe(5);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.items).toHaveLength(2);
+    expect.soft(result.current.items[0]?.date).toBe("2026-04-28");
+    expect.soft(result.current.items[0]?.count).toBe(5);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("fetch エラー時に error が設定されアイテムは空", async () => {
@@ -45,8 +45,8 @@ describe("useArticlesCalendar", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toContain("500");
-    expect(result.current.items).toEqual([]);
+    expect.soft(result.current.error).toContain("500");
+    expect.soft(result.current.items).toEqual([]);
   });
 
   it("空のレスポンスの場合 items が空配列", async () => {
@@ -64,8 +64,8 @@ describe("useArticlesCalendar", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.items).toEqual([]);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.items).toEqual([]);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("days が変わると再 fetch が発火する", async () => {
@@ -102,7 +102,7 @@ describe("useArticlesCalendar", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBe("Network error");
-    expect(result.current.items).toEqual([]);
+    expect.soft(result.current.error).toBe("Network error");
+    expect.soft(result.current.items).toEqual([]);
   });
 });

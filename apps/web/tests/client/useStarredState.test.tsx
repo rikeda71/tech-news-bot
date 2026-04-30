@@ -43,15 +43,15 @@ describe("useStarredState", () => {
     act(() => {
       result.current.toggleStar(1);
     });
-    expect(result.current.isStarred(1)).toBe(false);
-    expect(result.current.isStarred(2)).toBe(true);
+    expect.soft(result.current.isStarred(1)).toBe(false);
+    expect.soft(result.current.isStarred(2)).toBe(true);
   });
 
   it("returns the same Set reference when raw is unchanged", () => {
     // raw が変わっていなければ getSnapshot が同じ参照を返すことを確認する
     localStorage.setItem("tnb-starred-articles", JSON.stringify([7, 8]));
     const { result } = renderHook(() => useStarredState());
-    expect(result.current.isStarred(7)).toBe(true);
-    expect(result.current.isStarred(99)).toBe(false);
+    expect.soft(result.current.isStarred(7)).toBe(true);
+    expect.soft(result.current.isStarred(99)).toBe(false);
   });
 });

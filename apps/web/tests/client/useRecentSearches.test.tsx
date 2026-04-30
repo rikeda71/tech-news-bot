@@ -19,8 +19,8 @@ describe("useRecentSearches", () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed: unknown = JSON.parse(stored!);
-    expect(Array.isArray(parsed)).toBe(true);
-    expect((parsed as string[]).includes("react")).toBe(true);
+    expect.soft(Array.isArray(parsed)).toBe(true);
+    expect.soft((parsed as string[]).includes("react")).toBe(true);
   });
 
   it("add: 先頭に追加される", () => {
@@ -29,8 +29,8 @@ describe("useRecentSearches", () => {
       result.current.add("typescript");
       result.current.add("react");
     });
-    expect(result.current.items[0]).toBe("react");
-    expect(result.current.items[1]).toBe("typescript");
+    expect.soft(result.current.items[0]).toBe("react");
+    expect.soft(result.current.items[1]).toBe("typescript");
   });
 
   it("add: 空文字は無視される", () => {
@@ -56,9 +56,9 @@ describe("useRecentSearches", () => {
       result.current.add("react");
       result.current.add("typescript");
     });
-    expect(result.current.items[0]).toBe("typescript");
-    expect(result.current.items.filter((v) => v === "typescript").length).toBe(1);
-    expect(result.current.items.length).toBe(2);
+    expect.soft(result.current.items[0]).toBe("typescript");
+    expect.soft(result.current.items.filter((v) => v === "typescript").length).toBe(1);
+    expect.soft(result.current.items.length).toBe(2);
   });
 
   it("add: 11 件以上で 10 件にトリムされる", () => {
@@ -68,11 +68,11 @@ describe("useRecentSearches", () => {
         result.current.add(`query-${i}`);
       }
     });
-    expect(result.current.items.length).toBe(10);
+    expect.soft(result.current.items.length).toBe(10);
     // 最後に追加した query-11 が先頭にある
-    expect(result.current.items[0]).toBe("query-11");
+    expect.soft(result.current.items[0]).toBe("query-11");
     // 最初に追加した query-1 は溢れて消える
-    expect(result.current.items.includes("query-1")).toBe(false);
+    expect.soft(result.current.items.includes("query-1")).toBe(false);
   });
 
   it("remove: 該当が消える", () => {
@@ -84,8 +84,8 @@ describe("useRecentSearches", () => {
     act(() => {
       result.current.remove("typescript");
     });
-    expect(result.current.items.includes("typescript")).toBe(false);
-    expect(result.current.items.includes("react")).toBe(true);
+    expect.soft(result.current.items.includes("typescript")).toBe(false);
+    expect.soft(result.current.items.includes("react")).toBe(true);
   });
 
   it("clear: 全消去される", () => {

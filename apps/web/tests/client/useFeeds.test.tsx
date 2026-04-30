@@ -39,9 +39,9 @@ describe("useFeeds", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.feeds).toHaveLength(2);
-    expect(result.current.feeds[0]?.id).toBe("feed-1");
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.feeds).toHaveLength(2);
+    expect.soft(result.current.feeds[0]?.id).toBe("feed-1");
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("fetch エラー時に error が設定されフィードは空", async () => {
@@ -53,8 +53,8 @@ describe("useFeeds", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toContain("500");
-    expect(result.current.feeds).toEqual([]);
+    expect.soft(result.current.error).toContain("500");
+    expect.soft(result.current.feeds).toEqual([]);
   });
 
   it("空のフィード一覧が返された場合、feeds は空配列", async () => {
@@ -66,8 +66,8 @@ describe("useFeeds", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.feeds).toEqual([]);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.feeds).toEqual([]);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("fetch 中は loading が true", async () => {
@@ -96,7 +96,7 @@ describe("useFeeds", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toBe("Network Error");
-    expect(result.current.feeds).toEqual([]);
+    expect.soft(result.current.error).toBe("Network Error");
+    expect.soft(result.current.feeds).toEqual([]);
   });
 });

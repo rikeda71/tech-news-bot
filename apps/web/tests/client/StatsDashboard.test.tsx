@@ -118,8 +118,8 @@ describe("StatsDashboard", () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
     await screen.findByText("Alice");
-    expect(screen.getByText("Bob")).toBeTruthy();
-    expect(screen.getByText("Judy")).toBeTruthy();
+    expect.soft(screen.getByText("Bob")).toBeTruthy();
+    expect.soft(screen.getByText("Judy")).toBeTruthy();
   });
 
   it("top_authors のバーに aria-label が設定される", async () => {
@@ -134,15 +134,15 @@ describe("StatsDashboard", () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
     await screen.findByText("Feed A");
-    expect(screen.getByText("Feed B")).toBeTruthy();
-    expect(screen.getByText("Feed C")).toBeTruthy();
+    expect.soft(screen.getByText("Feed B")).toBeTruthy();
+    expect.soft(screen.getByText("Feed C")).toBeTruthy();
   });
 
   it("by_lang_30d の ja と en バーが表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
     await screen.findByText("ja");
-    expect(screen.getByText("en")).toBeTruthy();
+    expect.soft(screen.getByText("en")).toBeTruthy();
   });
 
   it("by_lang バーの aria-label に件数が含まれる", async () => {
@@ -150,18 +150,18 @@ describe("StatsDashboard", () => {
     render(<StatsDashboard />);
     // ja: 500件 のバー
     const jaBar = await screen.findByRole("img", { name: /ja.*500/ });
-    expect(jaBar).toBeTruthy();
+    expect.soft(jaBar).toBeTruthy();
     const enBar = screen.getByRole("img", { name: /en.*300/ });
-    expect(enBar).toBeTruthy();
+    expect.soft(enBar).toBeTruthy();
   });
 
   it("by_category が表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
     await screen.findByText("bigtech");
-    expect(screen.getByText("ai")).toBeTruthy();
-    expect(screen.getByText("jp")).toBeTruthy();
-    expect(screen.getByText("zenn")).toBeTruthy();
+    expect.soft(screen.getByText("ai")).toBeTruthy();
+    expect.soft(screen.getByText("jp")).toBeTruthy();
+    expect.soft(screen.getByText("zenn")).toBeTruthy();
   });
 
   it("活動カレンダーセクションが描画される", async () => {

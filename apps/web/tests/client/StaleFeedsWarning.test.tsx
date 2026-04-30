@@ -28,8 +28,8 @@ describe("StaleFeedsWarning", () => {
   it("renders feed name for each stale feed", () => {
     const feeds = [makeStale("f1", "Tech Blog"), makeStale("f2", "Dev Blog")];
     render(<StaleFeedsWarning staleFeeds={feeds} />);
-    expect(screen.getByText("Tech Blog")).toBeTruthy();
-    expect(screen.getByText("Dev Blog")).toBeTruthy();
+    expect.soft(screen.getByText("Tech Blog")).toBeTruthy();
+    expect.soft(screen.getByText("Dev Blog")).toBeTruthy();
   });
 
   it("shows 'error' label for feeds with error status", () => {
@@ -62,7 +62,7 @@ describe("StaleFeedsWarning", () => {
   it("uses details/summary pattern (collapsible)", () => {
     const feeds = [makeStale("f1", "Feed A")];
     const { container } = render(<StaleFeedsWarning staleFeeds={feeds} />);
-    expect(container.querySelector("details")).toBeTruthy();
-    expect(container.querySelector("summary")).toBeTruthy();
+    expect.soft(container.querySelector("details")).toBeTruthy();
+    expect.soft(container.querySelector("summary")).toBeTruthy();
   });
 });

@@ -42,9 +42,9 @@ describe("SearchSuggestions", () => {
         visible={true}
       />,
     );
-    expect(screen.getByText("React")).toBeTruthy();
-    expect(screen.getByText("TypeScript")).toBeTruthy();
-    expect(screen.getByText("Cloudflare")).toBeTruthy();
+    expect.soft(screen.getByText("React")).toBeTruthy();
+    expect.soft(screen.getByText("TypeScript")).toBeTruthy();
+    expect.soft(screen.getByText("Cloudflare")).toBeTruthy();
   });
 
   it("calls onPick when a suggestion item is clicked via mousedown", () => {

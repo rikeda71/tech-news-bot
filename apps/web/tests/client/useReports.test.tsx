@@ -46,9 +46,9 @@ describe("useReportsList", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.data).toHaveLength(2);
-    expect(result.current.data[0]?.id).toBe(1);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.data).toHaveLength(2);
+    expect.soft(result.current.data[0]?.id).toBe(1);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("fetch エラー時に error が設定されデータは空", async () => {
@@ -60,8 +60,8 @@ describe("useReportsList", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toContain("500");
-    expect(result.current.data).toEqual([]);
+    expect.soft(result.current.error).toContain("500");
+    expect.soft(result.current.data).toEqual([]);
   });
 
   it("空のレポート一覧が返された場合、data は空配列", async () => {
@@ -79,8 +79,8 @@ describe("useReportsList", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.data).toEqual([]);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.data).toEqual([]);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("kind が変わると再 fetch が発火する", async () => {
@@ -127,9 +127,9 @@ describe("useReport", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.data?.id).toBe(5);
-    expect(result.current.data?.content).toBe("# Daily Report\nContent here.");
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.data?.id).toBe(5);
+    expect.soft(result.current.data?.content).toBe("# Daily Report\nContent here.");
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("fetch エラー時に error が設定される", async () => {
@@ -141,8 +141,8 @@ describe("useReport", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toContain("404");
-    expect(result.current.data).toBeNull();
+    expect.soft(result.current.error).toContain("404");
+    expect.soft(result.current.data).toBeNull();
   });
 
   it("id が変わると再 fetch が発火する", async () => {
@@ -176,7 +176,7 @@ describe("useReport", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toBe("Connection refused");
-    expect(result.current.data).toBeNull();
+    expect.soft(result.current.error).toBe("Connection refused");
+    expect.soft(result.current.data).toBeNull();
   });
 });

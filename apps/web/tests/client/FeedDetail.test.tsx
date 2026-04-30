@@ -97,8 +97,8 @@ describe("FeedDetail", () => {
       expect(screen.getByText("Test Feed")).toBeTruthy();
     });
 
-    expect(screen.getByText("https://example.com/feed")).toBeTruthy();
-    expect(screen.getByText("42")).toBeTruthy();
+    expect.soft(screen.getByText("https://example.com/feed")).toBeTruthy();
+    expect.soft(screen.getByText("42")).toBeTruthy();
   });
 
   it("記事 5 件の場合に 5 枚のカードが表示される", async () => {
@@ -324,14 +324,14 @@ describe("FeedDetail", () => {
     });
 
     // feed meta と articles で各 2 回ずつ、計 4 回 fetch
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/feeds/test-feed?recent=20");
-    expect(fetchMock).toHaveBeenNthCalledWith(
+    expect.soft(fetchMock).toHaveBeenCalledTimes(4);
+    expect.soft(fetchMock).toHaveBeenNthCalledWith(1, "/api/feeds/test-feed?recent=20");
+    expect.soft(fetchMock).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining("/api/articles/by-feed/test-feed"),
     );
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/feeds/other-feed?recent=20");
-    expect(fetchMock).toHaveBeenNthCalledWith(
+    expect.soft(fetchMock).toHaveBeenNthCalledWith(3, "/api/feeds/other-feed?recent=20");
+    expect.soft(fetchMock).toHaveBeenNthCalledWith(
       4,
       expect.stringContaining("/api/articles/by-feed/other-feed"),
     );

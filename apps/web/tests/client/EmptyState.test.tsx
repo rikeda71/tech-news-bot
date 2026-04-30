@@ -8,18 +8,18 @@ describe("EmptyState", () => {
     render(
       <EmptyState icon="🔍" title="記事が見つかりません" body="別のキーワードで検索してください" />,
     );
-    expect(screen.getByText("🔍")).toBeTruthy();
-    expect(screen.getByText("記事が見つかりません")).toBeTruthy();
-    expect(screen.getByText("別のキーワードで検索してください")).toBeTruthy();
+    expect.soft(screen.getByText("🔍")).toBeTruthy();
+    expect.soft(screen.getByText("記事が見つかりません")).toBeTruthy();
+    expect.soft(screen.getByText("別のキーワードで検索してください")).toBeTruthy();
   });
 
   it("renders with different props correctly", () => {
     render(
       <EmptyState icon="📭" title="ブックマークなし" body="記事をブックマークに追加してください" />,
     );
-    expect(screen.getByText("📭")).toBeTruthy();
-    expect(screen.getByText("ブックマークなし")).toBeTruthy();
-    expect(screen.getByText("記事をブックマークに追加してください")).toBeTruthy();
+    expect.soft(screen.getByText("📭")).toBeTruthy();
+    expect.soft(screen.getByText("ブックマークなし")).toBeTruthy();
+    expect.soft(screen.getByText("記事をブックマークに追加してください")).toBeTruthy();
   });
 
   it("icon is displayed as a block element with large text", () => {

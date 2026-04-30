@@ -78,8 +78,8 @@ describe("usePresets (mock)", () => {
       result.current.addPreset("ai + ja", { category: "ai", lang: "ja" });
     });
     expect(result.current.presets).toHaveLength(1);
-    expect(result.current.presets[0].name).toBe("ai + ja");
-    expect(result.current.presets[0].filters.category).toBe("ai");
+    expect.soft(result.current.presets[0].name).toBe("ai + ja");
+    expect.soft(result.current.presets[0].filters.category).toBe("ai");
   });
 
   it("removes a preset from the list", () => {
@@ -112,8 +112,8 @@ describe("usePresets (mock)", () => {
     act(() => {
       result.current.addPreset("one-too-many", { q: "overflow" });
     });
-    expect(alertMock).toHaveBeenCalled();
-    expect(result.current.presets).toHaveLength(50);
+    expect.soft(alertMock).toHaveBeenCalled();
+    expect.soft(result.current.presets).toHaveLength(50);
 
     // @ts-expect-error -- globalThis.alert を元に戻す
     delete globalThis.alert;

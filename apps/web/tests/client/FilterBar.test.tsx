@@ -30,9 +30,9 @@ describe("FilterBar", () => {
 
   it("each select has an accessible aria-label", () => {
     render(<FilterBar {...defaultProps} />);
-    expect(screen.getByRole("combobox", { name: "カテゴリ" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "言語" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "フィード" })).toBeTruthy();
+    expect.soft(screen.getByRole("combobox", { name: "カテゴリ" })).toBeTruthy();
+    expect.soft(screen.getByRole("combobox", { name: "言語" })).toBeTruthy();
+    expect.soft(screen.getByRole("combobox", { name: "フィード" })).toBeTruthy();
   });
 
   it("calls onCategoryChange when a category is selected", async () => {
@@ -61,8 +61,8 @@ describe("FilterBar", () => {
     const user = userEvent.setup();
     render(<FilterBar {...defaultProps} category="ai" onClear={onClear} />);
     const clearBtn = screen.getByText(/解除/);
-    expect(clearBtn).toBeTruthy();
+    expect.soft(clearBtn).toBeTruthy();
     await user.click(clearBtn);
-    expect(onClear).toHaveBeenCalled();
+    expect.soft(onClear).toHaveBeenCalled();
   });
 });

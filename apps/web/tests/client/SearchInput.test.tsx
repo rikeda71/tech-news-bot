@@ -64,8 +64,8 @@ describe("SearchInput", () => {
     const ref = createRef<HTMLInputElement>();
     render(<SearchInput value="test" onChange={vi.fn<(q: string) => void>()} ref={ref} />);
     expect(ref.current).toBeTruthy();
-    expect(ref.current?.tagName).toBe("INPUT");
-    expect(ref.current?.value).toBe("test");
+    expect.soft(ref.current?.tagName).toBe("INPUT");
+    expect.soft(ref.current?.value).toBe("test");
   });
 
   it("has aria-label for screen readers", () => {
