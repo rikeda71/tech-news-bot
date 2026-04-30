@@ -21,7 +21,15 @@ const WRANGLER_DIR = path.join(REPO_ROOT, "apps", "web");
 const DB_NAME = "tech-news-bot-db";
 
 const VALID_KINDS = ["daily", "weekly", "monthly"];
+const VALID_TARGETS = ["local", "remote"];
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
+const POS_INT_RE = /^\d+$/;
+
+// SQL リテラルへ文字列を埋め込む際の escape。validate* と二重防御。
+// 値は事前に allowlist / regex で検証済みなので通常はシングルクォート escape で十分。
+function sqlQuote(s) {
+  return `'${s.replace(/'/g, "''")}'`;
+}
 
 function parseArgs(argv) {
   const positional = [];
@@ -89,6 +97,15 @@ function validateKind(kind) {
   }
 }
 
+function validateTarget(target) {
+  if (!VALID_TARGETS.includes(target)) {
+    process.stderr.write(
+      `Invalid --target value: ${target}. Allowed: ${VALID_TARGETS.join(", ")}\n`,
+    );
+    process.exit(2);
+  }
+}
+
 function validateIso(value, name) {
   if (value !== null && !ISO_RE.test(value)) {
     process.stderr.write(
@@ -99,11 +116,16 @@ function validateIso(value, name) {
 }
 
 function validateIds(rawIds) {
-  const ids = rawIds
+  const tokens = rawIds
     .split(",")
     .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => Number.parseInt(s, 10));
+    .filter(Boolean);
+  // `parseInt("3abc", 10)` は 3 を返してしまうので、先に厳密な数字フォーマットを要求する。
+  if (tokens.some((t) => !POS_INT_RE.test(t))) {
+    process.stderr.write(`Invalid id(s): ${rawIds}. Must be positive integer(s).\n`);
+    process.exit(2);
+  }
+  const ids = tokens.map((t) => Number.parseInt(t, 10));
   if (ids.some((id) => !Number.isFinite(id) || id <= 0)) {
     process.stderr.write(`Invalid id(s): ${rawIds}. Must be positive integer(s).\n`);
     process.exit(2);
@@ -113,14 +135,16 @@ function validateIds(rawIds) {
 
 function cmdList(opts) {
   validateKind(opts.kind);
+  validateTarget(opts.target);
   validateIso(opts.from, "--from");
   validateIso(opts.to, "--to");
 
   const limit = Math.max(1, Math.min(opts.limit, 1000));
   const where = ["1=1"];
-  if (opts.kind) where.push(`kind = '${opts.kind}'`);
-  if (opts.from) where.push(`generated_at >= '${opts.from}'`);
-  if (opts.to) where.push(`generated_at <= '${opts.to}'`);
+  // sqlQuote で escape する (validate を通っていても二重防御)。
+  if (opts.kind) where.push(`kind = ${sqlQuote(opts.kind)}`);
+  if (opts.from) where.push(`generated_at >= ${sqlQuote(opts.from)}`);
+  if (opts.to) where.push(`generated_at <= ${sqlQuote(opts.to)}`);
 
   const sql = `SELECT id, kind, period_start, period_end, category, lang, source_skill, generated_at, length(content) AS content_len FROM reports WHERE ${where.join(" AND ")} ORDER BY generated_at DESC LIMIT ${limit};`;
 
@@ -146,6 +170,7 @@ function cmdList(opts) {
 }
 
 function cmdShow(id, opts) {
+  validateTarget(opts.target);
   const sql = `SELECT id, kind, period_start, period_end, category, lang, content, meta_json, source_skill, generated_at FROM reports WHERE id = ${id};`;
 
   let rows;
@@ -169,6 +194,7 @@ function cmdShow(id, opts) {
 }
 
 function cmdDelete(ids, opts) {
+  validateTarget(opts.target);
   const idList = ids.join(", ");
 
   // dry-run: SELECT して対象行を確認
@@ -231,8 +257,9 @@ function cmdDelete(ids, opts) {
 
 function cmdFindOverlaps(opts) {
   validateKind(opts.kind);
+  validateTarget(opts.target);
 
-  const kindClause = opts.kind ? `AND a.kind = '${opts.kind}'` : "";
+  const kindClause = opts.kind ? `AND a.kind = ${sqlQuote(opts.kind)}` : "";
 
   const sql = `
 SELECT
