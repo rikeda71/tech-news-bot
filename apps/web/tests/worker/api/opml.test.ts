@@ -69,7 +69,7 @@ describe("GET /feeds.opml", () => {
     const first = await SELF.fetch("https://example.com/feeds.opml");
     expect(first.status).toBe(200);
     const etag = first.headers.get("ETag");
-    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const second = await SELF.fetch("https://example.com/feeds.opml", {
       headers: { "If-None-Match": etag! },
