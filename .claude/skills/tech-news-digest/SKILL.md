@@ -61,31 +61,13 @@ node tools/d1-client/recent.mjs --since=week --category=jp --target=remote
 
 **複数カテゴリを対象にする場合 (例: bigtech + ai + jp)**:
 
-`recent.mjs` はカンマ区切り複数指定に非対応のため、カテゴリごとに呼んで URL で de-dup する:
+`recent.mjs` はカンマ区切りの複数カテゴリ指定に対応している。1 回の呼び出しで取得し、URL de-dup も `recent.mjs` 側で実施されるためアプリ側の merge 処理は不要:
 
 ```sh
-# カテゴリごとに取得
-node tools/d1-client/recent.mjs --since=today --category=bigtech --target=remote > /tmp/arts_bigtech.json
-node tools/d1-client/recent.mjs --since=today --category=ai      --target=remote > /tmp/arts_ai.json
-node tools/d1-client/recent.mjs --since=today --category=jp      --target=remote > /tmp/arts_jp.json
+node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=remote --limit=600
 ```
 
-取得後、3 つの `articles[]` を結合して URL de-dup する (古い `published_at` 優先):
-
-```js
-const seen = new Map();
-const merged = [];
-for (const a of [...bigtech, ...ai, ...jp].sort((x, y) =>
-  x.published_at.localeCompare(y.published_at),
-)) {
-  if (!seen.has(a.url)) {
-    seen.set(a.url, true);
-    merged.push(a);
-  }
-}
-```
-
-以降の Stage はマージ済み `merged` を `articles` として扱う。
+返り値の `articles[]` は de-dup 済み (古い `published_at` 優先)。以降の Stage はそのまま `articles` を使う。
 
 stdout に出る JSON 形式:
 
