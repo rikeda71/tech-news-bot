@@ -1,0 +1,11 @@
+# ローカル開発で wrangler dev / vp test を動かすときの env 例
+# このファイルをコピーして .dev.vars を作成する (.dev.vars は gitignore 済み)
+
+ADMIN_TOKEN=local-dev-admin-token
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+# Cloudflare Access の検証をスキップ (ローカルでは Access が前段にいないため)
+SKIP_ACCESS_JWT=1
+# 本番設定例 (動作確認用):
+# CF_ACCESS_AUD=<audience-tag-from-zero-trust-dashboard>
+# CF_ACCESS_TEAM_DOMAIN=<team>.cloudflareaccess.com

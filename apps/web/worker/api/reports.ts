@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import type { Context } from "hono";
 import type { Env } from "../types";
+import { adminAuthMiddleware } from "../utils/auth";
 import { getReport, listReports, upsertReport } from "../db/reports";
 import type { ReportInput, ReportKind } from "../db/reports";
 import type {
@@ -11,46 +11,16 @@ import type {
 
 const app = new Hono<{ Bindings: Env }>();
 
+// すべての reports admin ルートに認証を適用する。
+// 個別ハンドラでの authGuard 呼び出しを廃し、ハンドラ追加時の認証漏れを防ぐ。
+app.use("*", adminAuthMiddleware);
+
 const VALID_KINDS = new Set<ReportKind>(["daily", "weekly", "monthly"]);
 const VALID_CATEGORIES = new Set(["bigtech", "ai", "jp", "zenn"]);
 const VALID_LANGS = new Set(["ja", "en"]);
 // content が極端に長くなるのを防ぐ (D1 の row size と Worker の CPU 時間を意識)。
 // 1MB は markdown レポートとしては十分すぎる量。
 const MAX_CONTENT_BYTES = 1_000_000;
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-function isValidAdminToken(
-  provided: string,
-  current: string | undefined,
-  next: string | undefined,
-): boolean {
-  if (current && timingSafeEqual(provided, current)) return true;
-  if (next && timingSafeEqual(provided, next)) return true;
-  return false;
-}
-
-// admin token を検証して、失敗時に Response を返す。成功時は null を返す。
-function authGuard(c: Context<{ Bindings: Env }>): Response | null {
-  const current = c.env.ADMIN_TOKEN;
-  const next = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, next)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-  return null;
-}
 
 // Date.toISOString() の strict round-trip だと "2026-04-29T00:00:00Z" のような
 // ms 抜きの ISO 8601 (LLM が頻繁に出力する形式) が弾かれる。
@@ -149,8 +119,6 @@ app.post("/", async (c) => {
   if (c.env.READONLY === "1") {
     return c.json({ error: "read-only mode" }, 403);
   }
-  const denied = authGuard(c);
-  if (denied) return denied;
 
   const rawBody = await c.req.text().catch(() => "");
   if (rawBody.trim() === "") {
@@ -176,9 +144,6 @@ app.post("/", async (c) => {
 });
 
 app.get("/", async (c) => {
-  const denied = authGuard(c);
-  if (denied) return denied;
-
   const kindParam = c.req.query("kind");
   let kind: ReportKind | undefined;
   if (kindParam !== undefined) {
@@ -196,9 +161,6 @@ app.get("/", async (c) => {
 });
 
 app.get("/:id", async (c) => {
-  const denied = authGuard(c);
-  if (denied) return denied;
-
   const idParam = Number(c.req.param("id"));
   if (!Number.isFinite(idParam) || idParam <= 0) {
     return c.json({ error: "invalid id" }, 400);

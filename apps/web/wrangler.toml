@@ -37,6 +37,15 @@ ALERT_MIN_FAILURES = "3"
 ALERT_FEED_STREAK = "5"
 COLLECTOR_ALERT_THRESHOLD = "5"
 
+# Cloudflare Access (Zero Trust) — /api/admin/* の認証
+# CF_ACCESS_AUD と CF_ACCESS_TEAM_DOMAIN は本番では `wrangler secret put` で登録する
+# (toml には書かない)。Phase 1 では Access の本設定が完了するまで JWT 検証を bypass する。
+# Cloudflare One ダッシュボードで Self-hosted application を作成し、secret を登録した後、
+# この行を削除して JWT 検証を有効化する。詳細は docs/auth.md を参照。
+# TODO(#375): CF_ACCESS_AUD / CF_ACCESS_TEAM_DOMAIN を secret 登録した時点でこの行を削除する。
+# 削除を忘れると本番で /api/admin/* が adminAuthMiddleware (Bearer) のみで守られる状態が継続する。
+SKIP_ACCESS_JWT = "1"
+
 [[analytics_engine_datasets]]
 binding = "COLLECTOR_AE"
 dataset = "tnb_collector_events"
@@ -70,3 +79,5 @@ READONLY = "1"
 CORS_ALLOWED_ORIGINS = "https://tech-news-bot.rikeda71.workers.dev"
 ALERT_MIN_FAILURES = "3"
 ALERT_FEED_STREAK = "5"
+# preview 環境では Access が前段に居ないため JWT 検証を bypass する。
+SKIP_ACCESS_JWT = "1"

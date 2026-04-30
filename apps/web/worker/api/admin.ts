@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import type { MiddlewareHandler } from "hono";
 import type { Env } from "../types";
+import { adminAuthMiddleware } from "../utils/auth";
 import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { getFeedsDiagnostics, setFeedEnabled } from "../db/feeds";
@@ -13,47 +13,9 @@ import type {
   AdminFeedsDiagnosticsResponse,
   AdminRunDetailResponse,
   AdminRunListResponse,
-  ErrorResponse,
 } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-// 現行 token または次世代 token のいずれかに一致すれば認証 OK。
-// ローテーション期間中は両方を受け入れ、完了後に ADMIN_TOKEN_NEXT を削除する。
-function isValidAdminToken(
-  provided: string,
-  current: string | undefined,
-  next: string | undefined,
-): boolean {
-  if (current && timingSafeEqual(provided, current)) return true;
-  if (next && timingSafeEqual(provided, next)) return true;
-  return false;
-}
-
-// すべての admin ルートに適用する認証 middleware。
-// ADMIN_TOKEN 未設定なら 503、token 不正なら 401 を返す。
-const adminAuthMiddleware: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
-  const current = c.env.ADMIN_TOKEN;
-  const nextToken = c.env.ADMIN_TOKEN_NEXT;
-  if (!current) {
-    return c.json<ErrorResponse>({ error: "ADMIN_TOKEN is not configured" }, 503);
-  }
-  const auth = c.req.header("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token || !isValidAdminToken(token, current, nextToken)) {
-    return c.json<ErrorResponse>({ error: "unauthorized" }, 401);
-  }
-  return await next();
-};
 
 app.use("*", adminAuthMiddleware);
 
