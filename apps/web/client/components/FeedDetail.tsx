@@ -8,14 +8,14 @@ const CATEGORY_LABEL: Record<string, string> = {
   bigtech: "Big Tech",
   ai: "AI",
   jp: "日本企業",
-  zenn: "Zenn",
+  personal: "個人ブログ",
 };
 
 const CATEGORY_ICON: Record<string, string> = {
   bigtech: "🏢",
   ai: "🤖",
   jp: "🇯🇵",
-  zenn: "📝",
+  personal: "👤",
 };
 
 // カテゴリバッジの色: CSS custom properties を任意プロパティ記法で参照
@@ -23,7 +23,7 @@ const CATEGORY_BADGE_CLASS: Record<string, string> = {
   bigtech: "bg-[var(--cat-bigtech-bg)] text-[var(--cat-bigtech)]",
   ai: "bg-[var(--cat-ai-bg)] text-[var(--cat-ai)]",
   jp: "bg-[var(--cat-jp-bg)] text-[var(--cat-jp)]",
-  zenn: "bg-[var(--cat-zenn-bg)] text-[var(--cat-zenn)]",
+  personal: "bg-[var(--cat-personal-bg)] text-[var(--cat-personal)]",
 };
 
 interface Props {

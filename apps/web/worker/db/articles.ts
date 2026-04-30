@@ -351,7 +351,7 @@ export interface CategoryTrendPoint {
   ai: number;
   bigtech: number;
   jp: number;
-  zenn: number;
+  personal: number;
 }
 
 export interface FeedActivityRow {
@@ -381,7 +381,7 @@ export async function getCategoryTrend30d(db: D1Database): Promise<CategoryTrend
     const d = new Date(today);
     d.setUTCDate(today.getUTCDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    points.push({ date: dateStr, ai: 0, bigtech: 0, jp: 0, zenn: 0 });
+    points.push({ date: dateStr, ai: 0, bigtech: 0, jp: 0, personal: 0 });
   }
 
   // クエリ結果をマップにして点に埋め込む
@@ -435,7 +435,7 @@ export interface ByLang30d {
 
 /**
  * 過去 30 日の author 別記事数 TOP 10 (null / 空文字除外)。
- * Zenn は個人ブログ集約サービスのため企業 tech blog の人気著者ランキングからは除外する。
+ * personal カテゴリ (個人ブログ) は企業 tech blog の人気著者ランキングからは除外する。
  */
 export async function getTopAuthors30d(db: D1Database): Promise<TopAuthorRow[]> {
   const rows = await db
@@ -444,7 +444,7 @@ export async function getTopAuthors30d(db: D1Database): Promise<TopAuthorRow[]> 
        FROM articles
        WHERE author IS NOT NULL
          AND author != ''
-         AND category != 'zenn'
+         AND category != 'personal'
          AND published_at >= datetime('now', '-30 days')
        GROUP BY author
        ORDER BY count DESC

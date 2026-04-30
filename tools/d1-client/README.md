@@ -22,7 +22,7 @@ node tools/d1-client/recent.mjs --since=<today|week|month|N> [options]
 | ------------ | ---------- | ------------------------------------------------------------------------------------ |
 | `--since`    | (必須)     | `today` / `week` / `month` / `N`                                                     |
 | `--target`   | `local`    | `local` または `remote`                                                              |
-| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`。カンマ区切りで複数指定可 (例: `bigtech,ai,jp`)     |
+| `--category` | なし       | `bigtech` / `ai` / `jp` / `personal`。カンマ区切りで複数指定可 (例: `bigtech,ai,jp`) |
 | `--lang`     | なし       | `ja` または `en`                                                                     |
 | `--limit`    | `200`      | 最大取得件数 (上限 1000 — D1 の 1 invocation あたり 50 queries 制限に基づく実装上限) |
 
@@ -43,8 +43,8 @@ node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=
   "filters": { "category": null, "lang": null },
   "total": 42,
   "articles": [...],
-  "by_category": { "ai": 12, "bigtech": 18, "jp": 8, "zenn": 4 },
-  "by_feed": { "zenn-trending": 3 },
+  "by_category": { "ai": 12, "bigtech": 18, "jp": 8, "personal": 4 },
+  "by_feed": { "zenn-mizchi": 3 },
   "by_lang": { "en": 30, "ja": 12 }
 }
 ```
@@ -62,7 +62,7 @@ node tools/d1-client/search.mjs --q=<keyword> [options]
 | `--q`        | (必須)     | 検索キーワード (FTS5 特殊文字は除去される) |
 | `--since`    | `month`    | `today` / `week` / `month` / `N`           |
 | `--target`   | `local`    | `local` または `remote`                    |
-| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`           |
+| `--category` | なし       | `bigtech` / `ai` / `jp` / `personal`       |
 | `--lang`     | なし       | `ja` または `en`                           |
 | `--limit`    | `100`      | 最大取得件数 (上限 1000)                   |
 
@@ -84,8 +84,8 @@ node tools/d1-client/search.mjs --q="LLM inference" --since=month --lang=en --ta
   "filters": { "category": null, "lang": null },
   "total": 18,
   "articles": [...],
-  "by_category": { "ai": 8, "zenn": 6, "bigtech": 3, "jp": 1 },
-  "by_feed": { "zenn-trending": 5 },
+  "by_category": { "ai": 8, "personal": 6, "bigtech": 3, "jp": 1 },
+  "by_feed": { "zenn-mizchi": 5 },
   "by_lang": { "ja": 10, "en": 8 }
 }
 ```

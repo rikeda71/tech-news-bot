@@ -12,7 +12,7 @@ import type {
 const app = new Hono<{ Bindings: Env }>();
 
 const VALID_KINDS = new Set<ReportKind>(["daily", "weekly", "monthly"]);
-const VALID_CATEGORIES = new Set(["bigtech", "ai", "jp", "zenn"]);
+const VALID_CATEGORIES = new Set(["bigtech", "ai", "jp", "personal"]);
 const VALID_LANGS = new Set(["ja", "en"]);
 // content が極端に長くなるのを防ぐ (D1 の row size と Worker の CPU 時間を意識)。
 // 1MB は markdown レポートとしては十分すぎる量。
@@ -107,7 +107,10 @@ function parseInput(
   let category: string | null = null;
   if (body.category !== undefined && body.category !== null) {
     if (typeof body.category !== "string" || !VALID_CATEGORIES.has(body.category)) {
-      return { ok: false, error: "category must be one of: bigtech | ai | jp | zenn (or null)" };
+      return {
+        ok: false,
+        error: "category must be one of: bigtech | ai | jp | personal (or null)",
+      };
     }
     category = body.category;
   }

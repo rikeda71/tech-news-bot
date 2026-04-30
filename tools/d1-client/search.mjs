@@ -4,7 +4,7 @@
 //
 // Usage:
 //   node tools/d1-client/search.mjs --q=<keyword> [--since=today|week|month|N]
-//                                   [--target=local|remote] [--category=ai|bigtech|jp|zenn]
+//                                   [--target=local|remote] [--category=ai|bigtech|jp|personal]
 //                                   [--lang=ja|en] [--limit=100]
 //
 // Output (stdout): JSON object
@@ -19,7 +19,7 @@ const REPO_ROOT = path.resolve(path.dirname(__filename), "..", "..");
 const WRANGLER_DIR = path.join(REPO_ROOT, "apps", "web");
 const DB_NAME = "tech-news-bot-db";
 
-const VALID_CATEGORIES = new Set(["bigtech", "ai", "jp", "zenn"]);
+const VALID_CATEGORIES = new Set(["bigtech", "ai", "jp", "personal"]);
 const VALID_LANGS = new Set(["ja", "en"]);
 
 /**

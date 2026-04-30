@@ -9,7 +9,7 @@ const makeTrendPoint = (date: string): TrendPoint => ({
   ai: 0,
   bigtech: 0,
   jp: 0,
-  zenn: 0,
+  personal: 0,
 });
 
 const feedActivity: FeedActivity = {
@@ -24,7 +24,7 @@ const baseStats: Stats = {
   last_published_at: "2024-01-15T10:00:00Z",
   last_fetched_at: "2024-01-15T11:00:00Z",
   last24h: 5,
-  by_category: { ai: 50, bigtech: 30, jp: 15, zenn: 5 },
+  by_category: { ai: 50, bigtech: 30, jp: 15, personal: 5 },
   by_lang: { en: 80, ja: 20 },
   stale_feeds: [],
   category_trend_30d: [],
@@ -56,8 +56,8 @@ describe("StatsPanel", () => {
 
   it("renders the category trend chart when trend data has non-zero values", () => {
     const trend: TrendPoint[] = [
-      { date: "2024-01-14", ai: 10, bigtech: 5, jp: 3, zenn: 2 },
-      { date: "2024-01-15", ai: 8, bigtech: 3, jp: 1, zenn: 4 },
+      { date: "2024-01-14", ai: 10, bigtech: 5, jp: 3, personal: 2 },
+      { date: "2024-01-15", ai: 8, bigtech: 3, jp: 1, personal: 4 },
     ];
     const stats: Stats = { ...baseStats, category_trend_30d: trend };
     render(<StatsPanel stats={stats} />);

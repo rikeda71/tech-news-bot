@@ -82,7 +82,7 @@ pnpm migrate:local
 1. `apps/web/worker/feeds.yaml` を編集する
 2. `id` は全フィード横断でユニーク、kebab-case
 3. 追加前に `curl -sSL <url>` で 200 + 妥当な RSS/Atom が返ることを確認
-4. `category` は `bigtech | ai | jp | zenn` のみ。Zenn 由来のフィードは必ず `zenn` カテゴリを使う
+4. `category` は `bigtech | ai | jp | personal` のみ。著名な個人ブログ (Zenn の個人 user feed など) は `personal` カテゴリを使う (Zenn publication / 企業ブログは `jp` 等の適切なカテゴリへ)
 5. `lang` は `ja | en` のみ
 6. 使えなくなったフィードは削除より `enabled: false` で一時停止を優先する
 7. PR を作る（CI が build/test を実行）

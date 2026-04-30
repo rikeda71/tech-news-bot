@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { makeOneOf } from "../../../worker/utils/types";
 
 describe("makeOneOf", () => {
-  const VALUES = ["bigtech", "ai", "jp", "zenn"] as const;
+  const VALUES = ["bigtech", "ai", "jp", "personal"] as const;
   const isCategory = makeOneOf<(typeof VALUES)[number]>(VALUES);
 
   describe("returns true for values included in the list", () => {
@@ -18,8 +18,8 @@ describe("makeOneOf", () => {
       expect(isCategory("jp")).toBe(true);
     });
 
-    it("returns true for 'zenn'", () => {
-      expect(isCategory("zenn")).toBe(true);
+    it("returns true for 'personal'", () => {
+      expect(isCategory("personal")).toBe(true);
     });
   });
 

@@ -23,9 +23,9 @@ const FEEDS: FeedConfig[] = [
   },
   {
     id: "feed-z",
-    name: "Zenn Feed",
-    url: "https://zenn.dev/feed",
-    category: "zenn",
+    name: "Personal Feed",
+    url: "https://zenn.dev/mizchi/feed",
+    category: "personal",
     lang: "ja",
     enabled: true,
   },
@@ -145,37 +145,37 @@ describe("articles db", () => {
     expect(onlyFeedA.articles.map((a) => a.guid)).toEqual(["ga"]);
   });
 
-  it("inserts and retrieves zenn category articles", async () => {
+  it("inserts and retrieves personal category articles", async () => {
     const inserted = await insertArticles(env.DB, [
       {
-        guid: "gz1",
+        guid: "gp1",
         feed_id: "feed-z",
-        title: "Zenn 記事 1",
-        url: "https://zenn.dev/user/articles/abc123",
-        summary: "Zenn の記事サマリ",
-        author: "zenn-author",
+        title: "個人ブログ記事 1",
+        url: "https://zenn.dev/mizchi/articles/abc123",
+        summary: "Zenn 個人ブログのサマリ",
+        author: "mizchi",
         published_at: "2024-04-10T00:00:00.000Z",
-        category: "zenn",
+        category: "personal",
         lang: "ja",
       },
       {
-        guid: "gz2",
+        guid: "gp2",
         feed_id: "feed-z",
-        title: "Zenn 記事 2",
-        url: "https://zenn.dev/user/articles/def456",
+        title: "個人ブログ記事 2",
+        url: "https://zenn.dev/mizchi/articles/def456",
         summary: null,
         author: null,
         published_at: "2024-04-11T00:00:00.000Z",
-        category: "zenn",
+        category: "personal",
         lang: "ja",
       },
     ]);
     expect(inserted).toBe(2);
 
-    const onlyZenn = await listArticles(env.DB, { limit: 10, category: "zenn" });
-    expect(onlyZenn.articles.map((a) => a.guid)).toEqual(["gz2", "gz1"]);
-    expect(onlyZenn.articles[0].category).toBe("zenn");
-    expect(onlyZenn.articles[0].lang).toBe("ja");
+    const onlyPersonal = await listArticles(env.DB, { limit: 10, category: "personal" });
+    expect(onlyPersonal.articles.map((a) => a.guid)).toEqual(["gp2", "gp1"]);
+    expect(onlyPersonal.articles[0].category).toBe("personal");
+    expect(onlyPersonal.articles[0].lang).toBe("ja");
   });
 
   describe("FTS5 trigram Japanese full-text search", () => {

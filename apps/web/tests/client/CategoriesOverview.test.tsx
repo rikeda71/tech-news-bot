@@ -29,8 +29,8 @@ const sampleResponse: CategoriesResponse = {
       last_published_at: "2024-01-14T12:00:00Z",
     },
     {
-      id: "zenn",
-      label: "Zenn",
+      id: "personal",
+      label: "個人ブログ",
       feeds_count: 10,
       articles_30d: 300,
       last_published_at: "2024-01-15T08:00:00Z",
@@ -73,7 +73,7 @@ describe("CategoriesOverview", () => {
 
     expect.soft(screen.getByText("AI")).toBeTruthy();
     expect.soft(screen.getByText("日本企業")).toBeTruthy();
-    expect.soft(screen.getByText("Zenn")).toBeTruthy();
+    expect.soft(screen.getByText("個人ブログ")).toBeTruthy();
   });
 
   it("feeds_count と articles_30d を表示する", async () => {

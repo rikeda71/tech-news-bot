@@ -232,7 +232,7 @@ describe("/api/stats", () => {
       stale_feeds: { id: string }[];
     };
     expect(body.total).toBe(3);
-    expect(body.by_category).toEqual({ bigtech: 1, ai: 1, jp: 1, zenn: 0 });
+    expect(body.by_category).toEqual({ bigtech: 1, ai: 1, jp: 1, personal: 0 });
     expect(body.by_lang).toEqual({ en: 2, ja: 1 });
     // 全フィードは未収集 (last_fetched_at NULL) なので stale 扱い
     expect(body.stale_feeds.length).toBe(3);

@@ -8,7 +8,7 @@ export type FilterState = {
   bookmarksOnly: boolean;
 };
 
-const VALID_CATEGORIES = new Set<string>(["bigtech", "ai", "jp", "zenn"]);
+const VALID_CATEGORIES = new Set<string>(["bigtech", "ai", "jp", "personal"]);
 const VALID_LANGS = new Set<string>(["ja", "en"]);
 
 const DEFAULT_STATE: FilterState = {

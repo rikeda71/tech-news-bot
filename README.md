@@ -12,7 +12,7 @@ graph LR
         F1[Big Tech Blogs]
         F2[AI Blogs]
         F3[JP Tech Blogs]
-        F4[Zenn Topics]
+        F4[Personal Blogs]
     end
 
     subgraph Cloudflare Worker
@@ -225,7 +225,7 @@ feeds:
   - id: openai-blog # 全フィード横断でユニークな kebab-case ID
     name: OpenAI News
     url: https://openai.com/news/rss.xml
-    category: ai # bigtech | ai | jp | zenn
+    category: ai # bigtech | ai | jp | personal
     lang: en # ja | en
     enabled: true
 ```

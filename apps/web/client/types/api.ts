@@ -1,4 +1,4 @@
-export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";
+export type FeedCategory = "bigtech" | "ai" | "jp" | "personal";
 export type FeedLang = "ja" | "en";
 
 export interface Article {

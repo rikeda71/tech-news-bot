@@ -66,7 +66,7 @@ export function FilterBar({
         <option value="bigtech">Big Tech</option>
         <option value="ai">AI</option>
         <option value="jp">日本企業</option>
-        <option value="zenn">Zenn</option>
+        <option value="personal">個人ブログ</option>
       </select>
 
       <select

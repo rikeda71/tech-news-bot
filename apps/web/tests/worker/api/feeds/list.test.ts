@@ -22,10 +22,10 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "zenn-ai",
+    id: "zenn-mizchi",
     name: "Zenn AI",
-    url: "https://zenn.dev/topics/ai/feed",
-    category: "zenn",
+    url: "https://zenn.dev/mizchi/feed",
+    category: "personal",
     lang: "ja",
     enabled: false,
   },
@@ -96,7 +96,7 @@ beforeEach(async () => {
       lang: "en",
     },
     // cyberagent-blog: 記事なし (articles_30d=0, last_published_at=null を確認)
-    // zenn-ai: 記事なし
+    // zenn-mizchi: 記事なし
   ]);
 });
 
@@ -199,7 +199,7 @@ describe("GET /api/feeds - filter by enabled", () => {
     const body = (await res.json()) as { feeds: { id: string; enabled: boolean }[] };
     expect.soft(res.status).toBe(200);
     expect.soft(body.feeds.every((f) => !f.enabled)).toBe(true);
-    expect.soft(body.feeds.some((f) => f.id === "zenn-ai")).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "zenn-mizchi")).toBe(true);
     expect.soft(body.feeds.some((f) => f.id === "openai-blog")).toBe(false);
   });
 
@@ -208,7 +208,7 @@ describe("GET /api/feeds - filter by enabled", () => {
     const body = (await res.json()) as { feeds: { id: string; enabled: boolean }[] };
     expect.soft(res.status).toBe(200);
     expect.soft(body.feeds.every((f) => f.enabled)).toBe(true);
-    expect.soft(body.feeds.some((f) => f.id === "zenn-ai")).toBe(false);
+    expect.soft(body.feeds.some((f) => f.id === "zenn-mizchi")).toBe(false);
   });
 
   it("returns 400 for invalid enabled value", async () => {

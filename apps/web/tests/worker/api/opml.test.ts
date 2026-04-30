@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { SELF } from "cloudflare:test";
 
-// feeds.yaml には bigtech / ai / jp / zenn の全カテゴリが定義されているため、
+// feeds.yaml には bigtech / ai / jp / personal の全カテゴリが定義されているため、
 // D1 への記事挿入なしで OPML エクスポートのテストが完結する。
 
 describe("GET /feeds.opml", () => {
@@ -29,7 +29,7 @@ describe("GET /feeds.opml", () => {
     expect(text).toContain('text="Big Tech"');
     expect(text).toContain('text="AI Labs"');
     expect(text).toContain('text="国内エンジニアリング"');
-    expect(text).toContain('text="Zenn"');
+    expect(text).toContain('text="個人ブログ"');
   });
 
   it("contains outline elements with type=rss, xmlUrl and htmlUrl", async () => {

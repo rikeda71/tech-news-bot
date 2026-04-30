@@ -22,10 +22,10 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "zenn-ai",
+    id: "zenn-mizchi",
     name: "Zenn AI",
-    url: "https://zenn.dev/topics/ai/feed",
-    category: "zenn",
+    url: "https://zenn.dev/mizchi/feed",
+    category: "personal",
     lang: "ja",
     enabled: false,
   },

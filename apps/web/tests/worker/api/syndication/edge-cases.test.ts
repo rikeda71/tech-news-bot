@@ -79,7 +79,7 @@ beforeEach(async () => {
 describe("empty feed edge cases", () => {
   it("RSS /feed.xml with no articles returns valid RSS with no <item> elements", async () => {
     // beforeEach でシードされるが、カテゴリ zenn は記事がないはず
-    const res = await SELF.fetch("https://example.com/feed.xml?category=zenn");
+    const res = await SELF.fetch("https://example.com/feed.xml?category=personal");
     expect.soft(res.status).toBe(200);
     const text = await res.text();
     // 空でも RSS 2.0 必須構造が揃っていること
@@ -92,7 +92,7 @@ describe("empty feed edge cases", () => {
   });
 
   it("JSON /feed.json with no articles returns valid JSON Feed with empty items", async () => {
-    const res = await SELF.fetch("https://example.com/feed.json?category=zenn");
+    const res = await SELF.fetch("https://example.com/feed.json?category=personal");
     expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { version: string; items: unknown[] };
     expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
@@ -100,7 +100,7 @@ describe("empty feed edge cases", () => {
   });
 
   it("Atom /feed.atom with no articles returns valid Atom feed with no <entry>", async () => {
-    const res = await SELF.fetch("https://example.com/feed.atom?category=zenn");
+    const res = await SELF.fetch("https://example.com/feed.atom?category=personal");
     expect.soft(res.status).toBe(200);
     const text = await res.text();
     expect.soft(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
@@ -110,8 +110,8 @@ describe("empty feed edge cases", () => {
 
   // 空フィード時の ETag が安定している (毎回同じ) ことを確認する
   it("RSS empty feed ETag is stable across two requests", async () => {
-    const res1 = await SELF.fetch("https://example.com/feed.xml?category=zenn");
-    const res2 = await SELF.fetch("https://example.com/feed.xml?category=zenn");
+    const res1 = await SELF.fetch("https://example.com/feed.xml?category=personal");
+    const res2 = await SELF.fetch("https://example.com/feed.xml?category=personal");
     const etag1 = res1.headers.get("ETag");
     const etag2 = res2.headers.get("ETag");
     expect.soft(etag1).not.toBeNull();
@@ -119,9 +119,9 @@ describe("empty feed edge cases", () => {
   });
 
   it("RSS empty feed supports 304 round-trip", async () => {
-    const res1 = await SELF.fetch("https://example.com/feed.xml?category=zenn");
+    const res1 = await SELF.fetch("https://example.com/feed.xml?category=personal");
     const etag = res1.headers.get("ETag")!;
-    const res2 = await SELF.fetch("https://example.com/feed.xml?category=zenn", {
+    const res2 = await SELF.fetch("https://example.com/feed.xml?category=personal", {
       headers: { "If-None-Match": etag },
     });
     expect(res2.status).toBe(304);

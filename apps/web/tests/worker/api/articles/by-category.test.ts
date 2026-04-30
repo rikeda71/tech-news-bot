@@ -26,8 +26,8 @@ describe("GET /api/articles/by-category/:cat", () => {
   });
 
   it("returns 200 with empty array when category has no articles", async () => {
-    // zenn カテゴリの記事は beforeEach では挿入されない
-    const res = await SELF.fetch("https://example.com/api/articles/by-category/zenn");
+    // personal カテゴリの記事は beforeEach では挿入されない
+    const res = await SELF.fetch("https://example.com/api/articles/by-category/personal");
     expect.soft(res.status).toBe(200);
     const body = await res.json<{ articles: unknown[]; next_cursor: string | null }>();
     expect.soft(body.articles).toEqual([]);

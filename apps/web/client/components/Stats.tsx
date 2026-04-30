@@ -5,7 +5,7 @@ interface StatsProps {
   stats: Stats;
 }
 
-const TREND_CATEGORIES: Array<keyof Omit<TrendPoint, "date">> = ["bigtech", "ai", "jp", "zenn"];
+const TREND_CATEGORIES: Array<keyof Omit<TrendPoint, "date">> = ["bigtech", "ai", "jp", "personal"];
 
 function formatDate(iso: string): string {
   const d = new Date(iso);

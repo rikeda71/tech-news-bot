@@ -59,7 +59,7 @@ jobs:
             - since=today
             - mode=deep
             - target=remote
-            - zenn カテゴリは除外 (bigtech / ai / jp の 3 カテゴリを対象にする)
+            - personal カテゴリは除外 (bigtech / ai / jp の 3 カテゴリを対象にする)
             - lang 指定なし
 
             Stage 1 では bigtech / ai / jp の 3 カテゴリを 1 回の呼び出しで取得してください:

@@ -14,7 +14,12 @@ import { renderRssFeed } from "./syndication/rss";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
-const VALID_CATEGORIES = ["bigtech", "ai", "jp", "zenn"] as const satisfies readonly FeedCategory[];
+const VALID_CATEGORIES = [
+  "bigtech",
+  "ai",
+  "jp",
+  "personal",
+] as const satisfies readonly FeedCategory[];
 const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
 const isCategory = makeOneOf<FeedCategory>(VALID_CATEGORIES);
 const isLang = makeOneOf<FeedLang>(VALID_LANGS);
@@ -27,7 +32,7 @@ const CATEGORY_DISPLAY_NAMES: Record<FeedCategory, string> = {
   bigtech: "Big Tech",
   ai: "AI Labs",
   jp: "国内エンジニアリング",
-  zenn: "Zenn",
+  personal: "個人ブログ",
 };
 
 // 言語ごとの表示名 mapping

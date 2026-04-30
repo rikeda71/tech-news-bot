@@ -10,7 +10,7 @@ INSERT INTO feeds (id, name, url, category, lang, enabled) VALUES
   ('google-blog', 'Google Blog', 'https://blog.google/rss/', 'bigtech', 'en', 1),
   ('openai-blog', 'OpenAI Blog', 'https://openai.com/news/rss.xml', 'ai', 'en', 1),
   ('cybozu-blog', 'Cybozu Tech Blog', 'https://blog.cybozu.io/feed', 'jp', 'ja', 1),
-  ('zenn-trend', 'Zenn トレンド', 'https://zenn.dev/feed', 'zenn', 'ja', 1);
+  ('zenn-mizchi', 'mizchi (Zenn)', 'https://zenn.dev/mizchi/feed', 'personal', 'ja', 1);
 
 -- articles (21 件: load-more で 2 ページ以上必要なため)
 INSERT INTO articles (guid, feed_id, title, url, summary, author, published_at, category, lang) VALUES
@@ -29,9 +29,9 @@ INSERT INTO articles (guid, feed_id, title, url, summary, author, published_at, 
   ('c-003', 'cybozu-blog', 'Kubernetes 運用 Tips', 'https://blog.cybozu.io/k8s-tips', 'Kubernetes 運用のコツを共有します。', '佐藤一郎', '2026-04-26T08:00:00Z', 'jp', 'ja'),
   ('c-004', 'cybozu-blog', 'React 19 対応', 'https://blog.cybozu.io/react19', 'React 19 への対応レポート。', '田中太郎', '2026-04-25T08:00:00Z', 'jp', 'ja'),
   ('c-005', 'cybozu-blog', 'テスト自動化の実践', 'https://blog.cybozu.io/test-automation', '自動テストの実践的な手法を紹介。', '鈴木花子', '2026-04-24T08:00:00Z', 'jp', 'ja'),
-  ('z-001', 'zenn-trend', 'Zenn人気記事: Rustを始めよう', 'https://zenn.dev/example/rust', 'Rust 入門ガイド。', 'zenn_user1', '2026-04-28T07:00:00Z', 'zenn', 'ja'),
-  ('z-002', 'zenn-trend', 'Zenn人気記事: TypeScript Tips', 'https://zenn.dev/example/ts-tips', 'TypeScript の便利な Tips 集。', 'zenn_user2', '2026-04-27T07:00:00Z', 'zenn', 'ja'),
-  ('z-003', 'zenn-trend', 'Zenn人気記事: Docker最新情報', 'https://zenn.dev/example/docker', 'Docker の最新動向まとめ。', 'zenn_user3', '2026-04-26T07:00:00Z', 'zenn', 'ja'),
-  ('z-004', 'zenn-trend', 'Zenn人気記事: Next.js 15', 'https://zenn.dev/example/nextjs15', 'Next.js 15 の新機能解説。', 'zenn_user4', '2026-04-25T07:00:00Z', 'zenn', 'ja'),
-  ('z-005', 'zenn-trend', 'Zenn人気記事: Go言語入門', 'https://zenn.dev/example/go', 'Go 言語のエントリーポイント。', 'zenn_user5', '2026-04-24T07:00:00Z', 'zenn', 'ja'),
-  ('z-006', 'zenn-trend', 'Zenn人気記事: Cloudflare Workers', 'https://zenn.dev/example/cf-workers', 'Cloudflare Workers 活用ガイド。', 'zenn_user6', '2026-04-23T07:00:00Z', 'zenn', 'ja');
+  ('p-001', 'zenn-mizchi', '個人記事: Rustを始めよう', 'https://zenn.dev/mizchi/articles/rust', 'Rust 入門ガイド。', 'mizchi', '2026-04-28T07:00:00Z', 'personal', 'ja'),
+  ('p-002', 'zenn-mizchi', '個人記事: TypeScript Tips', 'https://zenn.dev/mizchi/articles/ts-tips', 'TypeScript の便利な Tips 集。', 'mizchi', '2026-04-27T07:00:00Z', 'personal', 'ja'),
+  ('p-003', 'zenn-mizchi', '個人記事: Docker最新情報', 'https://zenn.dev/mizchi/articles/docker', 'Docker の最新動向まとめ。', 'mizchi', '2026-04-26T07:00:00Z', 'personal', 'ja'),
+  ('p-004', 'zenn-mizchi', '個人記事: Next.js 15', 'https://zenn.dev/mizchi/articles/nextjs15', 'Next.js 15 の新機能解説。', 'mizchi', '2026-04-25T07:00:00Z', 'personal', 'ja'),
+  ('p-005', 'zenn-mizchi', '個人記事: Go言語入門', 'https://zenn.dev/mizchi/articles/go', 'Go 言語のエントリーポイント。', 'mizchi', '2026-04-24T07:00:00Z', 'personal', 'ja'),
+  ('p-006', 'zenn-mizchi', '個人記事: Cloudflare Workers', 'https://zenn.dev/mizchi/articles/cf-workers', 'Cloudflare Workers 活用ガイド。', 'mizchi', '2026-04-23T07:00:00Z', 'personal', 'ja');

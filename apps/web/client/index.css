@@ -26,7 +26,7 @@
   --color-cat-bigtech: #0550ae;
   --color-cat-ai: #7d4e00;
   --color-cat-jp: #1a7f37;
-  --color-cat-zenn: #0550ae;
+  --color-cat-personal: #8250df;
 
   /* --- スペーシング --- */
   --spacing-1: 4px;
@@ -90,8 +90,8 @@
   --cat-ai-bg: rgba(125, 78, 0, 0.1);
   --cat-jp: #1a7f37;
   --cat-jp-bg: rgba(26, 127, 55, 0.1);
-  --cat-zenn: #0550ae;
-  --cat-zenn-bg: rgba(5, 80, 174, 0.1);
+  --cat-personal: #8250df;
+  --cat-personal-bg: rgba(130, 80, 223, 0.1);
 
   /* 後方互換 (一部コンポーネントで使用) */
   --bg: var(--bg-base);
@@ -102,7 +102,7 @@
   --badge-bigtech: var(--cat-bigtech);
   --badge-ai: var(--cat-ai);
   --badge-jp: var(--cat-jp);
-  --badge-zenn: var(--cat-zenn);
+  --badge-personal: var(--cat-personal);
 
   /* --- ハイライト --- */
   --mark-bg: #fff3b0;
@@ -206,8 +206,8 @@
   --cat-ai-bg: rgba(210, 153, 34, 0.15);
   --cat-jp: #3fb950;
   --cat-jp-bg: rgba(63, 185, 80, 0.15);
-  --cat-zenn: #3ea8ff;
-  --cat-zenn-bg: rgba(62, 168, 255, 0.15);
+  --cat-personal: #a371f7;
+  --cat-personal-bg: rgba(163, 113, 247, 0.15);
 
   --bg: var(--bg-base);
   --bg-elev: var(--bg-elevated);
@@ -217,7 +217,7 @@
   --badge-bigtech: var(--cat-bigtech);
   --badge-ai: var(--cat-ai);
   --badge-jp: var(--cat-jp);
-  --badge-zenn: var(--cat-zenn);
+  --badge-personal: var(--cat-personal);
 
   --mark-bg: #4a3f00;
 

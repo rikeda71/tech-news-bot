@@ -6,12 +6,12 @@ interface StatsChartProps {
 }
 
 // カテゴリごとの色 (CSS 変数が使えないため直値; ライト/ダーク両対応の中間色)
-// zenn は bigtech との判別性確保のため青ではなく紫に変更
+// personal は bigtech との判別性確保のため青ではなく紫に変更
 const CATEGORY_COLORS: Record<string, string> = {
   bigtech: "#4493f8",
   ai: "#d29922",
   jp: "#3fb950",
-  zenn: "#a371f7",
+  personal: "#a371f7",
 };
 
 const CHART_W = 800;

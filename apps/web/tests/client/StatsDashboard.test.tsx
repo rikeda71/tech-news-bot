@@ -13,7 +13,7 @@ const MOCK_STATS_RESPONSE = {
   articles_30d: 800,
   last_published_at: "2026-04-28T10:00:00Z",
   last_fetched_at: "2026-04-28T11:00:00Z",
-  by_category: { bigtech: 300, ai: 250, jp: 200, zenn: 150 },
+  by_category: { bigtech: 300, ai: 250, jp: 200, personal: 150 },
   by_lang_30d: { ja: 500, en: 300 },
   top_authors_30d: [
     { author: "Alice", count: 30 },
@@ -161,7 +161,7 @@ describe("StatsDashboard", () => {
     await screen.findByText("bigtech");
     expect.soft(screen.getByText("ai")).toBeTruthy();
     expect.soft(screen.getByText("jp")).toBeTruthy();
-    expect.soft(screen.getByText("zenn")).toBeTruthy();
+    expect.soft(screen.getByText("personal")).toBeTruthy();
   });
 
   it("活動カレンダーセクションが描画される", async () => {
