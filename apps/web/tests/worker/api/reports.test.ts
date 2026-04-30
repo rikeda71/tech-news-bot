@@ -3,6 +3,7 @@ import { SELF } from "cloudflare:test";
 import type {
   AdminReportDetailResponse,
   AdminReportListResponse,
+  AdminReportOverlapResponse,
   AdminReportSaveResponse,
 } from "../../../worker/api/types";
 
@@ -68,7 +69,13 @@ describe("POST /api/admin/reports", () => {
     const res = await SELF.fetch("https://example.com/api/admin/reports", {
       method: "POST",
       headers: { ...NEXT_AUTH, "content-type": "application/json" },
-      body: JSON.stringify(buildPayload({ period_start: "2026-04-27T00:00:00.000Z" })),
+      body: JSON.stringify(
+        buildPayload({
+          period_start: "2026-04-30T00:00:00.000Z",
+          period_end: "2026-05-01T00:00:00.000Z",
+          generated_at: "2026-05-01T00:00:00.000Z",
+        }),
+      ),
     });
     expect(res.status).toBe(200);
   });
@@ -211,6 +218,310 @@ describe("POST /api/admin/reports", () => {
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("period_end must be after period_start");
   });
+
+  // ---- overlap validation ----
+  // 各テストは互いに干渉しないよう、独自の月/期間を使う (DB はテスト間でリセットされない)。
+
+  it("200: exact same period → upsert update (no overlap)", async () => {
+    // 1回目登録 (2025-01 の週)
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-01-06T00:00:00.000Z",
+          period_end: "2025-01-13T00:00:00.000Z",
+          content: "first",
+          generated_at: "2025-01-13T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 同一 period で上書き → 200
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-01-06T00:00:00.000Z",
+          period_end: "2025-01-13T00:00:00.000Z",
+          content: "updated",
+          generated_at: "2025-01-13T00:01:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as AdminReportSaveResponse;
+    expect(body.ok).toBe(true);
+  });
+
+  it("409: partial overlap (start shifted by 1 day)", async () => {
+    // 既存: 2025-02-03 〜 2025-02-10
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-02-03T00:00:00.000Z",
+          period_end: "2025-02-10T00:00:00.000Z",
+          content: "existing-shift-start",
+          generated_at: "2025-02-10T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: 2025-02-04 〜 2025-02-11 (start 違い, overlap あり)
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-02-04T00:00:00.000Z",
+          period_end: "2025-02-11T00:00:00.000Z",
+          content: "overlapping start",
+          generated_at: "2025-02-11T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as AdminReportOverlapResponse;
+    expect.soft(body.error).toMatch(/overlap/i);
+    expect.soft(Array.isArray(body.conflicting_ids)).toBe(true);
+    expect.soft(body.conflicting_ids.length).toBeGreaterThan(0);
+  });
+
+  it("409: partial overlap (end shifted by 1 day)", async () => {
+    // 既存: 2025-03-03 〜 2025-03-10
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-03-03T00:00:00.000Z",
+          period_end: "2025-03-10T00:00:00.000Z",
+          content: "existing-shift-end",
+          generated_at: "2025-03-10T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: 2025-03-02 〜 2025-03-09 (end 違い, overlap あり)
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-03-02T00:00:00.000Z",
+          period_end: "2025-03-09T00:00:00.000Z",
+          content: "overlapping end",
+          generated_at: "2025-03-11T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as AdminReportOverlapResponse;
+    expect.soft(body.error).toMatch(/overlap/i);
+    expect.soft(body.conflicting_ids.length).toBeGreaterThan(0);
+  });
+
+  it("409: new period fully contains existing", async () => {
+    // 既存: 2025-04-07 〜 2025-04-12
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-04-07T00:00:00.000Z",
+          period_end: "2025-04-12T00:00:00.000Z",
+          content: "inner-existing",
+          generated_at: "2025-04-12T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: 2025-04-06 〜 2025-04-13 (既存を完全内包)
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-04-06T00:00:00.000Z",
+          period_end: "2025-04-13T00:00:00.000Z",
+          content: "outer-new",
+          generated_at: "2025-04-13T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it("409: existing period fully contains new", async () => {
+    // 既存: 2025-05-05 〜 2025-05-12
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-05-05T00:00:00.000Z",
+          period_end: "2025-05-12T00:00:00.000Z",
+          content: "outer-existing",
+          generated_at: "2025-05-12T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: 2025-05-06 〜 2025-05-11 (既存に内包される)
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-05-06T00:00:00.000Z",
+          period_end: "2025-05-11T00:00:00.000Z",
+          content: "inner-new",
+          generated_at: "2025-05-13T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it("200: adjacent periods (new start == existing end) → no overlap (half-open)", async () => {
+    // 既存: 2025-06-02 〜 2025-06-09
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-06-02T00:00:00.000Z",
+          period_end: "2025-06-09T00:00:00.000Z",
+          content: "adjacent prev",
+          generated_at: "2025-06-09T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: 2025-06-09 〜 2025-06-16 (start == 既存 end → 半開区間で重ならない)
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-06-09T00:00:00.000Z",
+          period_end: "2025-06-16T00:00:00.000Z",
+          content: "adjacent next",
+          generated_at: "2025-06-16T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("200: different kind → no overlap check", async () => {
+    // 既存: kind=weekly, 2025-07-07 〜 2025-07-14
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-07-07T00:00:00.000Z",
+          period_end: "2025-07-14T00:00:00.000Z",
+          content: "weekly-diff-kind",
+          generated_at: "2025-07-14T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: kind=monthly, overlapping period → 別 kind なので通る
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "monthly",
+          period_start: "2025-07-08T00:00:00.000Z",
+          period_end: "2025-07-15T00:00:00.000Z",
+          content: "monthly-diff-kind",
+          generated_at: "2025-07-15T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("200: different category → no overlap check", async () => {
+    // 既存: kind=weekly, category=null, 2025-08-04 〜 2025-08-11
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-08-04T00:00:00.000Z",
+          period_end: "2025-08-11T00:00:00.000Z",
+          category: null,
+          content: "all-category",
+          generated_at: "2025-08-11T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: category=bigtech, overlapping period → 別 category なので通る
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-08-05T00:00:00.000Z",
+          period_end: "2025-08-12T00:00:00.000Z",
+          category: "bigtech",
+          content: "bigtech-only",
+          generated_at: "2025-08-12T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("200: different lang → no overlap check", async () => {
+    // 既存: kind=weekly, lang=ja, 2025-09-01 〜 2025-09-08
+    await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-09-01T00:00:00.000Z",
+          period_end: "2025-09-08T00:00:00.000Z",
+          lang: "ja",
+          content: "ja-report",
+          generated_at: "2025-09-08T00:00:00.000Z",
+        }),
+      ),
+    });
+    // 新規: lang=en, overlapping period → 別 lang なので通る
+    const res = await SELF.fetch("https://example.com/api/admin/reports", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2025-09-02T00:00:00.000Z",
+          period_end: "2025-09-09T00:00:00.000Z",
+          lang: "en",
+          content: "en-report",
+          generated_at: "2025-09-09T00:00:00.000Z",
+        }),
+      ),
+    });
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("GET /api/admin/reports", () => {
@@ -225,8 +536,9 @@ describe("GET /api/admin/reports", () => {
       headers: JSON_HEADERS,
       body: JSON.stringify(
         buildPayload({
-          period_start: "2026-04-26T00:00:00.000Z",
-          generated_at: "2026-04-27T00:00:00.000Z",
+          period_start: "2026-03-26T00:00:00.000Z",
+          period_end: "2026-03-27T00:00:00.000Z",
+          generated_at: "2026-03-27T00:00:00.000Z",
           content: "older",
         }),
       ),
@@ -236,8 +548,9 @@ describe("GET /api/admin/reports", () => {
       headers: JSON_HEADERS,
       body: JSON.stringify(
         buildPayload({
-          period_start: "2026-04-28T00:00:00.000Z",
-          generated_at: "2026-04-29T00:00:00.000Z",
+          period_start: "2026-03-28T00:00:00.000Z",
+          period_end: "2026-03-29T00:00:00.000Z",
+          generated_at: "2026-03-29T00:00:00.000Z",
           content: "newer",
         }),
       ),
@@ -256,7 +569,14 @@ describe("GET /api/admin/reports", () => {
     await SELF.fetch("https://example.com/api/admin/reports", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify(buildPayload({ kind: "weekly" })),
+      body: JSON.stringify(
+        buildPayload({
+          kind: "weekly",
+          period_start: "2026-10-06T00:00:00.000Z",
+          period_end: "2026-10-13T00:00:00.000Z",
+          generated_at: "2026-10-13T00:00:00.000Z",
+        }),
+      ),
     });
     const res = await SELF.fetch("https://example.com/api/admin/reports?kind=weekly", {
       headers: AUTH,

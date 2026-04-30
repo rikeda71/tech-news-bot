@@ -102,6 +102,7 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
 - `category` / `lang` は許可リスト + `null`
 - 各 ISO 8601 は `new Date(s).toISOString() === s` で round-trip チェック
 - `READONLY=1` の場合は POST が 403
+- 同 (kind, category, lang) 内で半開区間 overlap が検出された場合は **409** `{ error, conflicting_ids }` を返す。完全一致は従来どおり upsert update。既存重複の解消は `node tools/d1-client/merge-overlapping-reports.mjs --target=local|remote [--apply]` を使用 (デフォルト dry-run)。
 
 ### Response
 

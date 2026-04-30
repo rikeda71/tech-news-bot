@@ -33,10 +33,54 @@ export interface ReportDetailRow extends ReportRow {
 
 const ALL_SENTINEL = "__all__";
 
+// 半開区間 [period_start, period_end) が既存 row と overlap する row を返す。
+// 完全一致 (period_start == new.period_start AND period_end == new.period_end) は
+// 既存の UNIQUE 制約 + ON CONFLICT UPDATE で処理されるため overlap 扱いしない。
+// 同 kind / 同 COALESCE(category, '__all__') / 同 COALESCE(lang, '__all__') のみ対象。
+export async function findOverlappingReports(
+  db: D1Database,
+  input: Pick<ReportInput, "kind" | "period_start" | "period_end" | "category" | "lang">,
+): Promise<ReportRow[]> {
+  // bind 順: ?1=kind, ?2=category, ?3=lang, ?4=input.period_start, ?5=input.period_end
+  // half-open overlap 条件 (existing.start < input.end AND existing.end > input.start) を
+  // ?4/?5 経由で表現する。`existing.period_end > ?4` の `?4` は input.period_start を指す
+  // (column 名と placeholder 番号が一致しないため、bind 順を変更しないこと)。
+  const result = await db
+    .prepare(
+      `SELECT id, kind, period_start, period_end, category, lang, source_skill, generated_at
+       FROM reports
+       WHERE kind = ?1
+         AND COALESCE(category, '${ALL_SENTINEL}') = COALESCE(?2, '${ALL_SENTINEL}')
+         AND COALESCE(lang,     '${ALL_SENTINEL}') = COALESCE(?3, '${ALL_SENTINEL}')
+         AND period_start < ?5  -- existing.period_start < input.period_end
+         AND period_end   > ?4  -- existing.period_end   > input.period_start
+         AND NOT (period_start = ?4 AND period_end = ?5)  -- 完全一致は ON CONFLICT で処理`,
+    )
+    .bind(input.kind, input.category, input.lang, input.period_start, input.period_end)
+    .all<ReportRow>();
+  return result.results ?? [];
+}
+
+// overlap した既存レポートが存在するときに upsertReport が throw するエラー。
+export class OverlapError extends Error {
+  public readonly conflictingIds: number[];
+  constructor(conflictingIds: number[]) {
+    super(`report period overlaps with existing report(s): ids=[${conflictingIds.join(",")}]`);
+    this.name = "OverlapError";
+    this.conflictingIds = conflictingIds;
+  }
+}
+
 // (kind, period_start, period_end, category, lang) で upsert する。
 // UNIQUE index が COALESCE(category, '__all__') で張られているため、
 // ON CONFLICT の target にも同じ式を指定する必要がある (SQLite 3.24+ の挙動)。
+// 半開区間 overlap が検出された場合は OverlapError を throw する。
 export async function upsertReport(db: D1Database, input: ReportInput): Promise<{ id: number }> {
+  const overlapping = await findOverlappingReports(db, input);
+  if (overlapping.length > 0) {
+    throw new OverlapError(overlapping.map((r) => r.id));
+  }
+
   const result = await db
     .prepare(
       `INSERT INTO reports
