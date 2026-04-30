@@ -11,12 +11,9 @@ export const FEED_CATEGORIES = [
   "personal",
 ] as const satisfies readonly FeedCategory[];
 
-export const FEED_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
-
 // readonly string[] 型にしてから includes で比較するため、
-// FeedCategory / FeedLang の string への拡張は satisfies で保証済みのため安全。
+// FeedCategory の string への拡張は satisfies で保証済みのため安全。
 const FEED_CATEGORIES_STR: readonly string[] = FEED_CATEGORIES;
-const FEED_LANGS_STR: readonly string[] = FEED_LANGS;
 
 /** 文字列が有効な FeedCategory かを判定する型ガード */
 export function isFeedCategory(value: unknown): value is FeedCategory {
@@ -25,5 +22,6 @@ export function isFeedCategory(value: unknown): value is FeedCategory {
 
 /** 文字列が有効な FeedLang かを判定する型ガード */
 export function isFeedLang(value: unknown): value is FeedLang {
-  return typeof value === "string" && FEED_LANGS_STR.includes(value);
+  const FEED_LANGS: readonly string[] = ["ja", "en"] satisfies readonly FeedLang[];
+  return typeof value === "string" && FEED_LANGS.includes(value);
 }
