@@ -60,9 +60,9 @@ describe("parseXml", () => {
         rss: { channel: { item: { title: string; link: string; guid: string } } };
       };
       const item = result.rss.channel.item;
-      expect(item.title).toBe("Post One");
-      expect(item.link).toBe("https://example.com/1");
-      expect(item.guid).toBe("guid-001");
+      expect.soft(item.title).toBe("Post One");
+      expect.soft(item.link).toBe("https://example.com/1");
+      expect.soft(item.guid).toBe("guid-001");
     });
   });
 
@@ -81,8 +81,8 @@ describe("parseXml", () => {
     it("parses entry from Atom", () => {
       const result = parseXml(ATOM_XML) as { feed: { entry: { title: string; id: string } } };
       const entry = result.feed.entry;
-      expect(entry.title).toBe("Atom Entry");
-      expect(entry.id).toBe("tag:example.com,2024:1");
+      expect.soft(entry.title).toBe("Atom Entry");
+      expect.soft(entry.id).toBe("tag:example.com,2024:1");
     });
   });
 
