@@ -174,7 +174,6 @@ pnpm exec wrangler secret put COLLECTOR_ALERT_WEBHOOK
 | `ADMIN_TOKEN_NEXT`        | 任意 | ローテーション中の次世代トークン (詳細は `docs/operations/admin-token-rotation.md`)    |
 | `ALERT_WEBHOOK_URL`       | 任意 | フィード収集失敗アラート用の Webhook URL (高機能アラート)                              |
 | `COLLECTOR_ALERT_WEBHOOK` | 任意 | シンプルな閾値アラート用の Webhook URL (`wrangler secret put COLLECTOR_ALERT_WEBHOOK`) |
-| `SLACK_WEBHOOK_URL`       | 任意 | 日次ダイジェスト通知用の Slack Incoming Webhook URL                                    |
 
 ### GitHub Actions による自動デプロイ
 
