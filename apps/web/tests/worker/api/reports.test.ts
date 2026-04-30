@@ -561,7 +561,7 @@ describe("GET /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportListResponse;
-    expect.soft(body.reports.length).toBeGreaterThanOrEqual(2);
+    expect(body.reports.length).toBeGreaterThanOrEqual(2);
     expect.soft(body.reports[0].generated_at >= body.reports[1].generated_at).toBe(true);
   });
 

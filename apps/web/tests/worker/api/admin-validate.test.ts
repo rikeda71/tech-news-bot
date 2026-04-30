@@ -98,7 +98,7 @@ describe("POST /api/admin/feeds/validate (integration)", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ url: "https://example.com/feed.xml" }),
     });
-    expect.soft(res.status).toBe(200);
+    expect(res.status).toBe(200);
     const cacheControl = res.headers.get("cache-control") ?? "";
     expect.soft(cacheControl).toContain("no-store");
     const body = (await res.json()) as { ok: boolean };

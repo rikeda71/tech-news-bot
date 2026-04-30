@@ -156,6 +156,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
         fetch_error_count: number;
       }[];
     };
+    expect(body.feeds.length).toBeGreaterThan(0);
     const f = body.feeds[0];
     expect.soft(f.last_status).toBe("error");
     expect.soft(f.last_error).toBe("connection refused");
