@@ -6,8 +6,8 @@
 //
 // Default: dry-run (DB 変更なし)。--apply で実際に UPDATE / DELETE を実行する。
 // --kind= 指定時は対象 kind に絞って overlap 検出 (例: --kind=weekly,monthly)。
-// daily の period は generated_at ベースで暦日に揃っていないため、隣接日の row が
-// 境界誤差で部分 overlap してしまう。誤って巻き込まないために --kind フィルタを使うこと。
+// daily を含めると隣接日 (別日) の row が同一クラスタに巻き込まれることがあるため、
+// weekly/monthly の重複統合には `--kind=weekly,monthly` のように絞ること。
 //
 // 出力 (stdout): JSON
 //   {
@@ -162,6 +162,14 @@ function main() {
     process.exit(2);
   }
   if (opts.kinds) {
+    if (opts.kinds.length === 0) {
+      // `--kind=` や `--kind=,` のような空 csv は空配列になる。silent に全件 filter してしまうと
+      // dry-run で 0 cluster 終了して merge 漏れに気付けないため fail-fast にする。
+      process.stderr.write(
+        `--kind= must contain at least one kind. Allowed: ${[...VALID_KINDS].join(",")}\n`,
+      );
+      process.exit(2);
+    }
     const invalid = opts.kinds.filter((k) => !VALID_KINDS.has(k));
     if (invalid.length > 0) {
       process.stderr.write(
