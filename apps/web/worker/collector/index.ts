@@ -425,7 +425,9 @@ export async function collectAll(
 
   const concurrency = Number(env.COLLECTOR_CONCURRENCY ?? "4") || 4;
   const timeoutMs = Number(env.COLLECTOR_TIMEOUT_MS ?? "10000") || 10000;
-  const maxRetries = Number(env.COLLECTOR_RETRIES ?? "2") || 2;
+  // 0 (リトライ無効) を許容するため `|| 2` フォールバックは使わず NaN/負数のみデフォルトに落とす。
+  const maxRetriesRaw = Number(env.COLLECTOR_RETRIES ?? "2");
+  const maxRetries = Number.isFinite(maxRetriesRaw) && maxRetriesRaw >= 0 ? maxRetriesRaw : 2;
   const summaryMax = Number(env.SUMMARY_MAX_LENGTH ?? "500") || 500;
 
   const d1Acc = new D1CostAccumulator();

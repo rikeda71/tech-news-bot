@@ -21,6 +21,10 @@ export default defineConfig(async () => {
             // 本番は 1 並列だが、テストでは全 yaml feed を直列に回すと per-feed retry で
             // 25-30s deadline を超えるため 4 並列に上書きする (Medium レート制限テストではない)
             COLLECTOR_CONCURRENCY: "4",
+            // 全 enabled feed (45 件超) × per-feed retry x backoff sleep が 25s deadline に
+            // 張り付き /api/admin/collector/run が CI で 504 flaky になっていたため、
+            // retry を無効化する。リトライ自体の挙動は collector/retry.test.ts が個別に検証する。
+            COLLECTOR_RETRIES: "0",
           },
         },
       }),
