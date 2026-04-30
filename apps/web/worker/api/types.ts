@@ -196,6 +196,11 @@ export interface AdminReportSaveResponse {
   id: number;
 }
 
+export interface AdminReportOverlapResponse {
+  error: string;
+  conflicting_ids: number[];
+}
+
 export interface AdminReportListResponse {
   reports: ReportRow[];
 }

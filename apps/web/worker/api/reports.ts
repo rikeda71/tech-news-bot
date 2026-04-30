@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { adminAuthMiddleware } from "../utils/auth";
-import { getReport, listReports, upsertReport } from "../db/reports";
+import { OverlapError, getReport, listReports, upsertReport } from "../db/reports";
 import type { ReportInput, ReportKind } from "../db/reports";
 import type {
   AdminReportDetailResponse,
@@ -141,7 +141,21 @@ app.post("/", async (c) => {
     return c.json({ error: validated.error }, 400);
   }
 
-  const { id } = await upsertReport(c.env.DB, validated.input);
+  let id: number;
+  try {
+    ({ id } = await upsertReport(c.env.DB, validated.input));
+  } catch (err) {
+    if (err instanceof OverlapError) {
+      return c.json(
+        {
+          error: "report period overlaps with existing report(s)",
+          conflicting_ids: err.conflictingIds,
+        },
+        409,
+      );
+    }
+    throw err;
+  }
 
   return c.json<AdminReportSaveResponse>({ ok: true, id });
 });
