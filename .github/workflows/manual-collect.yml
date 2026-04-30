@@ -1,0 +1,48 @@
+name: Manual Collect
+
+# /api/admin/collect を手動で叩く。新フィード追加直後の確認や cron 障害時の復旧用。
+# 全 enabled feed を対象にするか、feed_id を指定して単発実行できる。
+
+on:
+  workflow_dispatch:
+    inputs:
+      feed_id:
+        description: "feed id (空なら全 enabled feed を収集)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WORKER_URL: https://tech-news-bot.rikeda71.workers.dev
+      ADMIN_TOKEN: ${{ secrets.WORKER_ADMIN_TOKEN }}
+      FEED_ID: ${{ inputs.feed_id }}
+    steps:
+      - name: Trigger admin/collect
+        run: |
+          if [ -n "$FEED_ID" ]; then
+            BODY=$(jq -nc --arg id "$FEED_ID" '{feed_id: $id}')
+          else
+            BODY=""
+          fi
+          # -w で HTTP status を末尾に出し、jq で run_id を抜き出す
+          response=$(curl -sS -X POST \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            -w "\n%{http_code}" \
+            "$WORKER_URL/api/admin/collect")
+          status=$(printf "%s" "$response" | tail -n1)
+          body=$(printf "%s" "$response" | sed '$d')
+          echo "status: $status"
+          echo "body: $body"
+          if [ "$status" != "200" ]; then
+            echo "::error::admin/collect returned $status"
+            exit 1
+          fi
+          echo "$body" | jq .
