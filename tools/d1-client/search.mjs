@@ -139,13 +139,15 @@ function main() {
     process.exit(2);
   }
   if (opts.category !== null && !VALID_CATEGORIES.has(opts.category)) {
+    const cat = String(opts.category);
     process.stderr.write(
-      `Invalid --category=${opts.category}. Allowed: ${[...VALID_CATEGORIES].join("|")}\n`,
+      `Invalid --category=${cat}. Allowed: ${[...VALID_CATEGORIES].join("|")}\n`,
     );
     process.exit(2);
   }
   if (opts.lang !== null && !VALID_LANGS.has(opts.lang)) {
-    process.stderr.write(`Invalid --lang=${opts.lang}. Allowed: ${[...VALID_LANGS].join("|")}\n`);
+    const lang = String(opts.lang);
+    process.stderr.write(`Invalid --lang=${lang}. Allowed: ${[...VALID_LANGS].join("|")}\n`);
     process.exit(2);
   }
   const sinceISO = sinceToISO(opts.since);
