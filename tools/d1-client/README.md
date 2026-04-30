@@ -6,7 +6,9 @@ D1 からデータを抽出する Node.js CLI スクリプト群。Claude skills
 
 - `pnpm` がインストール済み
 - `apps/web/wrangler.toml` に D1 バインディングが設定済み
-- `--target=remote` の場合は `pnpm --filter @tnb/web exec wrangler login` で認証済み
+- `--target=remote` の場合は以下のいずれかで認証済み:
+  - `pnpm --filter @tnb/web exec wrangler login` (対話ログイン)
+  - または環境変数 `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` を設定 (CI/script 用)
 
 ## recent.mjs — 期間ベースで記事を取得
 
@@ -16,13 +18,13 @@ D1 からデータを抽出する Node.js CLI スクリプト群。Claude skills
 node tools/d1-client/recent.mjs --since=<today|week|month|N> [options]
 ```
 
-| オプション   | デフォルト | 説明                             |
-| ------------ | ---------- | -------------------------------- |
-| `--since`    | (必須)     | `today` / `week` / `month` / `N` |
-| `--target`   | `local`    | `local` または `remote`          |
-| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn` |
-| `--lang`     | なし       | `ja` または `en`                 |
-| `--limit`    | `200`      | 最大取得件数 (上限 1000)         |
+| オプション   | デフォルト | 説明                                                                                 |
+| ------------ | ---------- | ------------------------------------------------------------------------------------ |
+| `--since`    | (必須)     | `today` / `week` / `month` / `N`                                                     |
+| `--target`   | `local`    | `local` または `remote`                                                              |
+| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`                                                     |
+| `--lang`     | なし       | `ja` または `en`                                                                     |
+| `--limit`    | `200`      | 最大取得件数 (上限 1000 — D1 の 1 invocation あたり 50 queries 制限に基づく実装上限) |
 
 例:
 
@@ -48,7 +50,7 @@ node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
 
 ## search.mjs — キーワード全文検索で記事を取得
 
-FTS5 (trigram tokenizer, `migration/0003_fts5_trigram.sql` で設定) を使ってキーワード検索した記事を返す。`tech-news-search` skill が使用する。
+FTS5 (trigram tokenizer, `migrations/0003_fts5_trigram.sql` で設定) を使ってキーワード検索した記事を返す。`tech-news-search` skill が使用する。
 
 ```sh
 node tools/d1-client/search.mjs --q=<keyword> [options]

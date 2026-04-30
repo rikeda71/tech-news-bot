@@ -1,6 +1,6 @@
 # tech-news-bot
 
-海外 big tech / AI tech / 国内企業の tech blog を 3 時間ごとに RSS / Atom フィードから収集し、Cloudflare 無料枠のみで動作する Web UI と JSON Feed / RSS で配信する PoC アプリケーション。Worker 1 つで Cron 収集・API・SPA 配信をすべて担う。
+海外 big tech / AI tech / 国内企業の tech blog を 6 時間ごとに RSS / Atom フィードから収集し、Cloudflare 無料枠のみで動作する Web UI と JSON Feed / RSS で配信する PoC アプリケーション。Worker 1 つで Cron 収集・API・SPA 配信をすべて担う。
 
 コントリビューター向けの詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照。AI エージェント (Claude Code) 向けのガイドは [CLAUDE.md](CLAUDE.md) を参照。
 
@@ -16,7 +16,7 @@ graph LR
     end
 
     subgraph Cloudflare Worker
-        C[Cron 0 */3 * * *] --> COL[collectAll\nconcurrency 4]
+        C[Cron 0 */6 * * *] --> COL[collectAll\nconcurrency 1]
         COL --> D1[(D1 SQLite\narticles / feeds)]
         API[Hono /api/*] --> D1
         SPA[Static Assets\nReact SPA] --> API
@@ -32,15 +32,11 @@ graph LR
 
 | レイヤ       | サービス                                                  |
 | ------------ | --------------------------------------------------------- |
-| RSS 収集     | Cloudflare Workers Cron Triggers (3 時間ごと)             |
+| RSS 収集     | Cloudflare Workers Cron Triggers (6 時間ごと)             |
 | データベース | Cloudflare D1 (SQLite) + FTS5 全文検索                    |
 | API          | 同 Worker 内で Hono が `/api/*` と `/feed.*` を処理       |
-| 静的フロント | Worker Static Assets (Vite でビルドした React 18 SPA)     |
+| 静的フロント | Worker Static Assets (Vite でビルドした React 19 SPA)     |
 | 設定         | `apps/web/worker/feeds.yaml` を Worker に build 時 inline |
-
-## SPA スクリーンショット
-
-<!-- TODO: screenshot here -->
 
 ## クイックスタート
 
@@ -48,45 +44,50 @@ graph LR
 
 - Node.js 24 以上
 - pnpm 10 以上
-- Vite+ (`vp`): `curl -fsSL https://vite.plus | bash`
+- Vite+ (`vp`): 公式サイト [viteplus.dev](https://viteplus.dev/) の手順を参照してインストール
 - Cloudflare アカウント + `wrangler login`
 
 ```bash
 # 1. 依存インストール
 pnpm install
 
-# 2. ローカル D1 にマイグレーションを適用
+# 2. Cloudflare Worker の型を生成 (wrangler.toml から自動生成)
+pnpm cf-typegen
+
+# 3. ローカル D1 にマイグレーションを適用
 pnpm migrate:local
 
-# 3. 開発サーバー起動 (http://localhost:8787)
+# 4. 開発サーバー起動 (http://localhost:8787)
 pnpm dev
 ```
 
 ローカルで Cron を手動実行する場合:
 
 ```bash
-curl "http://localhost:8787/__scheduled?cron=0+*/3+*+*+*"
+curl "http://localhost:8787/__scheduled?cron=0+*/6+*+*+*"
 ```
 
 ## 主要コマンド
 
 ツールチェインは [Vite+](https://viteplus.dev/) (`vp`) ベース。
 
-| 目的                        | vp 直                              | pnpm script          |
-| --------------------------- | ---------------------------------- | -------------------- |
-| dev サーバー起動            | `vp dev` (`apps/web/` で実行)      | `pnpm dev`           |
-| 本番ビルド                  | `vp run build`                     | `pnpm build`         |
-| lint                        | `vp lint`                          | `pnpm lint`          |
-| format                      | `vp fmt --write`                   | `pnpm format`        |
-| typecheck                   | `pnpm -r typecheck`                | `pnpm typecheck`     |
-| lint + fmt + typecheck      | `vp check`                         | `pnpm check`         |
-| テスト                      | `vp test run` (`apps/web/` で実行) | `pnpm test`          |
-| Cloudflare 型生成           | —                                  | `pnpm cf-typegen`    |
-| D1 マイグレーション (local) | —                                  | `pnpm migrate:local` |
-| D1 マイグレーション (prod)  | —                                  | `pnpm migrate:prod`  |
-| デプロイ                    | —                                  | `pnpm deploy`        |
+| 目的                        | vp 直                                                        | pnpm script          |
+| --------------------------- | ------------------------------------------------------------ | -------------------- |
+| dev サーバー起動            | `vp dev` (`apps/web/` で実行)                                | `pnpm dev`           |
+| 本番ビルド                  | `vp build`                                                   | `pnpm build`         |
+| lint                        | `vp lint`                                                    | `pnpm lint`          |
+| format                      | `vp fmt --write`                                             | `pnpm format`        |
+| typecheck                   | `pnpm -r typecheck`                                          | `pnpm typecheck`     |
+| lint + fmt + typecheck      | `vp check`                                                   | `pnpm check`         |
+| worker テスト               | `vp test run` (`apps/web/` で実行)                           | `pnpm test`          |
+| client テスト               | `vp test run --config vitest.client.config.ts` (`apps/web/`) | `pnpm test:client`   |
+| e2e テスト (Playwright)     | —                                                            | `pnpm e2e`           |
+| Cloudflare 型生成           | —                                                            | `pnpm cf-typegen`    |
+| D1 マイグレーション (local) | —                                                            | `pnpm migrate:local` |
+| D1 マイグレーション (prod)  | —                                                            | `pnpm migrate:prod`  |
+| デプロイ                    | —                                                            | `pnpm deploy`        |
 
-テスト実行前に `pnpm build` が必要です (`@cloudflare/vitest-pool-workers` が `dist/client` を要求するため)。
+worker テスト実行前に `pnpm build` が必要です (`@cloudflare/vitest-pool-workers` が `dist/client` を要求するため)。
 
 ## API 使用例
 
@@ -108,20 +109,27 @@ curl "https://tech-news-bot.rikeda71.workers.dev/feed.xml?lang=ja"
 # JSON Feed v1.1
 curl "https://tech-news-bot.rikeda71.workers.dev/feed.json"
 
-# TODO: OpenAPI スキーマ (#33 マージ後に追加)
-# curl "https://tech-news-bot.rikeda71.workers.dev/api/openapi.json"
+# OpenAPI スキーマ
+curl "https://tech-news-bot.rikeda71.workers.dev/api/openapi.json"
 ```
 
 ### API リファレンス
 
-| Method | Path            | 説明                                                                    |
-| ------ | --------------- | ----------------------------------------------------------------------- |
-| GET    | `/api/articles` | 記事一覧。クエリ: `category`, `lang`, `feed_id`, `q`, `limit`, `cursor` |
-| GET    | `/api/feeds`    | フィード一覧と最終収集状況                                              |
-| GET    | `/api/stats`    | カテゴリ別・フィード別の記事数統計                                      |
-| GET    | `/api/health`   | DB 接続疎通と総記事数                                                   |
-| GET    | `/feed.json`    | JSON Feed v1.1 (直近 50 件、`category` / `lang` 絞り込み可)             |
-| GET    | `/feed.xml`     | RSS 2.0 (同上)                                                          |
+| Method | Path                | 説明                                                                    |
+| ------ | ------------------- | ----------------------------------------------------------------------- |
+| GET    | `/api/articles`     | 記事一覧。クエリ: `category`, `lang`, `feed_id`, `q`, `limit`, `cursor` |
+| GET    | `/api/feeds`        | フィード一覧と最終収集状況                                              |
+| GET    | `/api/stats`        | カテゴリ別・フィード別の記事数統計                                      |
+| GET    | `/api/categories`   | カテゴリ一覧                                                            |
+| GET    | `/api/health`       | DB 接続疎通と総記事数                                                   |
+| GET    | `/api/reports`      | レポート一覧 (`kind` フィルタ可)                                        |
+| GET    | `/api/reports/:id`  | レポート詳細 (content + meta_json)                                      |
+| GET    | `/api/openapi.json` | OpenAPI スキーマ (JSON)                                                 |
+| GET    | `/api/docs`         | Swagger UI                                                              |
+| GET    | `/feed.json`        | JSON Feed v1.1 (直近 50 件、`category` / `lang` 絞り込み可)             |
+| GET    | `/feed.xml`         | RSS 2.0 (同上)                                                          |
+| GET    | `/feed.atom`        | Atom 1.0 (同上)                                                         |
+| GET    | `/feeds.opml`       | OPML 2.0 (フィード一覧)                                                 |
 
 `/api/articles` のページングは Base64 エンコードされた cursor を `nextCursor` で返します。
 
@@ -146,14 +154,37 @@ pnpm exec wrangler secret put ADMIN_TOKEN
 pnpm exec wrangler secret put COLLECTOR_ALERT_WEBHOOK
 ```
 
+### 環境変数 / Secrets
+
+**Worker の `vars` (wrangler.toml で設定)**
+
+| 変数名                      | デフォルト | 説明                                     |
+| --------------------------- | ---------- | ---------------------------------------- |
+| `COLLECTOR_CONCURRENCY`     | `"1"`      | 並列フィード取得数                       |
+| `COLLECTOR_TIMEOUT_MS`      | `"10000"`  | フィード取得タイムアウト (ms)            |
+| `COLLECTOR_ALERT_THRESHOLD` | `"5"`      | アラートを発火するフィード失敗数の閾値   |
+| `ALERT_MIN_FAILURES`        | `"3"`      | アラート通知の最小失敗数                 |
+| `ALERT_FEED_STREAK`         | `"5"`      | 連続失敗でアラートを発火するストリーク数 |
+
+**Worker の Secrets (`wrangler secret put` で登録)**
+
+| Secret 名                 | 必須 | 説明                                                                                   |
+| ------------------------- | ---- | -------------------------------------------------------------------------------------- |
+| `ADMIN_TOKEN`             | 任意 | `/api/admin/*` の Bearer 認証トークン                                                  |
+| `ADMIN_TOKEN_NEXT`        | 任意 | ローテーション中の次世代トークン (詳細は `docs/operations/admin-token-rotation.md`)    |
+| `ALERT_WEBHOOK_URL`       | 任意 | フィード収集失敗アラート用の Webhook URL (高機能アラート)                              |
+| `COLLECTOR_ALERT_WEBHOOK` | 任意 | シンプルな閾値アラート用の Webhook URL (`wrangler secret put COLLECTOR_ALERT_WEBHOOK`) |
+| `SLACK_WEBHOOK_URL`       | 任意 | 日次ダイジェスト通知用の Slack Incoming Webhook URL                                    |
+
 ### GitHub Actions による自動デプロイ
 
 `main` ブランチへの push で `.github/workflows/deploy.yml` が自動デプロイします。以下の Repository Secrets を設定してください:
 
-| Secret 名               | 取得場所                                                    |
-| ----------------------- | ----------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | Cloudflare Dashboard > My Profile > API Tokens              |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Dashboard > アカウントのホームページ右サイドバー |
+| Secret 名               | 取得場所                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `CLOUDFLARE_API_TOKEN`  | Cloudflare Dashboard > My Profile > API Tokens                                             |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Dashboard > アカウントのホームページ右サイドバー                                |
+| `WORKER_ADMIN_TOKEN`    | `openssl rand -hex 32` で生成。deploy 時に Worker の `ADMIN_TOKEN` secret へ自動同期される |
 
 ### 手動デプロイ
 
@@ -167,7 +198,7 @@ pnpm deploy
 ```
 tech-news-bot/                    pnpm workspace root
 ├── apps/web/                     デプロイ単位 (Cloudflare Worker + SPA)
-│   ├── client/                   React 18 + Vite SPA
+│   ├── client/                   React 19 + Vite SPA
 │   ├── worker/                   Hono API + cron collector
 │   │   ├── api/                  /api/* エンドポイント群
 │   │   ├── collector/            RSS / Atom 取得・パース・de-dup
@@ -202,6 +233,17 @@ feeds:
 
 YAML は `@modyfi/vite-plugin-yaml` により build 時に JSON へ変換され Worker bundle に inline されます (runtime 依存なし)。設定変更は再デプロイで反映されます。
 
+## D1 スキーマ概要
+
+| テーブル         | 説明                                                      |
+| ---------------- | --------------------------------------------------------- |
+| `articles`       | 収集した記事 (URL, タイトル, 公開日, カテゴリ等)          |
+| `feeds`          | フィード定義と最終収集状況 (ETag / Last-Modified)         |
+| `collector_runs` | Cron 実行履歴 (収集件数・失敗数・所要時間)                |
+| `reports`        | 自動生成されたダイジェストレポート (daily/weekly/monthly) |
+
+マイグレーション SQL は `migrations/` ディレクトリを参照。
+
 ## D1 コスト監視 (Analytics Engine)
 
 Cron 収集が完了するたびに、D1 読み書き回数と実行時間を Cloudflare Analytics Engine (dataset: `tnb_collector_events`) に記録します。
@@ -232,7 +274,7 @@ ORDER BY hour DESC
 | ------------------ | --------- | ------------------------------ |
 | Workers リクエスト | 10 万/日  | UI 含めて数千 / 日             |
 | Workers CPU        | 10ms/req  | API は D1 1 クエリで数 ms      |
-| Cron wall clock    | 15 分     | 38 フィード × 数秒             |
+| Cron wall clock    | 15 分     | 45 フィード × 数秒             |
 | D1 ストレージ      | 5GB       | 1 記事 ≈ 2KB → 10 万件 = 200MB |
 | D1 Reads           | 500 万/日 | 余裕                           |
 | D1 Writes          | 10 万/日  | Cron 1 回 ≈ 数百件             |
@@ -244,6 +286,7 @@ ORDER BY hour DESC
 | [CONTRIBUTING.md](CONTRIBUTING.md)                                                   | コントリビューター | 開発ワークフロー・コーディング規約・PR の作り方                  |
 | [.claude/rules/](.claude/rules/)                                                     | Claude Code        | コーディング・テスト・Cloudflare・フィード・タスクフローのルール |
 | [.claude/skills/tech-news-digest/SKILL.md](.claude/skills/tech-news-digest/SKILL.md) | Claude Code        | D1 から記事を抽出して日本語で要約するスキル                      |
+| [docs/reports-pipeline.md](docs/reports-pipeline.md)                                 | 運用者             | 自動レポート pipeline (GitHub Actions + Claude Code + D1)        |
 | [docs/operations/admin-token-rotation.md](docs/operations/admin-token-rotation.md)   | 運用者             | Admin API Token のローテーション手順                             |
 
 ## ライセンス

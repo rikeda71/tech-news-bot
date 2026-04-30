@@ -173,7 +173,7 @@ repository secrets に以下を登録する。
 | `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要                      | Cloudflare dashboard → API Tokens                                  |
 | `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                                         | Cloudflare dashboard                                               |
 | `SLACK_BOT_TOKEN`         | report workflow の Slack スレッド投稿 (`chat.postMessage` API)       | Slack App 管理画面 → OAuth & Permissions → Bot Token (`xoxb-...`)  |
-| `SLACK_CHANNEL_ID`        | report workflow の投稿先 channel ID (= `CTPQ8SP98`)                  | Slack channel の URL または右クリック → Copy link から取得         |
+| `SLACK_CHANNEL_ID`        | report workflow の投稿先 channel ID                                  | Slack channel の URL または右クリック → Copy link から取得         |
 | `SLACK_WEBHOOK_URL`       | collector 日次ダイジェスト用 (apps/web/worker/notify/slack-daily.ts) | Slack ワークスペースで incoming webhook を作成 (report では未使用) |
 
 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` は既に deploy workflow で使っている
@@ -236,48 +236,18 @@ UNIQUE index が `(kind, period, category)` で張られているため、catego
 Slack への投稿は Worker ではなく GitHub Actions 側で行う。
 Slack Bot Token + `chat.postMessage` API を使い、**スレッド化した 2 段構成**で投稿する。
 
-フロー:
-
 1. Skill (Claude Code) が `/tmp/slack-message.md` を生成 (Slack mrkdwn 形式、30000 文字以内)
 2. `Save report to D1` ステップで POST レスポンス (`{ ok, id }`) を `/tmp/post-resp.json` に保存
 3. `Post to Slack (threaded)` ステップが 2 段階の `chat.postMessage` を実行:
    - **Step A (親メッセージ)**: タイトル + 重要度を header/context block で投稿。レスポンスの `.ts` を取得
    - **Step B (子メッセージ)**: 取得した `ts` を `thread_ts` に指定し、`slack-message.md` を chunks に分割して thread にぶら下げる
 
-### Blocks payload 構造
-
-**親メッセージ** (`chat.postMessage`):
-
-```
-header block   : 🟢/🟡/🔴 + 種別 + 期間
-context block  : 重要度テキスト · generated_at
-```
-
-**子メッセージ** (thread_ts 付き `chat.postMessage`):
-
-```
-section block × N : slack-message.md を 2800 chars 単位でチャンク分割 (最大 48 チャンク)
-[context block    : 省略された場合の注記 (超過時のみ)]
-divider
-section block  : レポート全文を Web で開く (viewer URL)
-```
-
-重要度と絵文字:
-
-| kind    | 絵文字 | タイトル例                                          | 重要度テキスト |
-| ------- | ------ | --------------------------------------------------- | -------------- |
-| daily   | 🟢     | `🟢 Daily Tech Report (2026-04-29)`                 | 重要度: 低     |
-| weekly  | 🟡     | `🟡 Weekly Tech Report (2026-04-22 〜 2026-04-29)`  | 重要度: 中     |
-| monthly | 🔴     | `🔴 Monthly Tech Report (2026-03-30 〜 2026-04-29)` | 重要度: 高     |
-
 特性:
 
-- 30000 文字以内を推奨上限とし、blocks 分割で長文に対応
-- 子メッセージの blocks 総数は最大 50 (Slack 制約)。チャンク数は上限 48 に制限し、divider + viewer link の 2 枠を確保
 - `SLACK_BOT_TOKEN` または `SLACK_CHANNEL_ID` が未設定の場合は no-op でスキップ (投稿しないだけで workflow は正常終了)
 - `continue-on-error: true` を付けているため、Slack 投稿が失敗しても workflow 全体が fail しない
 - bot token リテラルをコードに埋め込まない。`${{ secrets.SLACK_BOT_TOKEN }}` 経由でのみ参照する
-- **bot を channel に invite する必要がある**: Slack ワークスペースで `/invite @<bot名>` を channel (CTPQ8SP98) で実行しないと `not_in_channel` エラーになる
+- **bot を channel に invite する必要がある**: Slack ワークスペースで `/invite @<bot名>` を投稿先 channel で実行しないと `not_in_channel` エラーになる
 
 > **注**: `apps/web/worker/notify/slack-daily.ts` (collector の日次ダイジェスト) は引き続き
 > `SLACK_WEBHOOK_URL` (incoming webhook) を使用する。この webhook は削除しないこと。
@@ -289,13 +259,11 @@ section block  : レポート全文を Web で開く (viewer URL)
 gh secret set SLACK_BOT_TOKEN
 # プロンプトに xoxb-... トークンを入力
 
-# SLACK_CHANNEL_ID は登録済み (CTPQ8SP98)
-# 未登録の場合:
+# SLACK_CHANNEL_ID の取得: Slack channel の URL または右クリック → Copy link から取得
 gh secret set SLACK_CHANNEL_ID
-# プロンプトに CTPQ8SP98 を入力
 
 # Slack App に chat:write スコープを付与し、bot を channel に invite:
-# Slack ワークスペース内で /invite @<bot名> を CTPQ8SP98 channel で実行
+# Slack ワークスペース内で /invite @<bot名> を該当 channel で実行
 ```
 
 ---

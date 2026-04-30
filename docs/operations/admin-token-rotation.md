@@ -1,6 +1,29 @@
 # ADMIN_TOKEN ローテーション手順
 
-`/api/admin/collect` エンドポイントを保護する `ADMIN_TOKEN` のローテーション手順を示す。
+`/api/admin/*` エンドポイントを保護する `ADMIN_TOKEN` のローテーション手順を示す。
+
+## GitHub Actions との自動同期について
+
+`WORKER_ADMIN_TOKEN` (GitHub Actions Secret) は **single source of truth** として扱う。
+`.github/workflows/deploy.yml` に "Sync admin secret to Worker" ステップが含まれており、
+`main` への push / deploy 実行時に `wrangler secret put ADMIN_TOKEN` で Worker 側に自動同期される。
+
+### 自動同期パターン (推奨)
+
+Worker の `ADMIN_TOKEN` を GitHub Actions の `WORKER_ADMIN_TOKEN` に従って自動更新する方式。
+
+1. GitHub Actions Secret の `WORKER_ADMIN_TOKEN` を新しい値に更新する
+2. `main` ブランチへの push (または GitHub Actions UI から deploy workflow を手動実行) する
+3. deploy workflow が完了すると Worker の `ADMIN_TOKEN` も自動的に新しい値に更新される
+
+この方式では GH と Cloudflare の 2 箇所に同じ値を個別に登録する手間が不要。
+
+### 手動管理パターン
+
+GitHub Actions を使わず、`wrangler secret put` で直接 Worker secret を更新する方式。
+下記「ローテーション手順」に従って操作する。
+
+---
 
 Worker は `ADMIN_TOKEN`（現行）と `ADMIN_TOKEN_NEXT`（次世代）の両方を timing-safe で検証し、
 どちらかに一致した場合に認証を通す。これによりダウンタイムなしでトークンを切り替えられる。
@@ -25,16 +48,16 @@ Worker は自動的に再デプロイされ、旧トークン (ADMIN_TOKEN) と�
 
 ### 2. クライアント側を新トークンに切り替える
 
-`/api/admin/collect` を呼び出しているすべてのクライアント（GitHub Actions の secrets、
+`/api/admin/*` を呼び出しているすべてのクライアント（GitHub Actions の secrets、
 外部スクリプト等）を新トークン (`ADMIN_TOKEN_NEXT` に設定した値) に切り替える。
 
 ### 3. 稼働確認
 
-新トークンで `/api/admin/collect` が正常に動作することを確認する（例: 200 レスポンスを受信）。
+新トークンで `/api/admin/*` が正常に動作することを確認する（例: `/api/admin/reports` から 200 レスポンスを受信）。
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" \
-  -X POST https://tech-news-bot.rikeda71.workers.dev/api/admin/collect \
+  https://tech-news-bot.rikeda71.workers.dev/api/admin/reports \
   -H "Authorization: Bearer <new-token>"
 # → 200 であれば OK
 ```

@@ -46,7 +46,7 @@ PoC 規模 (Worker 1 個) のため `packages/` は廃止し、すべての work
 | 目的                        | コマンド                                       | pnpm script          |
 | --------------------------- | ---------------------------------------------- | -------------------- |
 | dev サーバー起動            | `vp dev` (`apps/web/`)                         | `pnpm dev`           |
-| 本番ビルド                  | `vp run build`                                 | `pnpm build`         |
+| 本番ビルド                  | `vp build`                                     | `pnpm build`         |
 | lint                        | `vp lint`                                      | `pnpm lint`          |
 | format                      | `vp fmt --write`                               | `pnpm format`        |
 | typecheck                   | `pnpm -r typecheck`                            | `pnpm typecheck`     |
