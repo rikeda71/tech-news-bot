@@ -127,6 +127,8 @@ stdout に出る JSON 形式:
 
 ### Stage 2: Triage — 重要記事を選定 (quick / deep)
 
+> **URL 制約**: この Stage 以降のすべての出力で使用する URL は、Stage 1 で取得した `articles[].url` のいずれかと **string equality で完全一致** すること。記憶・推測・タイトルからの組み立てによる URL 生成は禁止。
+
 `articles[].summary` (≤500 字抜粋) を読み、次の基準で **重要記事 5〜10 件**を選定する:
 
 - 大きなプロダクト / モデルローンチ (GA、GPT-N、Claude N、新フレームワーク等)
@@ -147,6 +149,8 @@ stdout に出る JSON 形式:
 
 ### Stage 3: Deep read — 本文を WebFetch で取得 (deep のみ)
 
+> **URL 制約**: WebFetch に渡す URL は `articles[].url` のコピーのみ使用する。要約テキストに埋め込むリンクも `articles[].url` から copy-paste すること。
+
 Stage 2 で選定した記事の `url` を WebFetch で取得し、本文を読んだうえで日本語 1〜2 文の要約を生成する。
 
 **同一ホストへの連続 fetch は行わない**。ホスト別にバッチを組み、各バッチ内では parallel fetch し、バッチ間では別ホストのバッチを挟む順序で実行する:
@@ -164,6 +168,8 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、本文を読�
 - 動画 / pdf / login wall は WebFetch せず `summary` だけで処理 (`(summary based)` 注記)
 
 ### Stage 4: Synthesize — トレンド分析 (deep / trend)
+
+> **URL 制約**: トレンド分析内で関連記事リンクを埋め込む際、URL は必ず `articles[].url` から copy-paste すること。Stage 1 に存在しない URL を生成・推測してはならない。
 
 Stage 1 の全記事 (`articles`、Stage 1 の de-dup 後) を見渡し、タイトル + summary + (deep なら Stage 3 の本文要約) からトレンドを **意味的に** 解釈する。
 
@@ -193,11 +199,13 @@ Markdown で次の構造で返す。`mode` に応じて該当しない節は省�
 Stage 2 で選定した重要記事のリンク集。
 
 - **[<タイトル>](url)** _(<feed_name>, <category>, <YYYY-MM-DD>)_ — <1〜2 文の日本語要約> <(summary based) があれば末尾に>
+<!-- ↑ url は articles[].url を copy-paste。推測・組み立て禁止 -->
 - ...
 
 ## トレンド (横断) ← deep / trend のみ
 
 - **<テーマ>**: <意味的な解釈の 1〜2 文> 関連: [記事 A](url), [記事 B](url)
+<!-- ↑ url は articles[].url を copy-paste。推測・組み立て禁止 -->
 - ...
 
 ## カテゴリ別ハイライト ← deep / trend のみ
@@ -253,6 +261,20 @@ Stage 2 で選定した重要記事のリンク集。
 - **記事 0 件**: 「該当期間に記事なし」と正直に報告する。creative writing で埋めない
 - **WebFetch 連続失敗**: deep モードで選定記事の半数以上が fetch 失敗したら、残りは `quick` 相当 (`(summary based)` 付き) に退避し、出力末尾に `_注: WebFetch が複数失敗したため一部 summary ベース_` を付ける
 - **ストーリー形式・読み物が要求された場合**: 本 skill はリスト形式のダイジェスト専用。テーマ別ストーリーやニュースレター形式が必要な場合は `tech-news-weekly` を案内する
+
+### URL 捏造禁止
+
+出力する markdown link `[text](url)` の `url` はすべて **Stage 1 で取得した `articles[].url` から copy-paste したもの**のみ許容する。
+
+以下の行為は一切禁止:
+
+- 記事タイトルからホスト名 + slug を組み立てて URL を生成する
+- ホスト名の記憶・推測からドメインを書く
+- `articles[]` に存在しない URL を出力する
+
+URL が不確実・不明な場合は `[テキスト]` のようにリンク無しのテキストにする。URL の copy-paste のみ許容される。
+
+**退行判定**: generation evaluation で `fabricated_url_count ≥ 1` の場合は退行とし、SKILL.md ガードレールと workflow prompt の URL 捏造禁止節を強化する。
 
 ## 評価
 
