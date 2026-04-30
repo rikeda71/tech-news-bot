@@ -5,24 +5,14 @@ import { listArticles } from "../db/articles";
 import { computeSyndicationEtag } from "../utils/etag";
 import { loadAllFeeds } from "../feed-config";
 import feedsYaml from "../feeds.yaml";
-import { makeOneOf } from "../utils/types";
 import { buildUrlParts } from "./syndication/shared";
 import type { FeedMeta } from "./syndication/shared";
 import { renderJsonFeed } from "./syndication/json";
 import { renderAtomFeed } from "./syndication/atom";
 import { renderRssFeed } from "./syndication/rss";
+import { isCategory, isLang } from "./_guards";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
-
-const VALID_CATEGORIES = [
-  "bigtech",
-  "ai",
-  "jp",
-  "personal",
-] as const satisfies readonly FeedCategory[];
-const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
-const isCategory = makeOneOf<FeedCategory>(VALID_CATEGORIES);
-const isLang = makeOneOf<FeedLang>(VALID_LANGS);
 const FEED_LIMIT = 50;
 const SITE_TITLE = "Tech News Bot";
 const SITE_DESCRIPTION = "Big tech / AI / 日本企業の technical blog を集約した RSS / JSON Feed";

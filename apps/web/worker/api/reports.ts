@@ -9,6 +9,7 @@ import type {
   AdminReportOverlapResponse,
   AdminReportSaveResponse,
 } from "./types";
+import { isCategory, isLang } from "./_guards";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -17,8 +18,6 @@ const app = new Hono<{ Bindings: Env }>();
 app.use("*", adminAuthMiddleware);
 
 const VALID_KINDS = new Set<ReportKind>(["daily", "weekly", "monthly"]);
-const VALID_CATEGORIES = new Set(["bigtech", "ai", "jp", "personal"]);
-const VALID_LANGS = new Set(["ja", "en"]);
 // content が極端に長くなるのを防ぐ (D1 の row size と Worker の CPU 時間を意識)。
 // 1MB は markdown レポートとしては十分すぎる量。
 const MAX_CONTENT_BYTES = 1_000_000;
@@ -77,7 +76,7 @@ function parseInput(
 
   let category: string | null = null;
   if (body.category !== undefined && body.category !== null) {
-    if (typeof body.category !== "string" || !VALID_CATEGORIES.has(body.category)) {
+    if (!isCategory(body.category)) {
       return {
         ok: false,
         error: "category must be one of: bigtech | ai | jp | personal (or null)",
@@ -88,7 +87,7 @@ function parseInput(
 
   let lang: string | null = null;
   if (body.lang !== undefined && body.lang !== null) {
-    if (typeof body.lang !== "string" || !VALID_LANGS.has(body.lang)) {
+    if (!isLang(body.lang)) {
       return { ok: false, error: "lang must be one of: ja | en (or null)" };
     }
     lang = body.lang;
