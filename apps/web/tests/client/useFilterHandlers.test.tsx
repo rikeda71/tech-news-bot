@@ -191,11 +191,11 @@ describe("useFilterHandlers", () => {
       result.current.handleClear();
     });
 
-    expect.soft(setters.setFeedId).toHaveBeenCalledWith("");
-    expect.soft(setters.setDateFrom).toHaveBeenCalledWith("");
-    expect.soft(setters.setDateTo).toHaveBeenCalledWith("");
-    expect.soft(setters.setUnreadOnly).toHaveBeenCalledWith(false);
-    expect.soft(setters.setStarredOnly).toHaveBeenCalledWith(false);
+    expect(setters.setFeedId).toHaveBeenCalledWith("");
+    expect(setters.setDateFrom).toHaveBeenCalledWith("");
+    expect(setters.setDateTo).toHaveBeenCalledWith("");
+    expect(setters.setUnreadOnly).toHaveBeenCalledWith(false);
+    expect(setters.setStarredOnly).toHaveBeenCalledWith(false);
   });
 
   it("handleBookmarkedOnlyToggle が setUrlFilters で bookmarksOnly を反転させる", () => {
@@ -237,8 +237,8 @@ describe("useFilterHandlers", () => {
       });
     });
 
-    expect.soft(setters.setFeedId).toHaveBeenCalledWith("preset-feed");
-    expect.soft(setters.setUnreadOnly).toHaveBeenCalledWith(true);
-    expect.soft(setters.setStarredOnly).toHaveBeenCalledWith(false);
+    expect(setters.setFeedId).toHaveBeenCalledWith("preset-feed");
+    expect(setters.setUnreadOnly).toHaveBeenCalledWith(true);
+    expect(setters.setStarredOnly).toHaveBeenCalledWith(false);
   });
 });

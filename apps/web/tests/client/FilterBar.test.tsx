@@ -63,6 +63,6 @@ describe("FilterBar", () => {
     const clearBtn = screen.getByText(/解除/);
     expect.soft(clearBtn).toBeTruthy();
     await user.click(clearBtn);
-    expect.soft(onClear).toHaveBeenCalled();
+    expect(onClear).toHaveBeenCalled();
   });
 });

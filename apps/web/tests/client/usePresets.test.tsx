@@ -112,7 +112,7 @@ describe("usePresets (mock)", () => {
     act(() => {
       result.current.addPreset("one-too-many", { q: "overflow" });
     });
-    expect.soft(alertMock).toHaveBeenCalled();
+    expect(alertMock).toHaveBeenCalled();
     expect.soft(result.current.presets).toHaveLength(50);
 
     // @ts-expect-error -- globalThis.alert を元に戻す
