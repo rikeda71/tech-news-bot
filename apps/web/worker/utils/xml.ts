@@ -16,6 +16,11 @@ export function parseXml(xml: string): unknown {
   return parser.parse(xml);
 }
 
+// XML 1.0 で禁止されている制御文字 (U+0000-U+0008, U+000B, U+000C, U+000E-U+001F)
+// RSS/Atom 本文に含まれていると、XML 出力時に Invalid XML になるため除去する
+// oxlint-disable-next-line no-control-regex -- 意図的に制御文字を対象とした正規表現
+const XML_INVALID_CHARS_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
+
 export function stripHtml(input: string | null | undefined, maxLen?: number): string | null {
   if (!input) return null;
   const text = input
@@ -28,6 +33,7 @@ export function stripHtml(input: string | null | undefined, maxLen?: number): st
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(XML_INVALID_CHARS_RE, "")
     .replace(/\s+/g, " ")
     .trim();
   if (!text) return null;
