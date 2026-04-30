@@ -45,7 +45,7 @@ describe("runs db", () => {
 
     const detail = await getRun(env.DB, run_id);
     expect(detail).not.toBeNull();
-    expect(detail!.run.id).toBe(run_id);
+    expect.soft(detail!.run.id).toBe(run_id);
     expect(detail!.feeds).toHaveLength(3);
 
     const feedA = detail!.feeds.find((f) => f.feed_id === "feed-a");
