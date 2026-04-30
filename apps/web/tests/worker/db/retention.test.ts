@@ -53,11 +53,11 @@ describe("pruneOldArticles", () => {
 
     const result = await pruneOldArticles(env.DB, 90);
 
-    expect(result.deleted).toBe(1);
+    expect.soft(result.deleted).toBe(1);
     const remaining = await env.DB.prepare("SELECT guid FROM articles ORDER BY guid").all<{
       guid: string;
     }>();
-    expect(remaining.results?.map((r) => r.guid)).toEqual(["g-recent"]);
+    expect.soft(remaining.results?.map((r) => r.guid)).toEqual(["g-recent"]);
   });
 
   it("is a no-op when days is 0", async () => {

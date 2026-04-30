@@ -20,15 +20,15 @@ describe("GET /api", () => {
   it("endpoints array is non-empty", async () => {
     const res = await SELF.fetch("https://example.com/api");
     const body = (await res.json()) as { endpoints: unknown[] };
-    expect(Array.isArray(body.endpoints)).toBe(true);
-    expect(body.endpoints.length).toBeGreaterThan(0);
+    expect.soft(Array.isArray(body.endpoints)).toBe(true);
+    expect.soft(body.endpoints.length).toBeGreaterThan(0);
   });
 
   it("syndication array is non-empty", async () => {
     const res = await SELF.fetch("https://example.com/api");
     const body = (await res.json()) as { syndication: unknown[] };
-    expect(Array.isArray(body.syndication)).toBe(true);
-    expect(body.syndication.length).toBeGreaterThan(0);
+    expect.soft(Array.isArray(body.syndication)).toBe(true);
+    expect.soft(body.syndication.length).toBeGreaterThan(0);
   });
 
   it("contains /api/articles endpoint", async () => {
@@ -79,8 +79,8 @@ describe("GET /api", () => {
   it("name and version fields are present", async () => {
     const res = await SELF.fetch("https://example.com/api");
     const body = (await res.json()) as { name: string; version: string };
-    expect(typeof body.name).toBe("string");
-    expect(body.name.length).toBeGreaterThan(0);
-    expect(typeof body.version).toBe("string");
+    expect.soft(typeof body.name).toBe("string");
+    expect.soft(body.name.length).toBeGreaterThan(0);
+    expect.soft(typeof body.version).toBe("string");
   });
 });

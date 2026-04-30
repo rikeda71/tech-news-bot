@@ -77,13 +77,13 @@ describe("GET /api/admin/cron-health", () => {
       articles_collected: number;
       top_failing_feeds: unknown[];
     };
-    expect(body.window_days).toBe(7);
-    expect(body.runs_total).toBe(0);
-    expect(body.runs_succeeded).toBe(0);
-    expect(body.runs_failed).toBe(0);
-    expect(body.articles_collected).toBe(0);
-    expect(Array.isArray(body.top_failing_feeds)).toBe(true);
-    expect(body.top_failing_feeds).toHaveLength(0);
+    expect.soft(body.window_days).toBe(7);
+    expect.soft(body.runs_total).toBe(0);
+    expect.soft(body.runs_succeeded).toBe(0);
+    expect.soft(body.runs_failed).toBe(0);
+    expect.soft(body.articles_collected).toBe(0);
+    expect.soft(Array.isArray(body.top_failing_feeds)).toBe(true);
+    expect.soft(body.top_failing_feeds).toHaveLength(0);
   });
 
   it("200: runs_total / runs_succeeded / runs_failed のカウントが正しい", async () => {
@@ -103,10 +103,10 @@ describe("GET /api/admin/cron-health", () => {
       runs_failed: number;
       articles_collected: number;
     };
-    expect(body.runs_total).toBe(3);
-    expect(body.runs_succeeded).toBe(2);
-    expect(body.runs_failed).toBe(1);
-    expect(body.articles_collected).toBe(8);
+    expect.soft(body.runs_total).toBe(3);
+    expect.soft(body.runs_succeeded).toBe(2);
+    expect.soft(body.runs_failed).toBe(1);
+    expect.soft(body.articles_collected).toBe(8);
   });
 
   it("200: top_failing_feeds が failures 降順", async () => {
@@ -126,10 +126,10 @@ describe("GET /api/admin/cron-health", () => {
     };
     // feed-a (failures=2) が feed-b (failures=1) より先
     expect(body.top_failing_feeds.length).toBeGreaterThanOrEqual(2);
-    expect(body.top_failing_feeds[0].feed_id).toBe("feed-a");
-    expect(body.top_failing_feeds[0].failures).toBe(2);
-    expect(body.top_failing_feeds[1].feed_id).toBe("feed-b");
-    expect(body.top_failing_feeds[1].failures).toBe(1);
+    expect.soft(body.top_failing_feeds[0].feed_id).toBe("feed-a");
+    expect.soft(body.top_failing_feeds[0].failures).toBe(2);
+    expect.soft(body.top_failing_feeds[1].feed_id).toBe("feed-b");
+    expect.soft(body.top_failing_feeds[1].failures).toBe(1);
   });
 
   it("200: days=7 で古いデータは含まれない", async () => {
@@ -153,8 +153,8 @@ describe("GET /api/admin/cron-health", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { runs_total: number; window_days: number };
-    expect(body.window_days).toBe(30);
-    expect(body.runs_total).toBe(1);
+    expect.soft(body.window_days).toBe(30);
+    expect.soft(body.runs_total).toBe(1);
   });
 
   it("200: Cache-Control ヘッダが private, max-age=60 を含む", async () => {
@@ -163,7 +163,7 @@ describe("GET /api/admin/cron-health", () => {
     });
     expect(res.status).toBe(200);
     const cacheControl = res.headers.get("cache-control") ?? "";
-    expect(cacheControl).toContain("private");
-    expect(cacheControl).toContain("max-age=60");
+    expect.soft(cacheControl).toContain("private");
+    expect.soft(cacheControl).toContain("max-age=60");
   });
 });
