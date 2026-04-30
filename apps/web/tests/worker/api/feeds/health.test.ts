@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env, SELF } from "cloudflare:test";
-import { insertArticles } from "../../../../worker/db/articles";
 import { syncFeeds } from "../../../../worker/db/feeds";
 import { finishRun, recordRunFeed, startRun } from "../../../../worker/db/runs";
 import type { FeedConfig } from "../../../../worker/types";
@@ -40,65 +39,8 @@ const FEEDS: FeedConfig[] = [
   },
 ];
 
-// 今日を基準に日付を計算するヘルパ
-function daysAgo(n: number): string {
-  return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
-}
-
 beforeEach(async () => {
   await syncFeeds(env.DB, FEEDS);
-
-  await insertArticles(env.DB, [
-    // openai-blog: 30d 以内に 2 件、30d 超に 1 件
-    {
-      guid: "openai-1",
-      feed_id: "openai-blog",
-      title: "OpenAI Article 1",
-      url: "https://x.test/openai/1",
-      summary: null,
-      author: null,
-      published_at: daysAgo(5),
-      category: "ai",
-      lang: "en",
-    },
-    {
-      guid: "openai-2",
-      feed_id: "openai-blog",
-      title: "OpenAI Article 2",
-      url: "https://x.test/openai/2",
-      summary: null,
-      author: null,
-      published_at: daysAgo(20),
-      category: "ai",
-      lang: "en",
-    },
-    {
-      guid: "openai-3",
-      feed_id: "openai-blog",
-      title: "OpenAI Article 3 (old)",
-      url: "https://x.test/openai/3",
-      summary: null,
-      author: null,
-      // 30d 窓外: articles_30d に含まれないが last_published_at には影響しない
-      published_at: daysAgo(31),
-      category: "ai",
-      lang: "en",
-    },
-    // google-research: 30d 以内に 1 件
-    {
-      guid: "google-1",
-      feed_id: "google-research",
-      title: "Google Research Article",
-      url: "https://x.test/google/1",
-      summary: null,
-      author: null,
-      published_at: daysAgo(10),
-      category: "bigtech",
-      lang: "en",
-    },
-    // cyberagent-blog: 記事なし (articles_30d=0, last_published_at=null を確認)
-    // zenn-ai: 記事なし
-  ]);
 });
 
 describe("GET /api/feeds/:id/health", () => {
