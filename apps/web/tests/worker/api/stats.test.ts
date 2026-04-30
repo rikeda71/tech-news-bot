@@ -102,8 +102,10 @@ beforeEach(async () => {
 describe("GET /api/stats — response headers", () => {
   it("sets Cache-Control: public, max-age=60, stale-while-revalidate=300", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60, stale-while-revalidate=300");
+    expect.soft(res.status).toBe(200);
+    expect
+      .soft(res.headers.get("Cache-Control"))
+      .toBe("public, max-age=60, stale-while-revalidate=300");
   });
 });
 

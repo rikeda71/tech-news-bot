@@ -83,7 +83,7 @@ describe("/feed.json", () => {
     expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("Content-Type")).toContain("application/feed+json");
     expect.soft(body.version).toBe("https://jsonfeed.org/version/1.1");
-    expect(body.items.map((i) => i.id)).toEqual(["g-bigtech", "g-jp", "g-ai"]);
+    expect.soft(body.items.map((i) => i.id)).toEqual(["g-bigtech", "g-jp", "g-ai"]);
     expect.soft(body.items[2].title).toBe("AI <Article> & friends");
   });
 
@@ -119,8 +119,8 @@ describe("/feed.xml", () => {
   it("filters by category", async () => {
     const res = await SELF.fetch("https://example.com/feed.xml?category=ai");
     const text = await res.text();
-    expect(text).toContain("g-ai");
-    expect(text).not.toContain("g-jp");
+    expect.soft(text).toContain("g-ai");
+    expect.soft(text).not.toContain("g-jp");
   });
 });
 
@@ -424,18 +424,18 @@ describe("/feeds/author/:author.xml (author RSS)", () => {
 
   it("returns 200 with empty feed for unknown author", async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/UnknownPerson.xml");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain('<rss version="2.0"');
+    expect.soft(text).toContain('<rss version="2.0"');
     // items が存在しないこと
-    expect(text).not.toContain("<item>");
+    expect.soft(text).not.toContain("<item>");
   });
 
   it("decodes URL-encoded author name", async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/Sam.xml");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain("g-ai");
+    expect.soft(text).toContain("g-ai");
 
     // URL エンコードされた名前でもデコードされて同じ結果を返す
     // "Sam" に含まれる文字は特別なエンコードが不要だが、スペースを含む著者名をテスト
@@ -531,9 +531,9 @@ describe("/feeds/author/:author.json (author JSON Feed)", () => {
 
   it("returns 200 with empty items for unknown author", async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/NoSuchPerson.json");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toEqual([]);
+    expect.soft(body.items).toEqual([]);
   });
 
   it("decodes URL-encoded author name (%20 → space)", async () => {
@@ -578,11 +578,11 @@ describe("/feeds/author/:author.atom (author Atom)", () => {
 
   it("returns 200 with empty feed for unknown author", async () => {
     const res = await SELF.fetch("https://example.com/feeds/author/Ghost.atom");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect.soft(text).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
     // entry が存在しないこと
-    expect(text).not.toContain("<entry>");
+    expect.soft(text).not.toContain("<entry>");
   });
 
   it("returns Cache-Control: public, max-age=600", async () => {
@@ -805,8 +805,8 @@ describe("empty feed edge cases", () => {
     const res2 = await SELF.fetch("https://example.com/feed.xml?category=zenn");
     const etag1 = res1.headers.get("ETag");
     const etag2 = res2.headers.get("ETag");
-    expect(etag1).not.toBeNull();
-    expect(etag1).toBe(etag2);
+    expect.soft(etag1).not.toBeNull();
+    expect.soft(etag1).toBe(etag2);
   });
 
   it("RSS empty feed supports 304 round-trip", async () => {
@@ -839,7 +839,7 @@ describe("special characters in article fields", () => {
 
   it("RSS escapes special characters in item title, summary, author", async () => {
     const res = await SELF.fetch("https://example.com/feed.xml?category=ai");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const text = await res.text();
     // エスケープ確認
     expect.soft(text).toContain("Special &lt;chars&gt; &amp; &quot;quotes&quot;");
@@ -849,7 +849,7 @@ describe("special characters in article fields", () => {
 
   it("Atom escapes special characters in entry title and summary", async () => {
     const res = await SELF.fetch("https://example.com/feed.atom?category=ai");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const text = await res.text();
     expect.soft(text).toContain("Special &lt;chars&gt; &amp; &quot;quotes&quot;");
     expect.soft(text).toContain("&lt;script&gt;alert(");
@@ -857,7 +857,7 @@ describe("special characters in article fields", () => {
 
   it("JSON Feed preserves raw characters in title (no XML escaping needed)", async () => {
     const res = await SELF.fetch("https://example.com/feed.json?category=ai");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { items: { title: string; content_text: string }[] };
     const special = body.items.find((i) => i.title.includes("Special"));
     expect(special).toBeDefined();
