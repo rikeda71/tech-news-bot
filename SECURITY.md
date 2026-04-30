@@ -44,7 +44,7 @@ The following are considered out of scope for this project's security policy:
 
 ## Secret Handling
 
-Secrets (such as `ADMIN_TOKEN`, `SLACK_WEBHOOK_URL`, and API tokens) must never be committed to the repository.
+Secrets (such as `ADMIN_TOKEN` and API tokens) must never be committed to the repository.
 
 - Secrets are registered via `wrangler secret put` or GitHub Actions repository secrets.
 - If a secret is accidentally exposed, rotate it immediately. Rotation procedures are documented in [`docs/operations/admin-token-rotation.md`](docs/operations/admin-token-rotation.md).
