@@ -20,15 +20,15 @@ describe("ThemeToggle", () => {
 
   it("light button has aria-pressed=true when theme is light", () => {
     render(<ThemeToggle theme="light" onSetTheme={mockSetTheme} />);
-    expect.soft(
-      screen.getByRole("button", { name: "ライトモード" }).getAttribute("aria-pressed"),
-    ).toBe("true");
-    expect.soft(
-      screen.getByRole("button", { name: "OS設定に追従" }).getAttribute("aria-pressed"),
-    ).toBe("false");
-    expect.soft(
-      screen.getByRole("button", { name: "ダークモード" }).getAttribute("aria-pressed"),
-    ).toBe("false");
+    expect
+      .soft(screen.getByRole("button", { name: "ライトモード" }).getAttribute("aria-pressed"))
+      .toBe("true");
+    expect
+      .soft(screen.getByRole("button", { name: "OS設定に追従" }).getAttribute("aria-pressed"))
+      .toBe("false");
+    expect
+      .soft(screen.getByRole("button", { name: "ダークモード" }).getAttribute("aria-pressed"))
+      .toBe("false");
   });
 
   it("system button has aria-pressed=true when theme is system", () => {

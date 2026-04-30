@@ -105,12 +105,12 @@ describe("ReportsList", () => {
 
     // 「日次」クリック後: aria-pressed が切り替わる
     await user.click(screen.getByRole("button", { name: "日次" }));
-    expect.soft(screen.getByRole("button", { name: "日次" }).getAttribute("aria-pressed")).toBe(
-      "true",
-    );
-    expect.soft(screen.getByRole("button", { name: "すべて" }).getAttribute("aria-pressed")).toBe(
-      "false",
-    );
+    expect
+      .soft(screen.getByRole("button", { name: "日次" }).getAttribute("aria-pressed"))
+      .toBe("true");
+    expect
+      .soft(screen.getByRole("button", { name: "すべて" }).getAttribute("aria-pressed"))
+      .toBe("false");
   });
 
   it("kind フィルタ chip をクリックすると fetch URL が変わる", async () => {
