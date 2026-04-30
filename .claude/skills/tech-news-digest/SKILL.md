@@ -1,6 +1,6 @@
 ---
 name: tech-news-digest
-description: D1 に蓄積された tech blog の記事を「今日 / 今週 / 任意期間」の粒度で抽出し、Stage 1〜4 (収集 → 選定 → WebFetch で本文取得 → トレンド分析) で日本語ダイジェストを生成する。"今日のニュースまとめて" "週次サマリ作って" "最近のトレンド何？" のような問い合わせで起動する。要約品質を本文ベースで保つため、デフォルトで WebFetch を使う deep モードで動作する。
+description: D1 に蓄積された tech blog の記事を「今日 / 今週 / 任意期間」の粒度でリスト形式に抽出し、Stage 1〜4 (収集 → 選定 → WebFetch で本文取得 → トレンド分析) で日本語ダイジェストを生成する。デイリー速報や「今日何があった？」程度の素早い確認に最適。"今日のニュースまとめて" "最近のトレンド何？" のような問い合わせで起動する。要約品質を本文ベースで保つため、デフォルトで WebFetch を使う deep モードで動作する。
 ---
 
 # tech-news-digest
@@ -46,7 +46,7 @@ D1 (`articles` テーブル) から期間指定で記事メタデータを取得
 
 - `--since=<today|week|month|N>` (必須)
 - `--target=<local|remote>` (省略時 `local`)
-- `--category=<bigtech|ai|jp>` (任意)
+- `--category=<bigtech|ai|jp>` (任意。`zenn` は対象外 — フィードノイズが多いため)
 - `--lang=<ja|en>` (任意)
 - `--limit=<N>` (デフォルト 200)
 
@@ -252,6 +252,7 @@ Stage 2 で選定した重要記事のリンク集。
   - `--target=local` で 0 件 → `pnpm migrate:local` + `pnpm dev` でローカル収集を 1 回回すよう案内
 - **記事 0 件**: 「該当期間に記事なし」と正直に報告する。creative writing で埋めない
 - **WebFetch 連続失敗**: deep モードで選定記事の半数以上が fetch 失敗したら、残りは `quick` 相当 (`(summary based)` 付き) に退避し、出力末尾に `_注: WebFetch が複数失敗したため一部 summary ベース_` を付ける
+- **ストーリー形式・読み物が要求された場合**: 本 skill はリスト形式のダイジェスト専用。テーマ別ストーリーやニュースレター形式が必要な場合は `tech-news-weekly` を案内する
 
 ## 評価
 

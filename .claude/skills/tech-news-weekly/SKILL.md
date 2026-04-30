@@ -1,6 +1,6 @@
 ---
 name: tech-news-weekly
-description: 週次・月次でテック業界の動きをストーリー形式でまとめる skill。"先週のまとめ作って" "月次レポート" "週次トレンドレポート" のような問い合わせで起動する。長期トレンドの意味的テーマ抽出とニュースレター的 narrative が必要な場合に使う。
+description: 週次・月次でテック業界の動きをニュースレター/読み物形式でまとめる skill。"先週のまとめ作って" "月次レポート" "週次トレンドレポート" のような問い合わせで起動する。テーマ別ストーリー・前週との比較・カテゴリ間の温度差分析など、長期トレンドの意味的テーマ抽出が必要な場合に使う。
 ---
 
 # tech-news-weekly
@@ -36,7 +36,7 @@ D1 (`articles` テーブル) から週次・月次の記事を取得し、意味
 
 - `--since=<week|month>` (必須)
 - `--target=<local|remote>` (省略時 `local`)
-- `--category=<bigtech|ai|jp>` (任意)
+- `--category=<bigtech|ai|jp>` (任意。`zenn` は対象外 — フィードノイズが多いため)
 - `--lang=<ja|en>` (任意)
 - `--limit=<N>` (デフォルト 200、月次は 500 推奨)
 
@@ -82,24 +82,9 @@ for (const a of [...bigtech, ...ai].sort((x, y) => x.published_at.localeCompare(
 
 以降の Stage はマージ済み `merged` を `articles` として扱う。
 
-stdout の JSON 形式は `tech-news-digest` と同一 (`since`, `total`, `articles`, `by_category`, `by_feed`, `by_lang`)。
+stdout の JSON 形式は `tech-news-digest` と同一 (`since`, `total`, `deduped_total`, `articles`, `by_category`, `by_feed`, `by_lang`)。
 
-**URL による de-dup**:
-
-Stage 1 完了後、`articles` を `url` でグループ化し、重複 URL は最も古い `published_at` のものを 1 件だけ残す:
-
-```js
-const seen = new Map();
-const deduped = [];
-for (const a of articles.sort((x, y) => x.published_at.localeCompare(y.published_at))) {
-  if (!seen.has(a.url)) {
-    seen.set(a.url, true);
-    deduped.push(a);
-  }
-}
-```
-
-de-dup 後の件数をレポート冒頭の期間ヘッダに反映する。
+> **注**: 単一カテゴリで取得した場合は `recent.mjs` が返す `deduped_total` をそのまま信頼する。複数カテゴリを結合した場合は上記コードブロックで URL de-dup 済みの `merged` が `articles` になるため、追加の de-dup 処理は不要。レポート冒頭の期間ヘッダには de-dup 後の件数 (単一カテゴリ: `deduped_total`、複数カテゴリ結合: `merged.length`) を表示する。
 
 エラーハンドリング:
 
