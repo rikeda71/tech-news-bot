@@ -6,7 +6,9 @@ describe("/robots.txt", () => {
     const res = await SELF.fetch("https://example.com/robots.txt");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("text/plain");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+    expect(res.headers.get("Cache-Control")).toBe(
+      "public, max-age=3600, stale-while-revalidate=86400",
+    );
   });
 
   it("contains User-agent: *", async () => {
@@ -33,7 +35,9 @@ describe("/sitemap.xml", () => {
     const res = await SELF.fetch("https://example.com/sitemap.xml");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("application/xml");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+    expect(res.headers.get("Cache-Control")).toBe(
+      "public, max-age=3600, stale-while-revalidate=86400",
+    );
   });
 
   it("contains root URL <loc>", async () => {
@@ -51,5 +55,20 @@ describe("/sitemap.xml", () => {
     expect(text).toContain("/?feed_id=google-research");
     expect(text).toContain("<changefreq>daily</changefreq>");
     expect(text).toContain("<priority>0.6</priority>");
+  });
+
+  it("does not include /api/openapi.json (not a content page)", async () => {
+    const res = await SELF.fetch("https://example.com/sitemap.xml");
+    const text = await res.text();
+    // API ドキュメントは HTML コンテンツではないのでクロールバジェット節約のため除外
+    expect(text).not.toContain("/api/openapi.json");
+  });
+
+  it("is well-formed XML with urlset root element", async () => {
+    const res = await SELF.fetch("https://example.com/sitemap.xml");
+    const text = await res.text();
+    expect.soft(text).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+    expect.soft(text).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    expect.soft(text).toContain("</urlset>");
   });
 });
