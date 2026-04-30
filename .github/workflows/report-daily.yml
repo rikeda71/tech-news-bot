@@ -89,6 +89,29 @@ jobs:
             exit 1
           fi
 
+          # Daily report の period を JST 暦日 (00:00 〜 翌 00:00 JST) に正規化する。
+          # skill が出力する generated_at ベースの sliding-window だと隣接日の row が
+          # 境界で部分 overlap してしまうため (#390)、POST 前にここで暦日丸めを行い、
+          # /tmp/report-meta.json の period_start / period_end を上書きする。
+          # start / end は 1 回の python3 呼び出しで同時に取得する (2 回 spawn する間に
+          # 日付が変わると 2 日分の period が生成されるため)。
+          read -r PERIOD_START_UTC PERIOD_END_UTC <<<"$(python3 -c "from datetime import datetime, timedelta, timezone
+          jst = timezone(timedelta(hours=9))
+          start = datetime.now(jst).replace(hour=0, minute=0, second=0, microsecond=0)
+          end = start + timedelta(days=1)
+          fmt = '%Y-%m-%dT%H:%M:%SZ'
+          print(start.astimezone(timezone.utc).strftime(fmt), end.astimezone(timezone.utc).strftime(fmt))")"
+          if ! jq \
+            --arg ps "$PERIOD_START_UTC" \
+            --arg pe "$PERIOD_END_UTC" \
+            '.period_start = $ps | .period_end = $pe' \
+            /tmp/report-meta.json > /tmp/report-meta.json.tmp; then
+            rm -f /tmp/report-meta.json.tmp
+            echo "Failed to override period in /tmp/report-meta.json" >&2
+            exit 1
+          fi
+          mv /tmp/report-meta.json.tmp /tmp/report-meta.json
+
           # report-meta.json は kind / period_start / period_end / category / lang /
           # source_skill / generated_at と追加メタ (dedup_total, by_category, ...) を含む。
           # API body は { ...meta, content, meta } の形に jq で組み立てる。

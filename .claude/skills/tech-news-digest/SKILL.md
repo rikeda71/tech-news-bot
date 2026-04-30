@@ -292,8 +292,8 @@ Stage 2〜4 は articles 0 件のためスキップする (`/tmp/report.md` の�
 ```json
 {
   "kind": "daily",
-  "period_start": "<since の ISO 8601 (実行時刻 -24h)>",
-  "period_end": "<実行時刻の ISO 8601>",
+  "period_start": "<任意の仮値。workflow が JST 暦日に上書きする>",
+  "period_end": "<任意の仮値。workflow が JST 暦日に上書きする>",
   "category": null,
   "lang": null,
   "included_categories": ["bigtech", "ai", "jp"],
@@ -304,6 +304,8 @@ Stage 2〜4 は articles 0 件のためスキップする (`/tmp/report.md` の�
   "by_feed": <object — 0 件のときは {}>
 }
 ```
+
+> **注**: `period_start` / `period_end` は workflow (`.github/workflows/report-daily.yml`) が POST 直前に **JST 暦日 (00:00 〜 翌 00:00 JST)** に上書きする。skill 側はとりあえず実行時刻ベースの値を入れておけばよく、最終的に D1 に保存される値は workflow 側の上書き後の暦日整合した期間になる。これは隣接日 row との境界 overlap (#390) を防ぐため。
 
 #### 3. `/tmp/slack-message.md`
 
