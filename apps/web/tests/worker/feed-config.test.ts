@@ -43,10 +43,10 @@ describe("loadAllFeeds", () => {
     expect(all.length).toBeGreaterThanOrEqual(enabled.length);
   });
 
-  it("includes well-known feeds (google-research, openai-blog, zenn-mizchi)", () => {
+  it("includes well-known feeds (google-developers, openai-blog, zenn-mizchi)", () => {
     const feeds = loadAllFeeds();
     const ids = feeds.map((f) => f.id);
-    expect(ids).toContain("google-research");
+    expect(ids).toContain("google-developers");
     expect(ids).toContain("openai-blog");
     expect(ids).toContain("zenn-mizchi");
   });

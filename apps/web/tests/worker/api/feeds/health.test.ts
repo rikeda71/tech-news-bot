@@ -14,7 +14,7 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "google-research",
+    id: "google-developers",
     name: "Google Research",
     url: "https://x.test/google",
     category: "bigtech",
@@ -142,10 +142,14 @@ describe("GET /api/feeds/:id/health", () => {
   });
 
   it("returns null last_error when no failures", async () => {
-    // google-research にはランを挿入していないため 0 件
+    // google-developers にはランを挿入していないため 0 件
     // 成功のみのランを別フィードに挿入して確認
-    await insertRun("google-research", "ok", { daysAgoN: 1, durationMs: 150, articlesInserted: 2 });
-    const res = await SELF.fetch("https://example.com/api/feeds/google-research/health");
+    await insertRun("google-developers", "ok", {
+      daysAgoN: 1,
+      durationMs: 150,
+      articlesInserted: 2,
+    });
+    const res = await SELF.fetch("https://example.com/api/feeds/google-developers/health");
     const body = await res.json<{ last_error: null; last_run_status: string }>();
     expect.soft(res.status).toBe(200);
     expect.soft(body.last_error).toBeNull();

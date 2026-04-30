@@ -51,6 +51,27 @@ export async function loadFeedHeadersAll(
 }
 
 /**
+ * 200 応答時のレスポンスヘッダ更新ステートメントを組み立てる。
+ * collector が per-feed batch に詰めて 1 ラウンドトリップで実行するため builder として分離。
+ */
+export function buildUpdateFeedHeadersStmt(
+  db: D1Database,
+  feedId: string,
+  etag: string | null,
+  lastModified: string | null,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE feeds
+       SET last_etag = ?1,
+           last_modified = ?2,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE id = ?3`,
+    )
+    .bind(etag, lastModified, feedId);
+}
+
+/**
  * 200 応答時のレスポンスヘッダを保存する。
  * null を渡すと既存値を NULL 上書きする (サーバが ETag を返さなくなった場合)。
  */
@@ -60,21 +81,12 @@ export async function updateFeedHeaders(
   etag: string | null,
   lastModified: string | null,
 ): Promise<void> {
-  await db
-    .prepare(
-      `UPDATE feeds
-       SET last_etag = ?1,
-           last_modified = ?2,
-           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-       WHERE id = ?3`,
-    )
-    .bind(etag, lastModified, feedId)
-    .run();
+  await buildUpdateFeedHeadersStmt(db, feedId, etag, lastModified).run();
 }
 
 export async function syncFeeds(db: D1Database, feeds: FeedConfig[]): Promise<void> {
   if (feeds.length === 0) return;
-  const stmts = feeds.map((f) =>
+  const upserts = feeds.map((f) =>
     db
       .prepare(
         `INSERT INTO feeds (id, name, url, category, lang, enabled, updated_at)
@@ -89,37 +101,48 @@ export async function syncFeeds(db: D1Database, feeds: FeedConfig[]): Promise<vo
       )
       .bind(f.id, f.name, f.url, f.category, f.lang, f.enabled ? 1 : 0),
   );
-  const BATCH_SIZE = 50;
-  for (let i = 0; i < stmts.length; i += BATCH_SIZE) {
-    await db.batch(stmts.slice(i, i + BATCH_SIZE));
-  }
 
   // yaml に存在しない feed を D1 で disable する (orphan cleanup)。
   // 削除しない理由: 過去記事は articles.feed_id 経由で feed 名・カテゴリを引いているため、
   // レコード自体は残し enabled=0 で stats の stale 判定や collector 対象から除外する。
   const ids = feeds.map((f) => f.id);
   const placeholders = ids.map((_, i) => `?${i + 1}`).join(",");
-  await db
+  const orphanStmt = db
     .prepare(
       `UPDATE feeds
        SET enabled = 0,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE enabled = 1 AND id NOT IN (${placeholders})`,
     )
-    .bind(...ids)
-    .run();
+    .bind(...ids);
+
+  // upsert と orphan disable を 1 batch に集約して subrequest を削減する。
+  // batch は最大 100 stmts のため、現状の feed 数 (< 100) では分割不要。
+  // 将来 feed 数が 99 以上に増えたら orphan を別 batch に切り出す必要がある。
+  const BATCH_LIMIT = 100;
+  const allStmts = [...upserts, orphanStmt];
+  if (allStmts.length <= BATCH_LIMIT) {
+    await db.batch(allStmts);
+    return;
+  }
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < upserts.length; i += BATCH_SIZE) {
+    await db.batch(upserts.slice(i, i + BATCH_SIZE));
+  }
+  await orphanStmt.run();
 }
 
-export async function recordFetchSuccess(
+/** recordFetchSuccess の SQL を builder として返す。collector の per-feed batch に渡す用。 */
+export function buildRecordFetchSuccessStmt(
   db: D1Database,
   feedId: string,
   fetchedAt: string,
   insertedCount: number,
   // 304 の場合は "not_modified"、それ以外は挿入件数を含む "ok:N" 形式
   statusOverride?: "not_modified",
-): Promise<void> {
+): D1PreparedStatement {
   const status = statusOverride ?? `ok:${insertedCount}`;
-  await db
+  return db
     .prepare(
       `UPDATE feeds
        SET last_fetched_at = ?1,
@@ -130,8 +153,18 @@ export async function recordFetchSuccess(
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?3`,
     )
-    .bind(fetchedAt, status, feedId)
-    .run();
+    .bind(fetchedAt, status, feedId);
+}
+
+export async function recordFetchSuccess(
+  db: D1Database,
+  feedId: string,
+  fetchedAt: string,
+  insertedCount: number,
+  // 304 の場合は "not_modified"、それ以外は挿入件数を含む "ok:N" 形式
+  statusOverride?: "not_modified",
+): Promise<void> {
+  await buildRecordFetchSuccessStmt(db, feedId, fetchedAt, insertedCount, statusOverride).run();
 }
 
 /** D1 の feeds.enabled を更新する。id が存在しない場合は found=false を返す。 */
@@ -170,13 +203,34 @@ export async function getEnabledFeedIds(db: D1Database): Promise<Set<string>> {
   return new Set(rows.results.map((r) => r.id));
 }
 
-export async function recordFetchError(
+/**
+ * collector 1 invocation の冒頭で呼ぶ統合クエリ。
+ * enabled=1 の feed id 集合と conditional GET ヘッダを 1 SELECT で同時に返し、
+ * Worker の subrequest を 2 から 1 に削減する。
+ */
+export async function loadEnabledFeedIdsAndHeaders(
+  db: D1Database,
+): Promise<{ enabledIds: Set<string>; headers: Map<string, FeedHeaders> }> {
+  const rows = await db
+    .prepare(`SELECT id, last_etag, last_modified FROM feeds WHERE enabled = 1`)
+    .all<{ id: string; last_etag: string | null; last_modified: string | null }>();
+  const enabledIds = new Set<string>();
+  const headers = new Map<string, FeedHeaders>();
+  for (const row of rows.results ?? []) {
+    enabledIds.add(row.id);
+    headers.set(row.id, { last_etag: row.last_etag, last_modified: row.last_modified });
+  }
+  return { enabledIds, headers };
+}
+
+/** recordFetchError の SQL を builder として返す。collector の per-feed batch に渡す用。 */
+export function buildRecordFetchErrorStmt(
   db: D1Database,
   feedId: string,
   fetchedAt: string,
   error: string,
-): Promise<void> {
-  await db
+): D1PreparedStatement {
+  return db
     .prepare(
       `UPDATE feeds
        SET last_fetched_at = ?1,
@@ -187,8 +241,16 @@ export async function recordFetchError(
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?3`,
     )
-    .bind(fetchedAt, error.slice(0, 1000), feedId)
-    .run();
+    .bind(fetchedAt, error.slice(0, 1000), feedId);
+}
+
+export async function recordFetchError(
+  db: D1Database,
+  feedId: string,
+  fetchedAt: string,
+  error: string,
+): Promise<void> {
+  await buildRecordFetchErrorStmt(db, feedId, fetchedAt, error).run();
 }
 
 export interface FeedStreak {

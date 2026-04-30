@@ -16,7 +16,7 @@ const TEST_FEED: FeedConfig = {
 const AUTH_HEADER = { authorization: "Bearer test-admin-token" };
 
 // feeds.yaml に実在する ID (テスト環境でも loadAllFeeds() から参照される)
-const REAL_FEED_ID = "google-research";
+const REAL_FEED_ID = "google-developers";
 
 beforeEach(async () => {
   await syncFeeds(env.DB, [TEST_FEED]);

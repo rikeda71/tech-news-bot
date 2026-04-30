@@ -1,13 +1,6 @@
 version: 1
 feeds:
   # ─────────── Big tech ───────────
-  - id: google-research
-    name: Google Research Blog
-    url: https://blog.research.google/feeds/posts/default
-    category: bigtech
-    lang: en
-    enabled: true
-
   - id: google-developers
     name: Google Developers Blog
     url: https://developers.googleblog.com/feeds/posts/default
@@ -18,13 +11,6 @@ feeds:
   - id: google-cloud
     name: Google Cloud Blog
     url: https://cloudblog.withgoogle.com/rss/
-    category: bigtech
-    lang: en
-    enabled: true
-
-  - id: google-cloudplatform
-    name: Google Cloud Platform Blog
-    url: https://cloudblog.withgoogle.com/products/gcp/rss/
     category: bigtech
     lang: en
     enabled: true
@@ -127,13 +113,6 @@ feeds:
     lang: en
     enabled: true
 
-  - id: microsoft-ai-blog
-    name: Microsoft AI Blog
-    url: https://blogs.microsoft.com/ai/feed/
-    category: ai
-    lang: en
-    enabled: true
-
   # ─────────── AI labs ───────────
   - id: openai-blog
     name: OpenAI News
@@ -166,13 +145,6 @@ feeds:
   - id: huggingface-blog
     name: Hugging Face Blog
     url: https://huggingface.co/blog/feed.xml
-    category: ai
-    lang: en
-    enabled: true
-
-  - id: cohere-blog
-    name: Cohere Blog (Medium)
-    url: https://medium.com/feed/cohere-ai
     category: ai
     lang: en
     enabled: true
@@ -273,13 +245,6 @@ feeds:
   - id: pepabo-tech
     name: GMO Pepabo Tech Blog
     url: https://tech.pepabo.com/feed.xml
-    category: jp
-    lang: ja
-    enabled: true
-
-  - id: wantedly-engineering
-    name: Wantedly Engineering (Medium)
-    url: https://medium.com/feed/wantedly-engineering
     category: jp
     lang: ja
     enabled: true

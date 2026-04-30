@@ -48,11 +48,11 @@ describe("/sitemap.xml", () => {
     expect(text).toContain("<changefreq>hourly</changefreq>");
   });
 
-  it("contains enabled feed_id URL (google-research)", async () => {
+  it("contains enabled feed_id URL (google-developers)", async () => {
     const res = await SELF.fetch("https://example.com/sitemap.xml");
     const text = await res.text();
     // feeds.yaml で enabled: true のフィードが含まれること
-    expect(text).toContain("/?feed_id=google-research");
+    expect(text).toContain("/?feed_id=google-developers");
     expect(text).toContain("<changefreq>daily</changefreq>");
     expect(text).toContain("<priority>0.6</priority>");
   });
