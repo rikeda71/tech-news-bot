@@ -1,11 +1,9 @@
 /**
- * articles.ts handler で使う parse / validation ヘルパー。
- * HTTP リクエストから値を取り出す純粋ロジックを集約し、handler を薄く保つ。
+ * articles.ts handler で使う HTTP request parse helper (Context 依存あり)。
+ * limit / cursor などのクエリパラメータ parse と validation を集約し、handler を薄く保つ。
  *
- * NOTE: _guards.ts (PR #404 でマージ予定) が存在しないため、
- *       isCategory / isLang の guard と VALID_CATEGORIES / VALID_LANGS は
- *       articles.ts 内の既存定義から import して再利用する。
- *       _guards.ts マージ後に import 元を切り替えること。
+ * isCategory / isLang の guard は _guards.ts に集約されている。
+ * articles.ts では _guards.ts から import して利用する。
  */
 import type { Context } from "hono";
 import type { Env } from "../types";
@@ -68,7 +66,7 @@ export function decodeCursor(input: string | undefined): Cursor | null {
     const decoded = atob(input);
     const parsed: unknown = JSON.parse(decoded);
     if (isCursorShape(parsed)) {
-      return parsed;
+      return { publishedAt: parsed.publishedAt, id: parsed.id };
     }
   } catch {
     return null;

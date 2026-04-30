@@ -65,6 +65,15 @@ describe("decodeCursor", () => {
     const result = decodeCursor(encoded);
     expect(result).toEqual(cursor);
   });
+
+  it("strips extraneous fields and returns only publishedAt and id", () => {
+    const encoded = btoa(
+      JSON.stringify({ publishedAt: "2024-04-01T00:00:00.000Z", id: 1, foo: "bar" }),
+    );
+    const result = decodeCursor(encoded);
+    expect(result).not.toBeNull();
+    expect(Object.keys(result!).toSorted()).toEqual(["id", "publishedAt"]);
+  });
 });
 
 // ---- encodeCursor ----
@@ -74,10 +83,10 @@ describe("encodeCursor", () => {
     expect(encodeCursor(null)).toBeNull();
   });
 
-  it("returns a string for a valid cursor", () => {
+  it("returns the exact base64 encoding of the cursor JSON", () => {
     const cursor = { publishedAt: "2024-04-01T00:00:00.000Z", id: 42 };
     const result = encodeCursor(cursor);
-    expect(typeof result).toBe("string");
+    expect(result).toBe(btoa(JSON.stringify(cursor)));
   });
 
   it("round-trips: encodeCursor -> decodeCursor returns original value", () => {
