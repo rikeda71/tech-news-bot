@@ -40,8 +40,8 @@ describe("useFeedArticles", () => {
   it("初期状態でローディングが true になる", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
     const { result } = renderHook(() => useFeedArticles("test-feed"));
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.articles).toEqual([]);
+    expect.soft(result.current.isLoading).toBe(true);
+    expect.soft(result.current.articles).toEqual([]);
   });
 
   it("fetch 成功時に記事が返される", async () => {
@@ -54,8 +54,8 @@ describe("useFeedArticles", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.articles).toHaveLength(5);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.articles).toHaveLength(5);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("nextCursor が null のとき hasMore が false になる", async () => {
@@ -117,8 +117,8 @@ describe("useFeedArticles", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.articles).toHaveLength(20);
-    expect(result.current.hasMore).toBe(true);
+    expect.soft(result.current.articles).toHaveLength(20);
+    expect.soft(result.current.hasMore).toBe(true);
 
     await act(async () => {
       await result.current.loadMore();
@@ -128,7 +128,7 @@ describe("useFeedArticles", () => {
       expect(result.current.articles).toHaveLength(30);
     });
 
-    expect(result.current.hasMore).toBe(false);
+    expect.soft(result.current.hasMore).toBe(false);
   });
 
   it("loadMore の URL に cursor が含まれる", async () => {
@@ -165,7 +165,7 @@ describe("useFeedArticles", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBeTruthy();
-    expect(result.current.articles).toEqual([]);
+    expect.soft(result.current.error).toBeTruthy();
+    expect.soft(result.current.articles).toEqual([]);
   });
 });

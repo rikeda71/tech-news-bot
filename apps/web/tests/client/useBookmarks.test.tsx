@@ -45,8 +45,8 @@ describe("useBookmarks", () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed: unknown = JSON.parse(stored!);
-    expect(Array.isArray(parsed)).toBe(true);
-    expect((parsed as string[]).includes("guid-xyz")).toBe(true);
+    expect.soft(Array.isArray(parsed)).toBe(true);
+    expect.soft((parsed as string[]).includes("guid-xyz")).toBe(true);
   });
 
   it("isBookmarked returns false for unknown guid", () => {
@@ -64,18 +64,18 @@ describe("useBookmarks", () => {
     act(() => {
       result.current.clear();
     });
-    expect(result.current.bookmarks.size).toBe(0);
-    expect(result.current.isBookmarked("guid-1")).toBe(false);
-    expect(result.current.isBookmarked("guid-2")).toBe(false);
+    expect.soft(result.current.bookmarks.size).toBe(0);
+    expect.soft(result.current.isBookmarked("guid-1")).toBe(false);
+    expect.soft(result.current.isBookmarked("guid-2")).toBe(false);
   });
 
   it("returns the same Set reference when raw is unchanged", () => {
     // raw が変わっていなければ getSnapshot が同じ参照を返すことを確認する
     localStorage.setItem(STORAGE_KEY, JSON.stringify(["guid-a", "guid-b"]));
     const { result } = renderHook(() => useBookmarks());
-    expect(result.current.isBookmarked("guid-a")).toBe(true);
-    expect(result.current.isBookmarked("guid-b")).toBe(true);
-    expect(result.current.isBookmarked("guid-c")).toBe(false);
+    expect.soft(result.current.isBookmarked("guid-a")).toBe(true);
+    expect.soft(result.current.isBookmarked("guid-b")).toBe(true);
+    expect.soft(result.current.isBookmarked("guid-c")).toBe(false);
   });
 
   it("syncs via StorageEvent (cross-tab simulation)", () => {

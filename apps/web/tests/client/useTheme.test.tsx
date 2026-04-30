@@ -35,8 +35,8 @@ describe("useTheme", () => {
     act(() => {
       result.current.setTheme("dark");
     });
-    expect(result.current.theme).toBe("dark");
-    expect(result.current.resolvedTheme).toBe("dark");
+    expect.soft(result.current.theme).toBe("dark");
+    expect.soft(result.current.resolvedTheme).toBe("dark");
   });
 
   it("setTheme persists to localStorage", () => {
@@ -73,8 +73,8 @@ describe("useTheme", () => {
     act(() => {
       result.current.setTheme("system");
     });
-    expect(result.current.theme).toBe("system");
-    expect(localStorage.getItem(STORAGE_KEY)).toBe("system");
+    expect.soft(result.current.theme).toBe("system");
+    expect.soft(localStorage.getItem(STORAGE_KEY)).toBe("system");
   });
 
   it("applies data-theme attribute to html element", () => {

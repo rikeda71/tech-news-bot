@@ -101,11 +101,11 @@ describe("useToast / ToastContainer", () => {
     const msgs = toasts.map((el) => el.textContent ?? "");
 
     // 最新 3 件のみ残り、最古の「通知1」は消える
-    expect(msgs.some((m) => m.includes("通知1"))).toBe(false);
-    expect(msgs.some((m) => m.includes("通知2"))).toBe(true);
-    expect(msgs.some((m) => m.includes("通知3"))).toBe(true);
-    expect(msgs.some((m) => m.includes("通知4"))).toBe(true);
-    expect(toasts).toHaveLength(3);
+    expect.soft(msgs.some((m) => m.includes("通知1"))).toBe(false);
+    expect.soft(msgs.some((m) => m.includes("通知2"))).toBe(true);
+    expect.soft(msgs.some((m) => m.includes("通知3"))).toBe(true);
+    expect.soft(msgs.some((m) => m.includes("通知4"))).toBe(true);
+    expect.soft(toasts).toHaveLength(3);
   });
 
   it("toast 要素に aria-live='polite' と role='status' が設定されている", () => {
@@ -116,7 +116,7 @@ describe("useToast / ToastContainer", () => {
     });
 
     const toastEl = screen.getByRole("status");
-    expect(toastEl).toBeTruthy();
-    expect(toastEl.getAttribute("aria-live")).toBe("polite");
+    expect.soft(toastEl).toBeTruthy();
+    expect.soft(toastEl.getAttribute("aria-live")).toBe("polite");
   });
 });

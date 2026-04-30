@@ -13,22 +13,22 @@ describe("ThemeToggle", () => {
 
   it("renders 3 buttons (light, system, dark)", () => {
     render(<ThemeToggle theme="system" onSetTheme={mockSetTheme} />);
-    expect(screen.getByRole("button", { name: "ライトモード" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "OS設定に追従" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "ダークモード" })).toBeTruthy();
+    expect.soft(screen.getByRole("button", { name: "ライトモード" })).toBeTruthy();
+    expect.soft(screen.getByRole("button", { name: "OS設定に追従" })).toBeTruthy();
+    expect.soft(screen.getByRole("button", { name: "ダークモード" })).toBeTruthy();
   });
 
   it("light button has aria-pressed=true when theme is light", () => {
     render(<ThemeToggle theme="light" onSetTheme={mockSetTheme} />);
-    expect(screen.getByRole("button", { name: "ライトモード" }).getAttribute("aria-pressed")).toBe(
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "OS設定に追従" }).getAttribute("aria-pressed")).toBe(
-      "false",
-    );
-    expect(screen.getByRole("button", { name: "ダークモード" }).getAttribute("aria-pressed")).toBe(
-      "false",
-    );
+    expect
+      .soft(screen.getByRole("button", { name: "ライトモード" }).getAttribute("aria-pressed"))
+      .toBe("true");
+    expect
+      .soft(screen.getByRole("button", { name: "OS設定に追従" }).getAttribute("aria-pressed"))
+      .toBe("false");
+    expect
+      .soft(screen.getByRole("button", { name: "ダークモード" }).getAttribute("aria-pressed"))
+      .toBe("false");
   });
 
   it("system button has aria-pressed=true when theme is system", () => {

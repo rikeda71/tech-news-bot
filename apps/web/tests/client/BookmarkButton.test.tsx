@@ -27,8 +27,8 @@ describe("BookmarkButton", () => {
     const btn = screen.getByRole("button");
     await user.click(btn);
     // ブックマーク追加後は aria-pressed=true になる
-    expect(btn.getAttribute("aria-pressed")).toBe("true");
-    expect(btn.textContent).toContain("★");
+    expect.soft(btn.getAttribute("aria-pressed")).toBe("true");
+    expect.soft(btn.textContent).toContain("★");
   });
 
   it("toggles back to false when clicked twice", async () => {
@@ -37,8 +37,8 @@ describe("BookmarkButton", () => {
     const btn = screen.getByRole("button");
     await user.click(btn);
     await user.click(btn);
-    expect(btn.getAttribute("aria-pressed")).toBe("false");
-    expect(btn.textContent).toContain("☆");
+    expect.soft(btn.getAttribute("aria-pressed")).toBe("false");
+    expect.soft(btn.textContent).toContain("☆");
   });
 
   it("aria-label reflects current state", async () => {

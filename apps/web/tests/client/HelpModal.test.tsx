@@ -12,16 +12,16 @@ describe("HelpModal", () => {
 
   it("renders the dialog with shortcut table when open=true", () => {
     render(<HelpModal open={true} onClose={vi.fn<() => void>()} />);
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.getByText("キーボードショートカット")).toBeTruthy();
+    expect.soft(screen.getByRole("dialog")).toBeTruthy();
+    expect.soft(screen.getByText("キーボードショートカット")).toBeTruthy();
   });
 
   it("shows shortcut rows in the table", () => {
     render(<HelpModal open={true} onClose={vi.fn<() => void>()} />);
     // HelpModal に定義されているショートカット説明が表示されているか確認
-    expect(screen.getByText("次の記事に移動")).toBeTruthy();
-    expect(screen.getByText("前の記事に移動")).toBeTruthy();
-    expect(screen.getByText("検索ボックスにフォーカス")).toBeTruthy();
+    expect.soft(screen.getByText("次の記事に移動")).toBeTruthy();
+    expect.soft(screen.getByText("前の記事に移動")).toBeTruthy();
+    expect.soft(screen.getByText("検索ボックスにフォーカス")).toBeTruthy();
   });
 
   it("calls onClose when close button is clicked", async () => {

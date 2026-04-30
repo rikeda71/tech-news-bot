@@ -71,8 +71,8 @@ describe("useUrlState", () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(window.location.search).toContain("category=jp");
-    expect(result.current[0].category).toBe("jp");
+    expect.soft(window.location.search).toContain("category=jp");
+    expect.soft(result.current[0].category).toBe("jp");
   });
 
   it("setFilters({ category: '' }) で URL から category が消える", () => {
@@ -87,8 +87,8 @@ describe("useUrlState", () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(window.location.search).not.toContain("category");
-    expect(result.current[0].category).toBe("");
+    expect.soft(window.location.search).not.toContain("category");
+    expect.soft(result.current[0].category).toBe("");
   });
 
   it("bookmarksOnly: true で URL に bookmarks=only が付く", () => {
@@ -103,8 +103,8 @@ describe("useUrlState", () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(window.location.search).toContain("bookmarks=only");
-    expect(result.current[0].bookmarksOnly).toBe(true);
+    expect.soft(window.location.search).toContain("bookmarks=only");
+    expect.soft(result.current[0].bookmarksOnly).toBe(true);
   });
 
   it("bookmarksOnly: false で URL から bookmarks が消える", () => {
@@ -120,8 +120,8 @@ describe("useUrlState", () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(window.location.search).not.toContain("bookmarks");
-    expect(result.current[0].bookmarksOnly).toBe(false);
+    expect.soft(window.location.search).not.toContain("bookmarks");
+    expect.soft(result.current[0].bookmarksOnly).toBe(false);
   });
 
   it("popstate dispatch で state が更新される", () => {
@@ -161,8 +161,8 @@ describe("useUrlState", () => {
     });
 
     // debounce が解消されて最後の値 "ab" が URL に反映される
-    expect(window.location.search).toContain("q=ab");
-    expect(result.current[0].q).toBe("ab");
+    expect.soft(window.location.search).toContain("q=ab");
+    expect.soft(result.current[0].q).toBe("ab");
   });
 
   it("不正な category 値は '' にフォールバックする", () => {

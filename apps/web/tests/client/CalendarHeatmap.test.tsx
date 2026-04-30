@@ -85,8 +85,8 @@ describe("CalendarHeatmap", () => {
     const cells = container.querySelectorAll("[data-level][aria-label]");
     expect(cells.length).toBeGreaterThan(0);
     const labels = Array.from(cells).map((c) => c.getAttribute("aria-label") ?? "");
-    expect(labels.some((l) => l.includes("5件"))).toBe(true);
-    expect(labels.some((l) => l.includes("月") && l.includes("日"))).toBe(true);
+    expect.soft(labels.some((l) => l.includes("5件"))).toBe(true);
+    expect.soft(labels.some((l) => l.includes("月") && l.includes("日"))).toBe(true);
   });
 
   it("count=0 のセルは data-level=0 が付与される", async () => {

@@ -31,9 +31,9 @@ describe("Header", () => {
 
   it("renders 3 theme toggle buttons", () => {
     render(<Header />);
-    expect(screen.getByRole("button", { name: "ライトモード" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "OS設定に追従" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "ダークモード" })).toBeTruthy();
+    expect.soft(screen.getByRole("button", { name: "ライトモード" })).toBeTruthy();
+    expect.soft(screen.getByRole("button", { name: "OS設定に追従" })).toBeTruthy();
+    expect.soft(screen.getByRole("button", { name: "ダークモード" })).toBeTruthy();
   });
 
   it("system button is aria-pressed=true when theme is system", () => {
