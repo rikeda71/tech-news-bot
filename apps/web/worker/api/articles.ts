@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import type { Env, FeedCategory, FeedLang } from "../types";
+import type { Env } from "../types";
 import { loadAllFeeds } from "../feed-config";
 import {
   countArticlesByDay,
@@ -35,26 +35,16 @@ import type {
   ArticleRelatedResponse,
   ArticleSearchResponse,
 } from "./types";
-import { makeOneOf } from "../utils/types";
+import { isCategory, isLang } from "./_guards";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
 const app = new Hono<{ Bindings: Env }>();
 
-const VALID_CATEGORIES = [
-  "bigtech",
-  "ai",
-  "jp",
-  "personal",
-] as const satisfies readonly FeedCategory[];
-const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
 const VALID_FEED_IDS = new Set(loadAllFeeds().map((f) => f.id));
 const VALID_CALENDAR_DAYS = [7, 30, 90, 365] as const;
 // URL パラメータの長さ上限。意図せず長い文字列が D1 クエリに流れ込むのを防ぐ
 const MAX_PARAM_LENGTH = 200;
-
-const isCategory = makeOneOf<FeedCategory>(VALID_CATEGORIES);
-const isLang = makeOneOf<FeedLang>(VALID_LANGS);
 
 // ISO 8601 の日時部分 (時刻まで)。decodeCursor の publishedAt 検証と
 // since/until の ISO 形式チェック (時刻部分以降は内部で 10 文字に切り詰めて検証) に共用する。
