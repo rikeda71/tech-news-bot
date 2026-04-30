@@ -89,6 +89,12 @@ jobs:
             - 最終 markdown 出力以外のアシスタント発話は最小限に抑えてください。
             - WebFetch が失敗した記事には (summary based) を末尾に付けてください。
 
+            URL 捏造禁止 (必須):
+            - 出力する markdown link [title](url) の url は、Stage 1 で取得した articles[].url のいずれかと完全一致 (string equality) させてください。articles[] に存在しない url を絶対に作らないでください。
+            - 注目記事ピックアップ / カテゴリ別ハイライト / 今週の主要トピック の関連記事リンクすべてでこの制約を守ってください。
+            - 不確実な場合はリンク無しのテキストにし、URL の推測 (タイトルからホスト+slug を組み立てる、ホスト名の記憶からドメインを書く等) は一切行わないでください。
+            - Stage 4 完了時点で、Stage 1 取得 articles[].url の全 URL を「許容 URL 一覧」として内部で保持し、出力 markdown 内のすべての [text](url) link が許容 URL 一覧に含まれることを確認してから書き出してください。含まれない link があれば url 部分を削除してテキストのみにしてください。
+
             加えて、Slack 投稿用のメッセージを /tmp/slack-message.md に書き出してください。
             - Slack mrkdwn 記法 (*bold*, _italic_, <URL|label>)
             - 30000 文字以内 (上限。長くても構わない)

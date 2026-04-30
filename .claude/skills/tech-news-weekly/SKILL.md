@@ -93,6 +93,8 @@ stdout の JSON 形式は `tech-news-digest` と同一 (`since`, `total`, `dedup
 
 ### Stage 2: Triage — 重要記事の選定
 
+> **URL 制約**: この Stage 以降のすべての出力で使用する URL は、Stage 1 で取得した `articles[].url` のいずれかと **string equality で完全一致** すること。記憶・推測・タイトルからの組み立てによる URL 生成は禁止。
+
 `articles[].summary` (≤500 字抜粋) を読み、週次・月次のレポートに値する記事を選定する。
 
 選定基準 (優先度順):
@@ -117,6 +119,8 @@ stdout の JSON 形式は `tech-news-digest` と同一 (`since`, `total`, `dedup
 
 ### Stage 3: Deep read — 本文を WebFetch で取得
 
+> **URL 制約**: WebFetch に渡す URL および出力に埋め込む link URL は `articles[].url` のコピーのみ使用する。
+
 Stage 2 で選定した記事の `url` を WebFetch で取得し、日本語 1〜2 文の要約を生成する。
 
 **同一ホストへの連続 fetch は行わない**。ホスト別にバッチを組み、各バッチを並列 fetch し、バッチ間では別ホストのバッチを挟む:
@@ -135,6 +139,8 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、日本語 1�
 - deep モードで選定記事の半数以上が fetch 失敗したら、出力末尾に `_注: WebFetch が複数失敗したため一部 summary ベース_` を付ける
 
 ### Stage 4: テーマ抽出 + 時系列 narrative 生成
+
+> **URL 制約**: ストーリー内に埋め込む関連記事リンクの URL は必ず `articles[].url` から copy-paste すること。Stage 1 に存在しない URL を生成・推測してはならない。
 
 Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、読み物として成立するレポートを生成する。
 
@@ -201,6 +207,7 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
 ## 注目記事ピックアップ ← 必ず出力する。省略禁止
 
 - **[<タイトル>](url)** _(<feed_name>, <category>, <YYYY-MM-DD>)_: <1〜2 文の要約> <(summary based) があれば末尾に>
+<!-- ↑ url は articles[].url を copy-paste。推測・組み立て禁止 -->
 - ...
 
 ## カテゴリ別件数
@@ -224,6 +231,20 @@ Stage 1 の全記事 (de-dup 後) と Stage 3 の本文要約を総合して、�
   - `--target=remote` で 401/403 → `pnpm --filter @tnb/web exec wrangler login` を案内
   - `--target=local` で 0 件 → `pnpm migrate:local` + `pnpm dev` でローカル収集を 1 回回すよう案内
 - **today / 今日 と言われた場合**: 本 skill は週次・月次専用。`tech-news-digest` を使うよう案内する
+
+### URL 捏造禁止
+
+出力する markdown link `[text](url)` の `url` はすべて **Stage 1 で取得した `articles[].url` から copy-paste したもの**のみ許容する。
+
+以下の行為は一切禁止:
+
+- 記事タイトルからホスト名 + slug を組み立てて URL を生成する
+- ホスト名の記憶・推測からドメインを書く
+- `articles[]` に存在しない URL を出力する
+
+URL が不確実・不明な場合は `[テキスト]` のようにリンク無しのテキストにする。URL の copy-paste のみ許容される。
+
+**退行判定**: generation evaluation で `fabricated_url_count ≥ 1` の場合は退行とし、SKILL.md ガードレールと workflow prompt の URL 捏造禁止節を強化する。
 
 ## 関連ファイル
 

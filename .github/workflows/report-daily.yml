@@ -51,54 +51,31 @@ jobs:
           model: "claude-sonnet-4-5-20250929"
           allowed_tools: "Bash,Read,Write,WebFetch,Skill"
           timeout_minutes: 30
-          # daily digest 生成プロンプト。skill 起動と最終ファイル書き出しを明示する。
+          # daily digest 生成プロンプト。詳細な手順 (出力ファイル / フォーマット / no-articles 挙動 /
+          # URL grounding) は .claude/skills/tech-news-digest/SKILL.md の「自動 daily report
+          # 生成モード」節を一次ソースとする。yaml 側は skill 起動パラメータのみを渡す。
           prompt: |
             あなたは tech-news-bot の自動レポート生成エージェントです。
 
-            tech-news-digest skill を以下の引数で起動してください:
+            tech-news-digest skill を「自動 daily report 生成モード」で起動してください。
+            詳細な手順・出力ファイル仕様・記事 0 件時の挙動・URL grounding ルールは
+            すべて .claude/skills/tech-news-digest/SKILL.md の「自動 daily report 生成モード」
+            節に書かれています。skill 側を一次ソースとし、本 prompt の指示と矛盾した場合は
+            SKILL.md を優先してください。
+
+            起動パラメータ:
             - since=today
             - mode=deep
             - target=remote
             - personal カテゴリは除外 (bigtech / ai / jp の 3 カテゴリを対象にする)
             - lang 指定なし
 
-            Stage 1 では bigtech / ai / jp の 3 カテゴリを 1 回の呼び出しで取得してください:
-              node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=remote --limit=600
-            取得した articles[] を対象に URL de-dup (古い published_at 優先) する。
-            以降の Stage はマージ済み articles を対象とする。
+            最終的に以下 3 ファイルを必ず書き出してください (記事 0 件でも書き出す):
+            - /tmp/report.md
+            - /tmp/report-meta.json
+            - /tmp/slack-message.md
 
-            Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
-            書き出してください。レポートには以下の節を必ず含めてください:
-            - `## Pick 記事リンク一覧` (必須・省略禁止): 各記事にタイトル/URL/feed_name/category/YYYY-MM-DD/1〜2文要約を含む
-            - `## カテゴリ別動向` (必須): bigtech / ai / jp の各サブセクション (###) でカテゴリごとの技術動向をサマる
-
-            合わせて以下の JSON を /tmp/report-meta.json に書き出してください:
-
-            {
-              "kind": "daily",
-              "period_start": "<since の ISO 8601>",
-              "period_end":   "<実行時刻の ISO 8601>",
-              "category": null,
-              "lang": null,
-              "included_categories": ["bigtech","ai","jp"],
-              "source_skill": "tech-news-digest",
-              "generated_at": "<実行時刻の ISO 8601>",
-              "dedup_total": <number>,
-              "by_category": <object>,
-              "by_feed": <object>
-            }
-
-            注意:
-            - recent.mjs を呼ぶときは --target=remote を必ず指定してください。
-            - 最終 markdown 出力以外のアシスタント発話は最小限に抑えてください。
-            - WebFetch が失敗した記事には (summary based) を末尾に付けてください。
-
-            加えて、Slack 投稿用のメッセージを /tmp/slack-message.md に書き出してください。
-            - Slack mrkdwn 記法 (*bold*, _italic_, <URL|label>)
-            - 30000 文字以内 (上限。長くても構わない)
-            - 冒頭にレポート概要を 1〜2 文
-            - その後に「カテゴリ別ハイライト (bigtech / ai / jp)」「注目記事 (各記事は 1 行、リンク付き)」を Slack で読みやすく整形
-            - 末尾に viewer URL は付けない (Actions 側で自動付与される)
+            最終ファイル書き出し以外のアシスタント発話は最小限に抑えてください。
 
       - name: Save report to D1 via admin API
         env:

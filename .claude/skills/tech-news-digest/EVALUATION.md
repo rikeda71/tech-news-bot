@@ -88,7 +88,36 @@ WebFetch 失敗率 = (summary based) がついた記事数 / Stage 2 選定記�
 
 ---
 
-### 6. 重複記事数 (客観)
+### 6. fabricated_url_count (客観)
+
+**定義**: 出力 markdown 中の `[text](url)` link のうち、Stage 1 `articles[].url` 集合に含まれない url の件数。
+
+**計算式**:
+
+```
+fabricated_url_count = |出力 link URL 集合| - |出力 link URL 集合 ∩ articles[].url 集合|
+```
+
+**測定手順**:
+
+1. skill 実行時の Stage 1 JSON (`articles[].url` の配列) を `/tmp/stage1_urls.txt` に保存
+2. skill の最終出力 markdown を `/tmp/report.md` に保存
+3. 以下のコマンドで link を抽出し set difference を確認:
+
+```sh
+# 出力 markdown から URL を抽出
+grep -oE '\]\([^)]+\)' /tmp/report.md | sed 's/](\(.*\))/\1/' | sort -u > /tmp/output_urls.txt
+# Stage 1 URL と差分を確認
+comm -23 /tmp/output_urls.txt <(sort /tmp/stage1_urls.txt) | wc -l
+```
+
+**許容範囲**: **0 件** (ゼロトレランス)。1 件以上で退行とみなす。
+
+**退行時の対応**: SKILL.md ガードレールの「URL 捏造禁止」節と workflow prompt の URL 制約指示を強化する。
+
+---
+
+### 7. 重複記事数 (客観)
 
 **定義**: Stage 1 の URL de-dup 処理後に残った同一 URL の重複記事数。skill の出力の `## カテゴリ別件数` 合計と、de-dup 前の `total` の差から推定できる。
 
@@ -121,6 +150,7 @@ skill を 1 回実行するごとに `runs.md` に追記する。
 | WebFetch 失敗数 (blocklist 除く) | N 件                 |
 | WebFetch 失敗率                  | X.XX                 |
 | 同一ホスト連続違反数             | N 件                 |
+| fabricated_url_count             | N 件                 |
 | 重要記事再現率                   | X.XX (N/5)           |
 | 要約事実整合性 (平均)            | X.X / 2.0            |
 | トレンド意味性スコア             | N / 5                |
@@ -148,10 +178,11 @@ runs.md に結果を記録
 
 ### チューニング優先度の目安
 
-| 指標                  | 退行 (要対応) | 改善の対象プロンプト箇所        |
-| --------------------- | ------------- | ------------------------------- |
-| 重要記事再現率 < 0.6  | 即時対応      | Stage 2 の選定基準テキスト      |
-| WebFetch 失敗率 ≥ 0.3 | 次回修正      | Stage 3 の blocklist / fallback |
-| トレンド意味性 < 3    | 次回修正      | Stage 4 の分析視点テキスト      |
-| 要約整合性 < 1.5      | 即時対応      | Stage 3 の要約生成プロンプト    |
-| 同一ホスト違反 > 0    | 即時対応      | Stage 3 のバッチ計画説明        |
+| 指標                     | 退行 (要対応) | 改善の対象プロンプト箇所                                                  |
+| ------------------------ | ------------- | ------------------------------------------------------------------------- |
+| 重要記事再現率 < 0.6     | 即時対応      | Stage 2 の選定基準テキスト                                                |
+| WebFetch 失敗率 ≥ 0.3    | 次回修正      | Stage 3 の blocklist / fallback                                           |
+| トレンド意味性 < 3       | 次回修正      | Stage 4 の分析視点テキスト                                                |
+| 要約整合性 < 1.5         | 即時対応      | Stage 3 の要約生成プロンプト                                              |
+| 同一ホスト違反 > 0       | 即時対応      | Stage 3 のバッチ計画説明                                                  |
+| fabricated_url_count ≥ 1 | 即時対応      | SKILL.md ガードレール「URL 捏造禁止」節 + workflow prompt の URL 制約指示 |
