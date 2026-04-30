@@ -1,4 +1,5 @@
 import type { Article } from "../types";
+import type { D1BindParameter } from "./types";
 
 // ---------------------------------------------------------------------------
 // 共通定数 (articles-query.ts と共有)
@@ -36,7 +37,7 @@ export interface CursorPage {
  */
 export function appendCursorCondition(
   conds: string[],
-  binds: unknown[],
+  binds: D1BindParameter[],
   cursor: Cursor | null | undefined,
 ): void {
   if (!cursor) return;
@@ -65,14 +66,14 @@ export function extractWithCursor(rows: Article[], limit: number): CursorPage {
 
 export type BuildPaginatedQueryInput = {
   baseConds: string[];
-  baseBinds: unknown[];
+  baseBinds: D1BindParameter[];
   limit: number;
   cursor: Cursor | null | undefined;
 };
 
 export type BuildPaginatedQueryOutput = {
   sql: string;
-  binds: unknown[];
+  binds: D1BindParameter[];
 };
 
 /**

@@ -7,6 +7,7 @@ import {
   insertArticles,
 } from "../../../worker/db/articles";
 import { syncFeeds } from "../../../worker/db/feeds";
+import type { D1BindParameter } from "../../../worker/db/types";
 import type { FeedConfig } from "../../../worker/types";
 import type { Article } from "../../../worker/types";
 
@@ -37,7 +38,7 @@ describe("appendCursorCondition", () => {
   it("cursor が null の場合は conds / binds を変更しない", () => {
     // Arrange
     const conds: string[] = ["a.category = ?1"];
-    const binds: unknown[] = ["bigtech"];
+    const binds: D1BindParameter[] = ["bigtech"];
 
     // Act
     appendCursorCondition(conds, binds, null);
@@ -50,7 +51,7 @@ describe("appendCursorCondition", () => {
   it("cursor が undefined の場合も conds / binds を変更しない", () => {
     // Arrange
     const conds: string[] = [];
-    const binds: unknown[] = [];
+    const binds: D1BindParameter[] = [];
 
     // Act
     appendCursorCondition(conds, binds, undefined);
@@ -63,7 +64,7 @@ describe("appendCursorCondition", () => {
   it("cursor が存在する場合、keyset pagination 条件を追記する", () => {
     // Arrange
     const conds: string[] = ["a.category = ?1"];
-    const binds: unknown[] = ["bigtech"];
+    const binds: D1BindParameter[] = ["bigtech"];
     const cursor = { publishedAt: "2024-04-01T00:00:00.000Z", id: 42 };
 
     // Act
@@ -79,7 +80,7 @@ describe("appendCursorCondition", () => {
   it("binds が空の状態から cursor を追記すると ?1 / ?2 から始まる", () => {
     // Arrange
     const conds: string[] = [];
-    const binds: unknown[] = [];
+    const binds: D1BindParameter[] = [];
     const cursor = { publishedAt: "2024-05-01T00:00:00.000Z", id: 10 };
 
     // Act

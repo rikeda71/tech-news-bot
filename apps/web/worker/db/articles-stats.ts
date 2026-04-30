@@ -61,7 +61,7 @@ export async function getCategoryTrend30d(db: D1Database): Promise<CategoryTrend
     const point = map.get(row.date);
     if (!point) continue;
     const cat = row.category as keyof Omit<CategoryTrendPoint, "date">;
-    if (cat in point) (point[cat] as number) += row.n;
+    if (cat in point) point[cat] += row.n;
   }
 
   return points;
