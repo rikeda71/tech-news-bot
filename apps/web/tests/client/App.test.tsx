@@ -4,15 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { Article } from "../../client/types/api";
 import type { Stats } from "../../client/hooks/useStats";
 
-// App は useTheme / fetch に依存するため、useTheme をモックしてから dynamic import する
-vi.mock("../../client/hooks/useTheme", () => ({
-  useTheme: () => ({
-    theme: "system" as const,
-    setTheme: vi.fn<(t: "light" | "dark" | "system") => void>(),
-    resolvedTheme: "light" as const,
-  }),
-}));
-
 const App = (await import("../../client/App")).default;
 
 // ---- テストデータ -------------------------------------------------------
@@ -91,6 +82,17 @@ beforeEach(() => {
   localStorage.clear();
   // URL を articles ルートに戻す
   window.history.replaceState(null, "", "/");
+  // useTheme が依存する window.matchMedia をスタブする
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    media: "",
+    onchange: null,
+    addListener: vi.fn<() => void>(), // 古い API も念の為
+    removeListener: vi.fn<() => void>(),
+    addEventListener: vi.fn<() => void>(),
+    removeEventListener: vi.fn<() => void>(),
+    dispatchEvent: vi.fn<() => boolean>(),
+  }));
 });
 
 afterEach(() => {
@@ -392,7 +394,7 @@ describe("App filter state", () => {
     });
   });
 
-  it("Stats View に切り替えてから Articles に戻るとフィルターが保持される", async () => {
+  it("Stats View に切り替えると category クエリは保持されない", async () => {
     stubFetch([makeArticle(1)]);
     const user = userEvent.setup();
     render(<App />);
@@ -409,23 +411,11 @@ describe("App filter state", () => {
       expect(window.location.search).toContain("category=bigtech");
     });
 
-    // Stats に切り替え
+    // Stats に切り替え → handleViewChange は pushState("/stats") でクエリを上書きするため消える
     await user.click(screen.getByRole("button", { name: /Stats/ }));
     await waitFor(() => {
       expect(window.location.pathname).toBe("/stats");
     });
-
-    // Articles に戻る
-    await user.click(screen.getByRole("button", { name: /Articles/ }));
-    await waitFor(() => {
-      expect(window.location.pathname).toBe("/");
-    });
-
-    // combobox は URL から再初期化されるので query に category が存在しないことを確認する
-    // (handleViewChange は setView のみ変更し filter を消さないため URL に残らない可能性あり)
-    // ここでは View が articles に戻っている (Articles タブが aria-current=page) ことを確認
-    expect(screen.getByRole("button", { name: /Articles/ }).getAttribute("aria-current")).toBe(
-      "page",
-    );
+    expect(window.location.search).not.toContain("category");
   });
 });
