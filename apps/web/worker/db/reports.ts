@@ -41,6 +41,10 @@ export async function findOverlappingReports(
   db: D1Database,
   input: Pick<ReportInput, "kind" | "period_start" | "period_end" | "category" | "lang">,
 ): Promise<ReportRow[]> {
+  // bind 順: ?1=kind, ?2=category, ?3=lang, ?4=input.period_start, ?5=input.period_end
+  // half-open overlap 条件 (existing.start < input.end AND existing.end > input.start) を
+  // ?4/?5 経由で表現する。`existing.period_end > ?4` の `?4` は input.period_start を指す
+  // (column 名と placeholder 番号が一致しないため、bind 順を変更しないこと)。
   const result = await db
     .prepare(
       `SELECT id, kind, period_start, period_end, category, lang, source_skill, generated_at
@@ -48,9 +52,9 @@ export async function findOverlappingReports(
        WHERE kind = ?1
          AND COALESCE(category, '${ALL_SENTINEL}') = COALESCE(?2, '${ALL_SENTINEL}')
          AND COALESCE(lang,     '${ALL_SENTINEL}') = COALESCE(?3, '${ALL_SENTINEL}')
-         AND period_start < ?5
-         AND period_end   > ?4
-         AND NOT (period_start = ?4 AND period_end = ?5)`,
+         AND period_start < ?5  -- existing.period_start < input.period_end
+         AND period_end   > ?4  -- existing.period_end   > input.period_start
+         AND NOT (period_start = ?4 AND period_end = ?5)  -- 完全一致は ON CONFLICT で処理`,
     )
     .bind(input.kind, input.category, input.lang, input.period_start, input.period_end)
     .all<ReportRow>();

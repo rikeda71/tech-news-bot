@@ -38,7 +38,10 @@ describe("findOverlappingReports", () => {
   });
 
   it("detects partial overlap (start shifted)", async () => {
-    await upsertReport(env.DB, baseInput({ generated_at: "2026-04-28T00:00:00.000Z" }));
+    const { id } = await upsertReport(
+      env.DB,
+      baseInput({ generated_at: "2026-04-28T00:00:00.000Z" }),
+    );
     // 既存: 04-21〜04-28 / 新規: 04-22〜04-29 → overlap
     const overlaps = await findOverlappingReports(
       env.DB,
@@ -47,7 +50,8 @@ describe("findOverlappingReports", () => {
         period_end: "2026-04-29T00:00:00.000Z",
       }),
     );
-    expect(overlaps.length).toBeGreaterThan(0);
+    expect(overlaps).toHaveLength(1);
+    expect(overlaps[0]?.id).toBe(id);
   });
 
   it("returns empty array for adjacent period (new start == existing end)", async () => {

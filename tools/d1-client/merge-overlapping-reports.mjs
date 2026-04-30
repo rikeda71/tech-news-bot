@@ -196,14 +196,16 @@ function main() {
 
     if (opts.apply) {
       const dropIds = drops.map((r) => r.id).join(",");
-      const updateSQL =
+      // UPDATE と DELETE を 1 回の `wrangler d1 execute --command` に渡してアトミックに実行する。
+      // 別呼び出しに分けると UPDATE 成功・DELETE 失敗で keep の period が拡張済み + drop が残る
+      // 中途半端な状態になり、再 POST で 409 が返り続ける詰みケースを生む。
+      const mergeSQL =
         `UPDATE reports SET period_start = '${periodStart.replace(/'/g, "''")}', ` +
         `period_end = '${periodEnd.replace(/'/g, "''")}' ` +
-        `WHERE id = ${keep.id};`;
-      const deleteSQL = `DELETE FROM reports WHERE id IN (${dropIds});`;
+        `WHERE id = ${keep.id}; ` +
+        `DELETE FROM reports WHERE id IN (${dropIds});`;
       try {
-        execWrangler(updateSQL, opts.target);
-        execWrangler(deleteSQL, opts.target);
+        execWrangler(mergeSQL, opts.target);
       } catch (err) {
         process.stderr.write(`Failed to apply merge for keep_id=${keep.id}: ${err.message}\n`);
         process.exit(1);

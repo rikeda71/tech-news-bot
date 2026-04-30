@@ -6,6 +6,7 @@ import type { ReportInput, ReportKind } from "../db/reports";
 import type {
   AdminReportDetailResponse,
   AdminReportListResponse,
+  AdminReportOverlapResponse,
   AdminReportSaveResponse,
 } from "./types";
 
@@ -146,7 +147,7 @@ app.post("/", async (c) => {
     ({ id } = await upsertReport(c.env.DB, validated.input));
   } catch (err) {
     if (err instanceof OverlapError) {
-      return c.json(
+      return c.json<AdminReportOverlapResponse>(
         {
           error: "report period overlaps with existing report(s)",
           conflicting_ids: err.conflictingIds,
