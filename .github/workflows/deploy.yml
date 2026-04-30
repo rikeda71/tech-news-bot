@@ -11,6 +11,9 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
