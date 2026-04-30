@@ -174,8 +174,8 @@ describe("articles db", () => {
 
     const onlyPersonal = await listArticles(env.DB, { limit: 10, category: "personal" });
     expect(onlyPersonal.articles.map((a) => a.guid)).toEqual(["gp2", "gp1"]);
-    expect(onlyPersonal.articles[0].category).toBe("personal");
-    expect(onlyPersonal.articles[0].lang).toBe("ja");
+    expect.soft(onlyPersonal.articles[0].category).toBe("personal");
+    expect.soft(onlyPersonal.articles[0].lang).toBe("ja");
   });
 
   describe("FTS5 trigram Japanese full-text search", () => {
