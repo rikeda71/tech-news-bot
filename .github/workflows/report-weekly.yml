@@ -49,10 +49,9 @@ jobs:
             - bigtech と ai の 2 カテゴリを対象にする
             - lang 指定なし
 
-            Stage 1 では bigtech / ai の 2 カテゴリをそれぞれ取得してマージしてください:
-              node tools/d1-client/recent.mjs --since=week --category=bigtech --target=remote
-              node tools/d1-client/recent.mjs --since=week --category=ai      --target=remote
-            2 つの articles[] を結合し URL de-dup (古い published_at 優先) する。
+            Stage 1 では bigtech / ai の 2 カテゴリを 1 回の呼び出しで取得してください:
+              node tools/d1-client/recent.mjs --since=week --category=bigtech,ai --target=remote --limit=400
+            取得した articles[] を対象に URL de-dup (古い published_at 優先) する。
             以降の Stage はマージ済み articles を対象とする。
 
             Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に

@@ -47,14 +47,13 @@ jobs:
             tech-news-weekly skill を以下の引数で起動してください:
             - since=month
             - target=remote
-            - limit=500
+            - limit=1000
             - bigtech と ai の 2 カテゴリを対象にする
             - lang 指定なし
 
-            Stage 1 では bigtech / ai の 2 カテゴリをそれぞれ取得してマージしてください:
-              node tools/d1-client/recent.mjs --since=month --category=bigtech --target=remote --limit=500
-              node tools/d1-client/recent.mjs --since=month --category=ai      --target=remote --limit=500
-            2 つの articles[] を結合し URL de-dup (古い published_at 優先) する。
+            Stage 1 では bigtech / ai の 2 カテゴリを 1 回の呼び出しで取得してください:
+              node tools/d1-client/recent.mjs --since=month --category=bigtech,ai --target=remote --limit=1000
+            取得した articles[] を対象に URL de-dup (古い published_at 優先) する。
             以降の Stage はマージ済み articles を対象とする。
 
             Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
@@ -79,7 +78,7 @@ jobs:
             }
 
             注意:
-            - recent.mjs を呼ぶときは --target=remote と --limit=500 を必ず指定してください。
+            - recent.mjs を呼ぶときは --target=remote と --limit=1000 を必ず指定してください。
             - 最終 markdown 出力以外のアシスタント発話は最小限に抑えてください。
             - WebFetch が失敗した記事には (summary based) を末尾に付けてください。
 

@@ -53,11 +53,9 @@ jobs:
             - zenn カテゴリは除外 (bigtech / ai / jp の 3 カテゴリを対象にする)
             - lang 指定なし
 
-            Stage 1 では bigtech / ai / jp の 3 カテゴリをそれぞれ取得してマージしてください:
-              node tools/d1-client/recent.mjs --since=today --category=bigtech --target=remote
-              node tools/d1-client/recent.mjs --since=today --category=ai      --target=remote
-              node tools/d1-client/recent.mjs --since=today --category=jp      --target=remote
-            3 つの articles[] を結合し URL de-dup (古い published_at 優先) する。
+            Stage 1 では bigtech / ai / jp の 3 カテゴリを 1 回の呼び出しで取得してください:
+              node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=remote --limit=600
+            取得した articles[] を対象に URL de-dup (古い published_at 優先) する。
             以降の Stage はマージ済み articles を対象とする。
 
             Stage 1〜4 を完走したあと、最終的な markdown レポート全文を /tmp/report.md に
