@@ -34,7 +34,7 @@ function BarRow({
 }) {
   const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
   return (
-    <div className="grid [grid-template-columns:minmax(120px,180px)_1fr_60px] items-center gap-[var(--space-3)]">
+    <div className="grid [grid-template-columns:minmax(120px,180px)_1fr_56px] items-center gap-[var(--space-3)]">
       {onClick ? (
         <button
           type="button"
@@ -50,12 +50,16 @@ function BarRow({
         </span>
       )}
       <div
-        className="h-[8px] rounded-[var(--radius-full)] bg-[var(--accent)] opacity-70 min-w-[2px] transition-opacity duration-100 hover:opacity-100"
+        className="relative h-[12px] rounded-[var(--radius-full)] bg-[var(--bg-overlay)] overflow-hidden"
         role="img"
         aria-label={`${label}: ${count}件`}
-        style={{ width: `${pct}%` }}
-      />
-      <span className="text-[var(--font-size-sm)] text-[var(--fg-muted)] text-right [font-variant-numeric:tabular-nums]">
+      >
+        <div
+          className="h-full rounded-[var(--radius-full)] bg-[var(--accent)] min-w-[2px] transition-[width] duration-200"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[var(--font-size-sm)] font-semibold text-[var(--fg-primary)] text-right [font-variant-numeric:tabular-nums]">
         {count.toLocaleString("ja-JP")}
       </span>
     </div>
