@@ -7,15 +7,17 @@ test.describe("bookmarks only toggle", () => {
     await waitForArticles(page);
 
     // ブックマークボタン (BookmarkButton) をクリック — aria-label "ブックマークに追加"
-    const bookmarkBtn = page
-      .locator("[data-article-id]")
-      .first()
-      .getByRole("button", { name: /ブックマーク/i });
-    await bookmarkBtn.first().click();
+    const firstCard = page.locator("[data-article-id]").first();
+    const bookmarkBtn = firstCard.getByRole("button", { name: "ブックマークに追加" });
+    await bookmarkBtn.click();
+
+    // ブックマーク追加が反映され aria-label が "ブックマークから削除" に変わるまで待つ
+    await expect(firstCard.getByRole("button", { name: "ブックマークから削除" })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // ブックマークのみ表示ボタンをクリック (aria-label "ブックマーク N 件のみ表示")
-    // ブックマーク追加後に aria-label が 1 件以上になるまで待ってからクリック
-    const bookmarkOnlyBtn = page.getByRole("button", { name: /ブックマーク [1-9]/ });
+    const bookmarkOnlyBtn = page.getByRole("button", { name: /ブックマーク \d+ 件のみ表示/ });
     await bookmarkOnlyBtn.click();
 
     // URL に bookmarks=only が付く
