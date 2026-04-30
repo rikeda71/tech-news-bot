@@ -164,6 +164,14 @@ export async function getRandomArticles(
  * guid に対する関連記事を返す。
  * 同 feed_id を優先し、不足分を同 category の記事で補う。
  * guid が存在しない場合は null を返す (呼び出し側で 404 ハンドル)。
+ *
+ * パフォーマンス (#398):
+ * 旧実装: sequential 3 クエリ (target → sameFeed → sameCategory)
+ * 新実装: target 取得後に sameFeed / sameCategory を Promise.all で並列発行し
+ *         ラウンドトリップを 3 → 2 に削減。
+ * sameCategory クエリは a.feed_id != target.feed_id かつ a.guid != target.guid で
+ * 粗く除外し、アプリ側で sameFeed と重複する guid を Set で除去する。
+ * これにより sameFeed の結果を待たずに sameCategory を発行できる。
  */
 export async function getRelatedArticles(
   db: D1Database,
@@ -173,39 +181,42 @@ export async function getRelatedArticles(
   const target = await findArticleByGuid(db, guid);
   if (!target) return null;
 
-  // 同じ feed_id の記事を published_at 降順で n 件取得 (対象自身除外)
-  const sameFeedRows = await db
-    .prepare(
-      `SELECT ${ARTICLES_SELECT_FIELDS}
-       ${ARTICLES_FROM_JOIN}
-       WHERE a.feed_id = ?1 AND a.guid != ?2
-       ORDER BY a.published_at DESC
-       LIMIT ?3`,
-    )
-    .bind(target.feed_id, guid, n)
-    .all<Article>();
+  // sameFeed と sameCategory を並列発行 (ラウンドトリップ削減)
+  const [sameFeedRows, sameCategoryRows] = await Promise.all([
+    db
+      .prepare(
+        `SELECT ${ARTICLES_SELECT_FIELDS}
+         ${ARTICLES_FROM_JOIN}
+         WHERE a.feed_id = ?1 AND a.guid != ?2
+         ORDER BY a.published_at DESC
+         LIMIT ?3`,
+      )
+      .bind(target.feed_id, guid, n)
+      .all<Article>(),
+    db
+      .prepare(
+        `SELECT ${ARTICLES_SELECT_FIELDS}
+         ${ARTICLES_FROM_JOIN}
+         WHERE a.category = ?1 AND a.feed_id != ?2 AND a.guid != ?3
+         ORDER BY a.published_at DESC
+         LIMIT ?4`,
+      )
+      .bind(target.category, target.feed_id, guid, n)
+      .all<Article>(),
+  ]);
 
   const sameFeedArticles = sameFeedRows.results ?? [];
   const remaining = n - sameFeedArticles.length;
 
   if (remaining <= 0) return sameFeedArticles;
 
-  // 不足分を同 category で補う (対象自身 + 同 feed 記事の guid を除外)
-  // feed が異なる記事のみ対象とすることで同 feed 重複を避ける
-  const excludeGuids = [guid, ...sameFeedArticles.map((a) => a.guid)];
-  const placeholders = excludeGuids.map((_, i) => `?${i + 3}`).join(",");
-  const sameCategoryRows = await db
-    .prepare(
-      `SELECT ${ARTICLES_SELECT_FIELDS}
-       ${ARTICLES_FROM_JOIN}
-       WHERE a.category = ?1 AND a.feed_id != ?2 AND a.guid NOT IN (${placeholders})
-       ORDER BY a.published_at DESC
-       LIMIT ?${excludeGuids.length + 3}`,
-    )
-    .bind(target.category, target.feed_id, ...excludeGuids, remaining)
-    .all<Article>();
+  // sameFeed の guid を Set にしてアプリ側で重複除去し、必要数だけ切り出す
+  const sameFeedGuids = new Set(sameFeedArticles.map((a) => a.guid));
+  const sameCategoryArticles = (sameCategoryRows.results ?? [])
+    .filter((a) => !sameFeedGuids.has(a.guid))
+    .slice(0, remaining);
 
-  return [...sameFeedArticles, ...(sameCategoryRows.results ?? [])];
+  return [...sameFeedArticles, ...sameCategoryArticles];
 }
 
 // ---------------------------------------------------------------------------
