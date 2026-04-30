@@ -149,7 +149,6 @@ export function ArticlesView({
           className={`py-[5px] px-[var(--space-3)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-full)] text-[var(--font-size-sm)] font-[inherit] cursor-pointer whitespace-nowrap shrink-0 transition-[border-color,color,background] duration-100 hover:border-[var(--accent)] hover:text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2${bookmarkedOnly ? " bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] font-semibold" : " text-[var(--fg-muted)]"}`}
           onClick={onBookmarkedOnlyToggle}
           aria-pressed={bookmarkedOnly}
-          aria-label={`ブックマーク ${bookmarks.size} 件${bookmarkedOnly ? "を表示中" : "のみ表示"}`}
         >
           ★ {bookmarks.size} 件{bookmarkedOnly ? " (表示中)" : ""}
         </button>

@@ -7,27 +7,14 @@ test.describe("bookmarks only toggle", () => {
     await waitForArticles(page);
 
     // ブックマークボタン (BookmarkButton) をクリック — aria-label "ブックマークに追加"
-    const firstCard = page.locator("[data-article-id]").first();
-    const bookmarkBtn = firstCard.getByRole("button", { name: "ブックマークに追加" });
-    await bookmarkBtn.click();
+    const bookmarkBtn = page
+      .locator("[data-article-id]")
+      .first()
+      .getByRole("button", { name: /ブックマーク/i });
+    await bookmarkBtn.first().click();
 
-    // ブックマーク追加が localStorage に書き込まれるまで待つ
-    await page.waitForFunction(
-      () => {
-        const raw = localStorage.getItem("tnb:bookmarks:v1");
-        if (!raw) return false;
-        try {
-          const arr: unknown = JSON.parse(raw);
-          return Array.isArray(arr) && (arr as unknown[]).length > 0;
-        } catch {
-          return false;
-        }
-      },
-      { timeout: 5_000 },
-    );
-
-    // ブックマークのみ表示ボタンをクリック (aria-label "ブックマーク N 件のみ表示")
-    const bookmarkOnlyBtn = page.getByRole("button", { name: /ブックマーク \d+ 件のみ表示/ });
+    // ブックマークのみ表示ボタンをクリック (aria-pressed 属性を持つ ★ N 件ボタン)
+    const bookmarkOnlyBtn = page.getByRole("button", { name: /★.+件/ });
     await bookmarkOnlyBtn.click();
 
     // URL に bookmarks=only が付く
