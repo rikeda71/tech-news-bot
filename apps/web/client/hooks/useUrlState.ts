@@ -1,4 +1,5 @@
 import { useCallback, useRef, useSyncExternalStore } from "react";
+import { isFeedCategory, isFeedLang } from "../lib/feed-categories";
 import type { FeedCategory, FeedLang } from "../types/api";
 
 export type FilterState = {
@@ -7,9 +8,6 @@ export type FilterState = {
   lang: FeedLang | "";
   bookmarksOnly: boolean;
 };
-
-const VALID_CATEGORIES = new Set<string>(["bigtech", "ai", "jp", "personal"]);
-const VALID_LANGS = new Set<string>(["ja", "en"]);
 
 const DEFAULT_STATE: FilterState = {
   q: "",
@@ -25,8 +23,8 @@ export function parseSearch(search: string): FilterState {
   const lang = params.get("lang") ?? "";
   return {
     q: params.get("q") ?? "",
-    category: VALID_CATEGORIES.has(category) ? (category as FeedCategory) : "",
-    lang: VALID_LANGS.has(lang) ? (lang as FeedLang) : "",
+    category: isFeedCategory(category) ? category : "",
+    lang: isFeedLang(lang) ? lang : "",
     bookmarksOnly: params.get("bookmarks") === "only",
   };
 }

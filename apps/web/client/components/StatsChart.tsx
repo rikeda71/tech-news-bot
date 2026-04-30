@@ -2,7 +2,7 @@ import type { TrendPoint } from "../hooks/useStats";
 
 interface StatsChartProps {
   data: TrendPoint[];
-  categories: Array<keyof Omit<TrendPoint, "date">>;
+  categories: ReadonlyArray<keyof Omit<TrendPoint, "date">>;
 }
 
 // カテゴリごとの色 (CSS 変数が使えないため直値; ライト/ダーク両対応の中間色)

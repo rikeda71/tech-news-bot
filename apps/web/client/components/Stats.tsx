@@ -1,11 +1,10 @@
-import type { FeedActivity, Stats, TrendPoint } from "../hooks/useStats";
+import { FEED_CATEGORIES } from "../lib/feed-categories";
+import type { FeedActivity, Stats } from "../hooks/useStats";
 import { StatsChart } from "./StatsChart";
 
 interface StatsProps {
   stats: Stats;
 }
-
-const TREND_CATEGORIES: Array<keyof Omit<TrendPoint, "date">> = ["bigtech", "ai", "jp", "personal"];
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -60,7 +59,7 @@ function FeedActivityTable({ rows }: { rows: FeedActivity[] }) {
 export function StatsPanel({ stats }: StatsProps) {
   const hasTrend =
     stats.category_trend_30d.length > 0 &&
-    stats.category_trend_30d.some((p) => TREND_CATEGORIES.some((c) => p[c] > 0));
+    stats.category_trend_30d.some((p) => FEED_CATEGORIES.some((c) => p[c] > 0));
 
   return (
     <section className="mb-[var(--space-6)] p-[var(--space-4)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)]">
@@ -68,7 +67,7 @@ export function StatsPanel({ stats }: StatsProps) {
         カテゴリ別 30 日トレンド
       </h2>
       {hasTrend ? (
-        <StatsChart data={stats.category_trend_30d} categories={TREND_CATEGORIES} />
+        <StatsChart data={stats.category_trend_30d} categories={FEED_CATEGORIES} />
       ) : (
         <p className="text-[var(--fg-muted)] text-[var(--font-size-sm)] m-0">
           過去 30 日のデータがありません
