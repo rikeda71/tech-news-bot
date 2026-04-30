@@ -19,8 +19,10 @@ test.describe("author detail page smoke", () => {
     // URL が /author/* に変わる
     await expect(page).toHaveURL(/\/author\/.+/, { timeout: 5_000 });
 
-    // 著者名が h1 見出しとして表示される
-    await expect(page.locator("h1")).toContainText(authorName, { timeout: 10_000 });
+    // 著者名が h1 見出しとして表示される (ページ内に複数 h1 が存在するため filter で絞る)
+    await expect(page.locator("h1").filter({ hasText: authorName })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test("著者詳細ページで記事一覧が表示される", async ({ page }) => {
