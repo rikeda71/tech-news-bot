@@ -5,18 +5,21 @@ import { parseXml, pickText, asArray } from "../utils/xml";
 import { buildGuids } from "./deduplicator";
 import { D1CostAccumulator, writeCollectorEvent, writeD1CostEvent } from "./metrics";
 import { maybeAlert, sendAlert } from "./alert";
-import { insertArticles, type InsertableArticle } from "../db/articles";
 import {
+  buildInsertArticleStmts,
+  findExistingArticleGuids,
+  type InsertableArticle,
+} from "../db/articles";
+import {
+  buildRecordFetchErrorStmt,
+  buildRecordFetchSuccessStmt,
+  buildUpdateFeedHeadersStmt,
   type FeedHeaders,
-  getEnabledFeedIds,
   getFeedStreaks,
-  loadFeedHeadersAll,
-  recordFetchError,
-  recordFetchSuccess,
+  loadEnabledFeedIdsAndHeaders,
   syncFeeds,
-  updateFeedHeaders,
 } from "../db/feeds";
-import { finishRun, recordRunFeed, startRun } from "../db/runs";
+import { buildRecordRunFeedStmt, finishRun, startRun } from "../db/runs";
 
 const MAX_FEED_BYTES = 4 * 1024 * 1024; // 4MB
 const MAX_ITEMS_PER_FEED = 50;
@@ -216,6 +219,17 @@ function isSafeUrl(url: string): boolean {
   return ALLOWED_URL_PREFIXES.some((p) => url.toLowerCase().startsWith(p));
 }
 
+/**
+ * 1 feed 分の収集。per-feed の D1 書き込みを 1 batch にまとめて
+ * Worker の subrequest 上限を圧迫しないようにする。
+ *
+ * Subrequest 内訳 (Cloudflare Workers の subrequest 上限対策):
+ * - 304:    fetch (1) + batch[recordFetchSuccess + recordRunFeed?] (1) = 2
+ * - 200:    fetch (1) + SELECT existing guids (1) + batch[updateHeaders + INSERTs + recordFetchSuccess + recordRunFeed?] (1) = 3
+ * - error:  fetch (1) + batch[recordFetchError + recordRunFeed?] (1) = 2
+ *
+ * runId が null なら recordRunFeed は省略 (テスト等で run tracking 無効時)。
+ */
 async function collectFeed(
   env: Env,
   feed: FeedConfig,
@@ -223,9 +237,12 @@ async function collectFeed(
   summaryMax: number,
   timeoutMs: number,
   maxRetries: number,
+  runId: number | null,
+  d1Acc: D1CostAccumulator,
 ): Promise<CollectResult> {
   const fetchedAt = new Date().toISOString();
   const t0 = performance.now();
+  const feedStart = Date.now();
   try {
     // savedHeaders は collectAll 冒頭で全 enabled feed 分を 1 query でまとめて取得済み。
     // feed あたり 1 read を消費しないので Worker の subrequest 上限対策になる。
@@ -236,7 +253,16 @@ async function collectFeed(
 
     // 304 Not Modified: parse/insert をスキップし last_fetched_at だけ更新する
     if (result.notModified) {
-      await recordFetchSuccess(env.DB, feed.id, fetchedAt, 0, "not_modified");
+      const stmts: D1PreparedStatement[] = [
+        buildRecordFetchSuccessStmt(env.DB, feed.id, fetchedAt, 0, "not_modified"),
+      ];
+      if (runId !== null) {
+        stmts.push(
+          buildRecordRunFeedStmt(env.DB, runId, feed.id, "skipped", 0, Date.now() - feedStart),
+        );
+      }
+      const batchResults = await env.DB.batch(stmts);
+      for (const r of batchResults) d1Acc.add(r.meta);
       writeCollectorEvent(env, {
         feedId: feed.id,
         status: "not_modified",
@@ -246,9 +272,7 @@ async function collectFeed(
       return { feedId: feed.id, status: "not_modified", inserted: 0, parsed: 0 };
     }
 
-    // 200 OK: レスポンスの ETag / Last-Modified を保存する
-    await updateFeedHeaders(env.DB, feed.id, result.etag, result.lastModified);
-
+    // 200 OK path
     const allItems = parseFeed(result.xml!, {
       summaryMaxLength: summaryMax,
       fallbackPublishedAt: fetchedAt,
@@ -278,8 +302,30 @@ async function collectFeed(
       lang: feed.lang,
     }));
 
-    const inserted = await insertArticles(env.DB, rows);
-    await recordFetchSuccess(env.DB, feed.id, fetchedAt, inserted);
+    // FTS トリガが INSERT OR IGNORE の changes() を変動させるため事前に既存 guid を引いて
+    // 新規行のみ INSERT する。SELECT は 1 subrequest だが per-feed batch とは独立して実行する。
+    const existingSet = await findExistingArticleGuids(
+      env.DB,
+      rows.map((r) => r.guid),
+    );
+    const newRows = rows.filter((r) => !existingSet.has(r.guid));
+    const inserted = newRows.length;
+
+    // header 更新 + INSERT 群 + recordFetchSuccess + recordRunFeed を 1 batch に集約。
+    // MAX_ITEMS_PER_FEED=50 + 3 = 53 stmts なので D1 batch 上限 100 を超えない。
+    const stmts: D1PreparedStatement[] = [
+      buildUpdateFeedHeadersStmt(env.DB, feed.id, result.etag, result.lastModified),
+      ...buildInsertArticleStmts(env.DB, newRows),
+      buildRecordFetchSuccessStmt(env.DB, feed.id, fetchedAt, inserted),
+    ];
+    if (runId !== null) {
+      stmts.push(
+        buildRecordRunFeedStmt(env.DB, runId, feed.id, "ok", inserted, Date.now() - feedStart),
+      );
+    }
+    const batchResults = await env.DB.batch(stmts);
+    for (const r of batchResults) d1Acc.add(r.meta);
+
     writeCollectorEvent(env, {
       feedId: feed.id,
       status: "ok",
@@ -291,7 +337,24 @@ async function collectFeed(
     const message = err instanceof Error ? err.message : String(err);
     const errorKind = classifyError(err);
     try {
-      await recordFetchError(env.DB, feed.id, fetchedAt, message);
+      const stmts: D1PreparedStatement[] = [
+        buildRecordFetchErrorStmt(env.DB, feed.id, fetchedAt, message),
+      ];
+      if (runId !== null) {
+        stmts.push(
+          buildRecordRunFeedStmt(
+            env.DB,
+            runId,
+            feed.id,
+            "failed",
+            0,
+            Date.now() - feedStart,
+            message,
+          ),
+        );
+      }
+      const batchResults = await env.DB.batch(stmts);
+      for (const r of batchResults) d1Acc.add(r.meta);
     } catch (logErr) {
       console.error(`Failed to record error for ${feed.id}`, logErr);
     }
@@ -416,7 +479,10 @@ export async function collectAll(
 
   // yaml の enabled=true を前提に、D1 で runtime disabled にされた feed を除外する。
   // feedIds が指定された場合はその ID に含まれるものだけを対象にする。
-  const d1EnabledIds = await getEnabledFeedIds(env.DB);
+  // enabled 判定と conditional GET ヘッダ取得を 1 query に統合して subrequest を削減する。
+  const { enabledIds: d1EnabledIds, headers: headersMap } = await loadEnabledFeedIdsAndHeaders(
+    env.DB,
+  );
   const activeFeeds = feeds.filter((f) => {
     if (!d1EnabledIds.has(f.id)) return false;
     if (opts?.feedIds !== undefined) return opts.feedIds.includes(f.id);
@@ -446,48 +512,22 @@ export async function collectAll(
     }
   }
 
-  const headersMap = await loadFeedHeadersAll(
-    env.DB,
-    activeFeeds.map((f) => f.id),
-  );
   const emptyHeaders: FeedHeaders = { last_etag: null, last_modified: null };
 
-  const results = await runWithConcurrency(activeFeeds, concurrency, async (feed) => {
-    const feedStart = Date.now();
-    const result = await collectFeed(
+  // collectFeed が runId を受け取って per-feed batch に recordRunFeed を含めるため、
+  // ここでは recordRunFeed を別途呼ばない (subrequest 削減)。
+  const results = await runWithConcurrency(activeFeeds, concurrency, (feed) =>
+    collectFeed(
       env,
       feed,
       headersMap.get(feed.id) ?? emptyHeaders,
       summaryMax,
       timeoutMs,
       maxRetries,
-    );
-    const durationMs = Date.now() - feedStart;
-
-    // 各フィードの結果を記録する。失敗しても collectFeed の結果は返す。
-    if (runId !== null) {
-      const status =
-        result.status === "error" ? "failed" : result.status === "not_modified" ? "skipped" : "ok";
-      try {
-        const meta = await recordRunFeed(
-          env.DB,
-          runId,
-          feed.id,
-          status,
-          result.inserted,
-          durationMs,
-          result.status === "error" ? result.error : undefined,
-        );
-        d1Acc.add(meta);
-      } catch (err) {
-        console.error(
-          `[collector] recordRunFeed(${feed.id}) failed: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
-
-    return result;
-  });
+      runId,
+      d1Acc,
+    ),
+  );
 
   const inserted = results.reduce((acc, r) => acc + r.inserted, 0);
   const skipped304 = results.filter((r) => r.status === "not_modified").length;

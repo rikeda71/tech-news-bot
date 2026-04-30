@@ -24,7 +24,7 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "google-research",
+    id: "google-developers",
     name: "Google Research Blog",
     url: "https://x.test/g",
     category: "bigtech",
@@ -60,7 +60,7 @@ beforeEach(async () => {
     },
     {
       guid: "g-bigtech",
-      feed_id: "google-research",
+      feed_id: "google-developers",
       title: "Google Blog Post",
       url: "https://x.test/g/1",
       summary: null,
@@ -127,12 +127,12 @@ describe("/feeds/:id.xml (per-feed RSS)", () => {
   });
 
   // enabled: false のフィードでも feeds.yaml に id が定義されていれば 200 を返すことを確認する。
-  // google-research は feeds.yaml で enabled: true だが、ここでは enabled: false として
+  // google-developers は feeds.yaml で enabled: true だが、ここでは enabled: false として
   // DB に登録し、それでも過去記事が配信されることを検証する。
   it("serves past articles for a feed regardless of enabled flag in DB", async () => {
     await syncFeeds(env.DB, [
       {
-        id: "google-research",
+        id: "google-developers",
         name: "Google Research Blog",
         url: "https://x.test/gr",
         category: "bigtech",
@@ -144,7 +144,7 @@ describe("/feeds/:id.xml (per-feed RSS)", () => {
     await insertArticles(env.DB, [
       {
         guid: "g-gr",
-        feed_id: "google-research",
+        feed_id: "google-developers",
         title: "Google Research Article",
         url: "https://x.test/gr/1",
         summary: null,
@@ -154,8 +154,8 @@ describe("/feeds/:id.xml (per-feed RSS)", () => {
         lang: "en",
       },
     ]);
-    // feeds.yaml に "google-research" が存在するため 200 が返る
-    const res = await SELF.fetch("https://example.com/feeds/google-research.xml");
+    // feeds.yaml に "google-developers" が存在するため 200 が返る
+    const res = await SELF.fetch("https://example.com/feeds/google-developers.xml");
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("g-gr");

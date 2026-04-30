@@ -18,17 +18,22 @@ database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 migrations_dir = "../../migrations"
 
 [triggers]
-# 0 */6 * * * : 6 時間ごと (UTC 00,06,12,18) — RSS 収集
-# Medium 等の外部レート制限と Worker 1 invocation あたりの subrequest 上限を緩和するため
-# 3h → 6h に頻度を下げている。新着の取り込みは最大 6 時間遅れる。
-crons = ["0 */6 * * *"]
+# Daily 3-way split (Free plan: 50 subrequests/invocation の制約を満たすため):
+#   16:00 UTC = 01:00 JST  → slot 0 (enabled feeds の 1/3)
+#   16:30 UTC = 01:30 JST  → slot 1 (enabled feeds の 1/3)
+#   17:00 UTC = 02:00 JST  → slot 2 (enabled feeds の 1/3 + retention)
+# JST 深夜時間帯に集中させ、翌朝 09:00 JST 以降の skill (since=today, 24h rolling)
+# が前日分を確実に含むようにしている (worker/index.ts の SLOT_BY_CRON も併せて更新)。
+crons = ["0 16 * * *", "30 16 * * *", "0 17 * * *"]
 
 [vars]
 # 並列 1: 同一ホスト (Medium) への並列アクセスで 429 を多発させないため。
 # fetch の wallclock は Cron の wall-time 上限内で十分収まる。
 COLLECTOR_CONCURRENCY = "1"
 COLLECTOR_TIMEOUT_MS = "10000"
-COLLECTOR_RETRIES = "2"
+# Free plan の subrequest 上限 (50 / invocation) を守るため最低限の 1 回まで。
+# 5xx / timeout は次の cron (8h 以内) で再取得されるため許容。
+COLLECTOR_RETRIES = "1"
 SUMMARY_MAX_LENGTH = "500"
 RETENTION_DAYS = "90"
 # カンマ区切りで許可する Origin を列挙。* は非推奨 (明示的 origin で制限する)
@@ -63,7 +68,7 @@ database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 [env.preview.vars]
 COLLECTOR_CONCURRENCY = "1"
 COLLECTOR_TIMEOUT_MS = "10000"
-COLLECTOR_RETRIES = "2"
+COLLECTOR_RETRIES = "1"
 SUMMARY_MAX_LENGTH = "500"
 RETENTION_DAYS = "90"
 READONLY = "1"

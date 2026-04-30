@@ -57,22 +57,30 @@ export interface InsertableArticle {
   lang: FeedLang;
 }
 
-export async function insertArticles(db: D1Database, rows: InsertableArticle[]): Promise<number> {
-  if (rows.length === 0) return 0;
-
-  // FTS トリガの changes() が混入するため、INSERT OR IGNORE の meta.changes は信頼できない。
-  // 事前に existing guid を引いてフィルタする (cron 単一インスタンス前提)。
-  const guids = rows.map((r) => r.guid);
+/**
+ * 既存 guid を引いて Set で返す。
+ * insertArticles の最初の SELECT を collector が直接呼べるように分離した。
+ * collector は per-feed batch に INSERT 文をまとめるため、SELECT だけ事前に必要。
+ */
+export async function findExistingArticleGuids(
+  db: D1Database,
+  guids: string[],
+): Promise<Set<string>> {
+  if (guids.length === 0) return new Set();
   const placeholders = guids.map((_, i) => `?${i + 1}`).join(",");
   const existing = await db
     .prepare(`SELECT guid FROM articles WHERE guid IN (${placeholders})`)
     .bind(...guids)
     .all<{ guid: string }>();
-  const existingSet = new Set((existing.results ?? []).map((r) => r.guid));
-  const newRows = rows.filter((r) => !existingSet.has(r.guid));
-  if (newRows.length === 0) return 0;
+  return new Set((existing.results ?? []).map((r) => r.guid));
+}
 
-  const stmts = newRows.map((r) =>
+/** INSERT OR IGNORE statement を組み立てる。collector の per-feed batch に渡す用。 */
+export function buildInsertArticleStmts(
+  db: D1Database,
+  rows: InsertableArticle[],
+): D1PreparedStatement[] {
+  return rows.map((r) =>
     db
       .prepare(
         `INSERT OR IGNORE INTO articles
@@ -91,6 +99,21 @@ export async function insertArticles(db: D1Database, rows: InsertableArticle[]):
         r.lang,
       ),
   );
+}
+
+export async function insertArticles(db: D1Database, rows: InsertableArticle[]): Promise<number> {
+  if (rows.length === 0) return 0;
+
+  // FTS トリガの changes() が混入するため、INSERT OR IGNORE の meta.changes は信頼できない。
+  // 事前に existing guid を引いてフィルタする (cron 単一インスタンス前提)。
+  const existingSet = await findExistingArticleGuids(
+    db,
+    rows.map((r) => r.guid),
+  );
+  const newRows = rows.filter((r) => !existingSet.has(r.guid));
+  if (newRows.length === 0) return 0;
+
+  const stmts = buildInsertArticleStmts(db, newRows);
   // D1 batch は 1 リクエスト 100 statements が上限
   const BATCH_SIZE = 50;
   for (let i = 0; i < stmts.length; i += BATCH_SIZE) {

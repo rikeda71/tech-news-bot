@@ -7,6 +7,7 @@ import syndication from "./api/syndication";
 import opml from "./api/opml";
 import { rewriteShell } from "./api/spa-shell";
 import { collectAll } from "./collector";
+import { pickFeedSlot } from "./collector/slot";
 import { pruneOldArticles } from "./db/retention";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -54,26 +55,41 @@ app.all("*", async (c) => {
   return rewriteShell(c.req.raw, c.env);
 });
 
+// 3 cron expression を slot 0/1/2 にマップする。Free plan の subrequest 上限 (50/invocation)
+// を満たすため、enabled feed を 3 等分して各 slot で 1 グループだけ収集する。
+// retention は slot 2 で 1 日 1 回だけ実行する。
+const SLOT_BY_CRON: Record<string, 0 | 1 | 2> = {
+  "0 16 * * *": 0,
+  "30 16 * * *": 1,
+  "0 17 * * *": 2,
+};
+
 const handler: ExportedHandler<Env> = {
   fetch: app.fetch,
-  async scheduled(_controller, env, ctx) {
+  async scheduled(controller, env, ctx) {
     // READONLY=1 の preview 環境ではコレクターを起動しない
     if (env.READONLY === "1") {
       console.log("[scheduled] READONLY mode – skipping");
       return;
     }
 
-    // 6 時間ごとの cron (0 */6 * * *): RSS 収集
+    const slot = SLOT_BY_CRON[controller.cron];
+    if (slot === undefined) {
+      console.warn(`[scheduled] unknown cron expression: ${controller.cron}`);
+      return;
+    }
+
+    const slotFeedIds = pickFeedSlot(slot, 3);
+    console.log(`[scheduled] cron=${controller.cron} slot=${slot} feeds=${slotFeedIds.length}`);
+
     ctx.waitUntil(
-      collectAll(env).catch((err) => {
+      collectAll(env, { source: "cron", feedIds: slotFeedIds }).catch((err) => {
         console.error("[scheduled] collectAll failed", err);
       }),
     );
 
-    const utcHour = new Date().getUTCHours();
-    // Run retention once per day at UTC 18:00 (JST 03:00) — 低トラフィック帯。
-    // cron `0 */6 * * *` は UTC 00,06,12,18 のみ起動するため 17 ではなく 18 に揃える。
-    if (utcHour === 18) {
+    // retention は最終 slot で 1 日 1 回だけ実行する。slot 2 = 17:00 UTC (JST 02:00)
+    if (slot === 2) {
       ctx.waitUntil(
         pruneOldArticles(env.DB, Number(env.RETENTION_DAYS ?? "90")).then((r) => {
           console.log(`[retention] deleted=${r.deleted}`);

@@ -46,10 +46,10 @@ describe("GET /feeds.opml", () => {
   it("xmlUrl points to this service origin with /feeds/<id>.xml path", async () => {
     const res = await SELF.fetch("https://example.com/feeds.opml");
     const text = await res.text();
-    // google-research フィードの xmlUrl がサービス自身のオリジンを使っていること
-    expect(text).toContain('xmlUrl="https://example.com/feeds/google-research.xml"');
+    // google-developers フィードの xmlUrl がサービス自身のオリジンを使っていること
+    expect(text).toContain('xmlUrl="https://example.com/feeds/google-developers.xml"');
     // htmlUrl は feeds.yaml の元 URL を指すこと
-    expect(text).toContain('htmlUrl="https://blog.research.google/feeds/posts/default"');
+    expect(text).toContain('htmlUrl="https://developers.googleblog.com/feeds/posts/default"');
   });
 
   it("enabled: false feeds are excluded", async () => {

@@ -31,6 +31,26 @@ export async function startRun(
   return { run_id, d1Meta: result.meta };
 }
 
+/** recordRunFeed の SQL を builder として返す。collector の per-feed batch に渡す用。 */
+export function buildRecordRunFeedStmt(
+  db: D1Database,
+  run_id: number,
+  feed_id: string,
+  status: "ok" | "failed" | "skipped",
+  articles_inserted: number,
+  duration_ms: number,
+  error?: string,
+): D1PreparedStatement {
+  // 200 文字で切り詰め。長いスタックトレースを D1 に書かないため。
+  const errorTruncated = error ? error.slice(0, 200) : null;
+  return db
+    .prepare(
+      `INSERT INTO collector_run_feeds (run_id, feed_id, status, articles_inserted, duration_ms, error)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+    )
+    .bind(run_id, feed_id, status, articles_inserted, duration_ms, errorTruncated);
+}
+
 export async function recordRunFeed(
   db: D1Database,
   run_id: number,
@@ -40,15 +60,15 @@ export async function recordRunFeed(
   duration_ms: number,
   error?: string,
 ): Promise<D1Result["meta"]> {
-  // 200 文字で切り詰め。長いスタックトレースを D1 に書かないため。
-  const errorTruncated = error ? error.slice(0, 200) : null;
-  const result = await db
-    .prepare(
-      `INSERT INTO collector_run_feeds (run_id, feed_id, status, articles_inserted, duration_ms, error)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
-    )
-    .bind(run_id, feed_id, status, articles_inserted, duration_ms, errorTruncated)
-    .run();
+  const result = await buildRecordRunFeedStmt(
+    db,
+    run_id,
+    feed_id,
+    status,
+    articles_inserted,
+    duration_ms,
+    error,
+  ).run();
   return result.meta;
 }
 
