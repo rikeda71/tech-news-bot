@@ -57,13 +57,13 @@ D1 は SQLite ベース。SQLite の制約 + Cloudflare の per-query CPU 50ms /
 - 以下の使用頻度の高いクエリにインデックスを作る:
   - `WHERE published_at > ? ORDER BY published_at DESC` → `idx_articles_published_at`
   - `WHERE feed_id = ? ORDER BY published_at DESC` → `idx_articles_feed_published`
-  - `WHERE category = ? AND published_at > ?` → `idx_articles_category_published` (`migrations/0004_compound_index.sql` 参照)
+  - `WHERE category = ? AND published_at > ?` → `idx_articles_category_published_at` (`migrations/0001_initial.sql` 参照)
 - 複合 index は **最も絞り込めるカラム** を先頭に
 - index 過多は writes を遅くする。`EXPLAIN QUERY PLAN <query>` でローカル確認してから追加
 
 ## FTS5 全文検索
 
-- `articles_fts` は trigram tokenizer 構成 (`migrations/0003_fts5_trigram.sql`)
+- `articles_fts` は trigram tokenizer 構成 (`migrations/0001_initial.sql` の `articles_fts` を参照)
 - INSERT / DELETE / UPDATE トリガで `articles` と自動同期
 - 検索クエリ: `SELECT * FROM articles_fts WHERE articles_fts MATCH ? ORDER BY rank LIMIT 30`
 - MATCH 演算子の引数は **クォートで括る** (`"AI agent"` のようにフレーズ検索)

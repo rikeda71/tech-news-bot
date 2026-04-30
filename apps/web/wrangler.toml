@@ -14,7 +14,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "tech-news-bot-db"
-database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
+database_id = "73aeec18-996d-4dfe-9cd8-a456779d835a"
 migrations_dir = "../../migrations"
 
 [triggers]
@@ -72,7 +72,7 @@ not_found_handling = "single-page-application"
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "tech-news-bot-db"
-database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
+database_id = "73aeec18-996d-4dfe-9cd8-a456779d835a"
 
 [env.preview.vars]
 COLLECTOR_CONCURRENCY = "1"
