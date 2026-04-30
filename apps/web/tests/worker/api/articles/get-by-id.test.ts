@@ -15,7 +15,7 @@ describe("GET /api/articles/:id", () => {
     const id = row?.id;
 
     const res = await SELF.fetch(`https://example.com/api/articles/${id}`);
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
 
     const body = await res.json<{
       id: number;
@@ -31,28 +31,28 @@ describe("GET /api/articles/:id", () => {
       category: string;
       lang: string;
     }>();
-    expect(body.id).toBe(id);
-    expect(body.guid).toBe("g-bt-1");
-    expect(body.feed_id).toBe("google-research");
-    expect(body.title).toBe("BigTech Article One");
-    expect(body.url).toBe("https://x.test/g/1");
-    expect(body.category).toBe("bigtech");
-    expect(body.lang).toBe("en");
-    expect(typeof body.fetched_at).toBe("string");
+    expect.soft(body.id).toBe(id);
+    expect.soft(body.guid).toBe("g-bt-1");
+    expect.soft(body.feed_id).toBe("google-research");
+    expect.soft(body.title).toBe("BigTech Article One");
+    expect.soft(body.url).toBe("https://x.test/g/1");
+    expect.soft(body.category).toBe("bigtech");
+    expect.soft(body.lang).toBe("en");
+    expect.soft(typeof body.fetched_at).toBe("string");
   });
 
   it("returns 404 for non-existent id", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/99999999");
-    expect(res.status).toBe(404);
+    expect.soft(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("not found");
+    expect.soft(body.error).toBe("not found");
   });
 
   it("returns 400 for non-integer id", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/abc");
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("invalid id");
+    expect.soft(body.error).toBe("invalid id");
   });
 
   it("returns 304 when If-None-Match matches ETag", async () => {
@@ -61,7 +61,7 @@ describe("GET /api/articles/:id", () => {
       .first<{ id: number }>();
     const id = row?.id;
 
-    // 1回目のリクエストで ETag を取得
+    // 1回目のリクエストで ETag を取得。etag は後続リクエストの前提のため fail-fast
     const res1 = await SELF.fetch(`https://example.com/api/articles/${id}`);
     expect(res1.status).toBe(200);
     const etag = res1.headers.get("ETag");
@@ -81,8 +81,8 @@ describe("GET /api/articles/:id", () => {
     const id = row?.id;
 
     const res = await SELF.fetch(`https://example.com/api/articles/${id}`);
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const contentType = res.headers.get("Content-Type");
-    expect(contentType).toMatch(/application\/json/);
+    expect.soft(contentType).toMatch(/application\/json/);
   });
 });
