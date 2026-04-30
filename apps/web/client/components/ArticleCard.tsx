@@ -161,6 +161,7 @@ export function ArticleCard({
                 onClick={() => {
                   if (article.author) onNavigateToAuthor(article.author);
                 }}
+                title={`${article.author} の記事一覧`}
                 aria-label={`${article.author} の記事一覧`}
               >
                 {article.author}
