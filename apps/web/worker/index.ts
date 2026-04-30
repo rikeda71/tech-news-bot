@@ -11,6 +11,20 @@ import { pruneOldArticles } from "./db/retention";
 
 const app = new Hono<{ Bindings: Env }>();
 
+// syndication / OPML / サイトマップは他サイトから fetch されるため cross-origin を許可する。
+// それ以外は same-origin に絞り情報漏洩リスクを低減する。
+function isCrossOriginAllowed(pathname: string): boolean {
+  return (
+    pathname === "/feed.json" ||
+    pathname === "/feed.xml" ||
+    pathname === "/feed.atom" ||
+    pathname.startsWith("/feeds/") ||
+    pathname === "/feeds.opml" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/robots.txt"
+  );
+}
+
 // Security headers (全レスポンスに付与)
 app.use("*", async (c, next) => {
   await next();
@@ -18,12 +32,25 @@ app.use("*", async (c, next) => {
   c.header("X-Frame-Options", "DENY");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   c.header("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+  // HSTS: 本番 HTTPS のみで提供するため常に有効化。includeSubDomains は workers.dev サブドメインにも適用される。
+  c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  // COOP: top-level browsing context を分離し Spectre 系攻撃の cross-origin leak を防ぐ。
+  c.header("Cross-Origin-Opener-Policy", "same-origin");
+  // CORP: syndication / OPML はサードパーティ RSS リーダーから fetch されるため cross-origin を許可。
+  // SPA / API は same-origin に絞ることで no-cors fetch による情報漏洩リスクを低減する。
+  const pathname = new URL(c.req.url).pathname;
+  if (isCrossOriginAllowed(pathname)) {
+    c.header("Cross-Origin-Resource-Policy", "cross-origin");
+  } else {
+    c.header("Cross-Origin-Resource-Policy", "same-origin");
+  }
   c.header(
     "Content-Security-Policy",
     [
       "default-src 'self'",
       "img-src 'self' data: https:",
-      // fonts.googleapis.com の CSS は <link rel="stylesheet"> 経由で読み込むため style-src の対象
+      // fonts.googleapis.com の CSS は <link rel="stylesheet"> 経由で読み込むため style-src の対象。
+      // 'unsafe-inline' は React の style={{ ... }} prop と Vite が注入するインラインスタイルのために必要。
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "script-src 'self'",
       "connect-src 'self'",
@@ -47,9 +74,13 @@ app.all("*", async (c) => {
   const url = new URL(c.req.url);
   if (url.pathname.startsWith("/assets/")) {
     const res = await c.env.ASSETS.fetch(c.req.raw);
-    const headers = new Headers(res.headers);
-    headers.set("Cache-Control", "public, max-age=31536000, immutable");
-    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+    // new Response(..., { headers }) でヘッダーを丸ごと置換すると global middleware が
+    // c.header() で設定したセキュリティヘッダーが失われる。
+    // 既存ヘッダーをコピーしてから Cache-Control のみ上書きすることでセキュリティヘッダーを保持する。
+    const newRes = new Response(res.body, { status: res.status, statusText: res.statusText });
+    res.headers.forEach((value, key) => newRes.headers.set(key, value));
+    newRes.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    return newRes;
   }
   return rewriteShell(c.req.raw, c.env);
 });

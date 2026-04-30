@@ -25,6 +25,8 @@ export default defineConfig(async () => {
             // 張り付き /api/admin/collector/run が CI で 504 flaky になっていたため、
             // retry を無効化する。リトライ自体の挙動は collector/retry.test.ts が個別に検証する。
             COLLECTOR_RETRIES: "0",
+            // テスト環境では Cloudflare Access が前段にいないため JWT 検証をスキップ
+            SKIP_ACCESS_JWT: "1",
           },
         },
       }),

@@ -21,6 +21,12 @@ export interface Env {
   COLLECTOR_ALERT_WEBHOOK?: string;
   // 閾値: feeds_failed がこの値以上になったら通知する (default: "5")
   COLLECTOR_ALERT_THRESHOLD?: string;
+  // Cloudflare Access (Zero Trust) — /api/admin/* の JWT 検証に使う
+  // 本番では `wrangler secret put` で登録。toml には書かない。
+  CF_ACCESS_AUD?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
+  // ローカル開発でアクセス JWT 検証をスキップする ("1" でスキップ)
+  SKIP_ACCESS_JWT?: string;
 }
 
 export type FeedCategory = "bigtech" | "ai" | "jp" | "personal";

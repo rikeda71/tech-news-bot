@@ -25,12 +25,13 @@ describe("ShareButtons", () => {
     expect.soft(href).toContain(encodeURIComponent(TEST_TITLE));
   });
 
-  it("X and Hatena links open in new tab with noopener", () => {
+  it("X and Hatena links open in new tab with noopener noreferrer", () => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />);
     for (const label of [/X \(Twitter\)/i, /はてなブックマーク/i]) {
       const link = screen.getByRole("link", { name: label });
       expect.soft(link.getAttribute("target")).toBe("_blank");
       expect.soft(link.getAttribute("rel")).toContain("noopener");
+      expect.soft(link.getAttribute("rel")).toContain("noreferrer");
     }
   });
 

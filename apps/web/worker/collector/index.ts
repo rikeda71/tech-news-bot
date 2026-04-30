@@ -2,6 +2,7 @@ import type { Env, FeedConfig } from "../types";
 import { loadEnabledFeeds } from "../feed-config";
 import { parseFeed } from "./rssParser";
 import { parseXml, pickText, asArray } from "../utils/xml";
+import { checkUrlSafety } from "./url-safety";
 import { buildGuids } from "./deduplicator";
 import { D1CostAccumulator, writeCollectorEvent, writeD1CostEvent } from "./metrics";
 import { maybeAlert, sendAlert } from "./alert";
@@ -341,8 +342,15 @@ export type ValidateFeedResult =
  * URL を fetch + parse して RSS/Atom として有効かどうかを検証する。
  * feeds.yaml に追記する前の事前確認用。DB アクセスは行わない。
  * タイムアウトは 10s (admin endpoint 側で 12s でラップする)。
+ * SSRF 対策として内部 IP / 特殊用途ホストへのアクセスは事前にブロックする。
  */
 export async function validateFeedUrl(url: string): Promise<ValidateFeedResult> {
+  // fetch より前に SSRF チェックを行い、内部 IP やプライベートホストを拒否する
+  const safety = checkUrlSafety(url);
+  if (!safety.ok) {
+    return { ok: false, error: `unsafe URL: ${safety.reason}` };
+  }
+
   let result: Awaited<ReturnType<typeof fetchFeed>>;
   try {
     // retry なし (検証用なので 1 回で判断する)
