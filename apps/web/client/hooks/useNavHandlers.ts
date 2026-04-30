@@ -26,7 +26,7 @@ export interface KbState {
   selectedIndex: number;
   helpOpen: boolean;
   setSelectedIndex: Dispatch<SetStateAction<number>>;
-  setHelpOpen: (open: boolean) => void;
+  setHelpOpen: Dispatch<SetStateAction<boolean>>;
   toggleBookmark: (guid: string) => void;
   searchRef: RefObject<HTMLInputElement | null>;
 }

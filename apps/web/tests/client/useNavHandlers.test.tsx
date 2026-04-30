@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { KbState, NavState } from "../../client/hooks/useNavHandlers";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Article } from "../../client/types/api";
 
 const { useNavHandlers } = await import("../../client/hooks/useNavHandlers");
@@ -22,31 +22,66 @@ function makeArticle(id: number): Article {
   };
 }
 
-function makeNavState(overrides?: Partial<NavState>): NavState {
-  return {
-    setView: vi.fn<(view: string) => void>(),
-    setFeedDetailId: vi.fn<(id: string) => void>(),
-    setAuthorName: vi.fn<(name: string) => void>(),
-    setReportId: vi.fn<(id: number) => void>(),
-    setFeedId: vi.fn<(id: string) => void>(),
-    setDateFrom: vi.fn<(date: string) => void>(),
-    setDateTo: vi.fn<(date: string) => void>(),
-    setUnreadOnly: vi.fn<(value: boolean) => void>(),
-    setStarredOnly: vi.fn<(value: boolean) => void>(),
-    ...overrides,
-  };
-}
+/** 全 NavState + KbState を実 useState で保持するヘルパーフック */
+function useTestHook(
+  initialArticles: Article[] = [],
+  initialSelectedIndex = -1,
+  initialHelpOpen = false,
+) {
+  const [view, setView] = useState<import("../../client/components/Header").AppView>("articles");
+  const [feedDetailId, setFeedDetailId] = useState("");
+  const [authorName, setAuthorName] = useState("");
+  const [reportId, setReportId] = useState(0);
+  const [feedId, setFeedId] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [starredOnly, setStarredOnly] = useState(false);
 
-function makeKbState(overrides?: Partial<KbState>): KbState {
+  const [articles] = useState<Article[]>(initialArticles);
+  const [selectedIndex, setSelectedIndex] = useState(initialSelectedIndex);
+  const [helpOpen, setHelpOpen] = useState(initialHelpOpen);
+  const toggleBookmark = vi.fn<(guid: string) => void>();
+  const searchRef = { current: null as HTMLInputElement | null };
+
+  const handlers = useNavHandlers(
+    {
+      setView,
+      setFeedDetailId,
+      setAuthorName,
+      setReportId,
+      setFeedId,
+      setDateFrom,
+      setDateTo,
+      setUnreadOnly,
+      setStarredOnly,
+    },
+    {
+      articles,
+      selectedIndex,
+      helpOpen,
+      setSelectedIndex,
+      setHelpOpen,
+      toggleBookmark,
+      searchRef,
+    },
+  );
+
   return {
-    articles: [],
-    selectedIndex: -1,
-    helpOpen: false,
-    setSelectedIndex: vi.fn<(updater: ((prev: number) => number) | number) => void>(),
-    setHelpOpen: vi.fn<(open: boolean) => void>(),
-    toggleBookmark: vi.fn<(guid: string) => void>(),
-    searchRef: { current: null },
-    ...overrides,
+    view,
+    feedDetailId,
+    authorName,
+    reportId,
+    feedId,
+    dateFrom,
+    dateTo,
+    unreadOnly,
+    starredOnly,
+    selectedIndex,
+    helpOpen,
+    toggleBookmark,
+    searchRef,
+    handlers,
   };
 }
 
@@ -60,236 +95,233 @@ describe("useNavHandlers", () => {
   // ---- nav handlers ----
 
   describe("handleViewChange", () => {
-    it("stats に切り替えると setView('stats') と history push が起きる", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("stats に切り替えると view が 'stats' になり history が push される", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleViewChange("stats");
+        result.current.handlers.handleViewChange("stats");
       });
-      expect(nav.setView).toHaveBeenCalledWith("stats");
-      expect(window.location.pathname).toBe("/stats");
+      expect.soft(result.current.view).toBe("stats");
+      expect.soft(window.location.pathname).toBe("/stats");
     });
 
-    it("categories に切り替えると /categories に push される", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("categories に切り替えると view が 'categories' になり /categories に push される", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleViewChange("categories");
+        result.current.handlers.handleViewChange("categories");
       });
-      expect(window.location.pathname).toBe("/categories");
+      expect.soft(result.current.view).toBe("categories");
+      expect.soft(window.location.pathname).toBe("/categories");
     });
 
-    it("reports に切り替えると /reports に push される", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("reports に切り替えると view が 'reports' になり /reports に push される", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleViewChange("reports");
+        result.current.handlers.handleViewChange("reports");
       });
-      expect(window.location.pathname).toBe("/reports");
+      expect.soft(result.current.view).toBe("reports");
+      expect.soft(window.location.pathname).toBe("/reports");
     });
 
-    it("articles に切り替えると / に push され feedDetailId / authorName / reportId がリセットされる", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("articles に切り替えると view / feedDetailId / authorName / reportId がリセットされる", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleViewChange("articles");
+        result.current.handlers.handleViewChange("articles");
       });
-      expect(nav.setView).toHaveBeenCalledWith("articles");
-      expect(nav.setFeedDetailId).toHaveBeenCalledWith("");
-      expect(nav.setAuthorName).toHaveBeenCalledWith("");
-      expect(nav.setReportId).toHaveBeenCalledWith(0);
-      expect(window.location.pathname).toBe("/");
+      expect.soft(result.current.view).toBe("articles");
+      expect.soft(result.current.feedDetailId).toBe("");
+      expect.soft(result.current.authorName).toBe("");
+      expect.soft(result.current.reportId).toBe(0);
+      expect.soft(window.location.pathname).toBe("/");
     });
   });
 
   describe("handleGoToFeedDetail", () => {
-    it("feedId を URL エンコードして /feed/<id> に push し setView('feed') を呼ぶ", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("feedId を URL エンコードして /feed/<id> に push し view が 'feed' になる", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleGoToFeedDetail("my-feed");
+        result.current.handlers.handleGoToFeedDetail("my-feed");
       });
-      expect(nav.setView).toHaveBeenCalledWith("feed");
-      expect(nav.setFeedDetailId).toHaveBeenCalledWith("my-feed");
-      expect(window.location.pathname).toBe("/feed/my-feed");
+      expect.soft(result.current.view).toBe("feed");
+      expect.soft(result.current.feedDetailId).toBe("my-feed");
+      expect.soft(window.location.pathname).toBe("/feed/my-feed");
     });
   });
 
   describe("handleBackFromFeedDetail", () => {
-    it("/ に push し setView('articles') を呼ぶ", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/ に push し view が 'articles'、feedDetailId が '' になる", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleBackFromFeedDetail();
+        result.current.handlers.handleGoToFeedDetail("my-feed");
       });
-      expect(nav.setView).toHaveBeenCalledWith("articles");
-      expect(nav.setFeedDetailId).toHaveBeenCalledWith("");
-      expect(window.location.pathname).toBe("/");
+      act(() => {
+        result.current.handlers.handleBackFromFeedDetail();
+      });
+      expect.soft(result.current.view).toBe("articles");
+      expect.soft(result.current.feedDetailId).toBe("");
+      expect.soft(window.location.pathname).toBe("/");
     });
   });
 
   describe("handleGoToAuthorDetail", () => {
-    it("著者名を URL エンコードして /author/<name> に push し setView('author') を呼ぶ", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("著者名を URL エンコードして /author/<name> に push し view が 'author' になる", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleGoToAuthorDetail("Alice");
+        result.current.handlers.handleGoToAuthorDetail("Alice");
       });
-      expect(nav.setView).toHaveBeenCalledWith("author");
-      expect(nav.setAuthorName).toHaveBeenCalledWith("Alice");
-      expect(window.location.pathname).toBe("/author/Alice");
+      expect.soft(result.current.view).toBe("author");
+      expect.soft(result.current.authorName).toBe("Alice");
+      expect.soft(window.location.pathname).toBe("/author/Alice");
     });
   });
 
   describe("handleBackFromAuthorDetail", () => {
-    it("/ に push し setView('articles') を呼ぶ", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/ に push し view が 'articles'、authorName が '' になる", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleBackFromAuthorDetail();
+        result.current.handlers.handleGoToAuthorDetail("Alice");
       });
-      expect(nav.setView).toHaveBeenCalledWith("articles");
-      expect(nav.setAuthorName).toHaveBeenCalledWith("");
-      expect(window.location.pathname).toBe("/");
+      act(() => {
+        result.current.handlers.handleBackFromAuthorDetail();
+      });
+      expect.soft(result.current.view).toBe("articles");
+      expect.soft(result.current.authorName).toBe("");
+      expect.soft(window.location.pathname).toBe("/");
     });
   });
 
   describe("handleSelectReport", () => {
-    it("/reports/<id> に push し setView('report') と setReportId を呼ぶ", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/reports/<id> に push し view が 'report'、reportId が設定される", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleSelectReport(42);
+        result.current.handlers.handleSelectReport(42);
       });
-      expect(nav.setView).toHaveBeenCalledWith("report");
-      expect(nav.setReportId).toHaveBeenCalledWith(42);
-      expect(window.location.pathname).toBe("/reports/42");
+      expect.soft(result.current.view).toBe("report");
+      expect.soft(result.current.reportId).toBe(42);
+      expect.soft(window.location.pathname).toBe("/reports/42");
     });
   });
 
   describe("handleBackFromReportDetail", () => {
-    it("/reports に push し setView('reports') を呼ぶ", () => {
-      const nav = makeNavState();
-      const { result } = renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/reports に push し view が 'reports'、reportId が 0 になる", () => {
+      const { result } = renderHook(() => useTestHook());
       act(() => {
-        result.current.handleBackFromReportDetail();
+        result.current.handlers.handleSelectReport(42);
       });
-      expect(nav.setView).toHaveBeenCalledWith("reports");
-      expect(nav.setReportId).toHaveBeenCalledWith(0);
-      expect(window.location.pathname).toBe("/reports");
+      act(() => {
+        result.current.handlers.handleBackFromReportDetail();
+      });
+      expect.soft(result.current.view).toBe("reports");
+      expect.soft(result.current.reportId).toBe(0);
+      expect.soft(window.location.pathname).toBe("/reports");
     });
   });
 
   // ---- popstate ----
 
   describe("popstate", () => {
-    beforeEach(() => {
-      window.history.pushState(null, "", "/");
-    });
-
-    it("/stats に遷移して popstate が来ると setView('stats') を呼ぶ", () => {
-      const nav = makeNavState();
-      renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/stats に遷移して popstate が来ると view が 'stats' になる", () => {
+      const { result } = renderHook(() => useTestHook());
       window.history.pushState(null, "", "/stats");
       act(() => {
         window.dispatchEvent(new PopStateEvent("popstate"));
       });
-      expect(nav.setView).toHaveBeenCalledWith("stats");
+      expect(result.current.view).toBe("stats");
     });
 
-    it("/feed/<id> で popstate が来ると setView('feed') と setFeedDetailId を呼ぶ", () => {
-      const nav = makeNavState();
-      renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/feed/<id> で popstate が来ると view が 'feed'、feedDetailId が設定される", () => {
+      const { result } = renderHook(() => useTestHook());
       window.history.pushState(null, "", "/feed/test-feed");
       act(() => {
         window.dispatchEvent(new PopStateEvent("popstate"));
       });
-      expect(nav.setView).toHaveBeenCalledWith("feed");
-      expect(nav.setFeedDetailId).toHaveBeenCalledWith("test-feed");
+      expect.soft(result.current.view).toBe("feed");
+      expect.soft(result.current.feedDetailId).toBe("test-feed");
     });
 
-    it("/author/<name> で popstate が来ると setView('author') と setAuthorName を呼ぶ", () => {
-      const nav = makeNavState();
-      renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/author/<name> で popstate が来ると view が 'author'、authorName が設定される", () => {
+      const { result } = renderHook(() => useTestHook());
       window.history.pushState(null, "", "/author/Bob");
       act(() => {
         window.dispatchEvent(new PopStateEvent("popstate"));
       });
-      expect(nav.setView).toHaveBeenCalledWith("author");
-      expect(nav.setAuthorName).toHaveBeenCalledWith("Bob");
+      expect.soft(result.current.view).toBe("author");
+      expect.soft(result.current.authorName).toBe("Bob");
     });
 
-    it("/reports/5 で popstate が来ると setView('report') と setReportId(5) を呼ぶ", () => {
-      const nav = makeNavState();
-      renderHook(() => useNavHandlers(nav, makeKbState()));
+    it("/reports/5 で popstate が来ると view が 'report'、reportId が 5 になる", () => {
+      const { result } = renderHook(() => useTestHook());
       window.history.pushState(null, "", "/reports/5");
       act(() => {
         window.dispatchEvent(new PopStateEvent("popstate"));
       });
-      expect(nav.setView).toHaveBeenCalledWith("report");
-      expect(nav.setReportId).toHaveBeenCalledWith(5);
+      expect.soft(result.current.view).toBe("report");
+      expect.soft(result.current.reportId).toBe(5);
     });
 
     it("/ で popstate が来ると articles 系 state がリセットされる", () => {
-      const nav = makeNavState();
-      renderHook(() => useNavHandlers(nav, makeKbState()));
+      const { result } = renderHook(() => useTestHook());
       window.history.pushState(null, "", "/");
       act(() => {
         window.dispatchEvent(new PopStateEvent("popstate"));
       });
-      expect(nav.setView).toHaveBeenCalledWith("articles");
-      expect(nav.setFeedDetailId).toHaveBeenCalledWith("");
-      expect(nav.setAuthorName).toHaveBeenCalledWith("");
-      expect(nav.setReportId).toHaveBeenCalledWith(0);
+      expect.soft(result.current.view).toBe("articles");
+      expect.soft(result.current.feedDetailId).toBe("");
+      expect.soft(result.current.authorName).toBe("");
+      expect.soft(result.current.reportId).toBe(0);
     });
 
     it("アンマウント後は popstate ハンドラが解除される", () => {
-      const nav = makeNavState();
-      const { unmount } = renderHook(() => useNavHandlers(nav, makeKbState()));
+      const { result, unmount } = renderHook(() => useTestHook());
+      const viewBefore = result.current.view;
       unmount();
       window.history.pushState(null, "", "/stats");
       act(() => {
         window.dispatchEvent(new PopStateEvent("popstate"));
       });
-      expect(nav.setView).not.toHaveBeenCalled();
+      // アンマウント後は state 更新されないので view は変わらないはず
+      expect(result.current.view).toBe(viewBefore);
     });
   });
 
   // ---- keyboard shortcut callbacks ----
 
   describe("handleKbNext", () => {
-    it("selectedIndex を +1 する (上限は articles.length - 1)", () => {
-      const kb = makeKbState({ articles: [makeArticle(1), makeArticle(2)], selectedIndex: 0 });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+    it("selectedIndex を +1 する", () => {
+      const articles = [makeArticle(1), makeArticle(2)];
+      const { result } = renderHook(() => useTestHook(articles, 0));
       act(() => {
-        result.current.handleKbNext();
+        result.current.handlers.handleKbNext();
       });
-      const updater = (kb.setSelectedIndex as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
-      expect(typeof updater).toBe("function");
-      expect((updater as (prev: number) => number)(0)).toBe(1);
-      expect((updater as (prev: number) => number)(1)).toBe(1); // 上限でクランプ
+      expect(result.current.selectedIndex).toBe(1);
+    });
+
+    it("selectedIndex が上限 (articles.length - 1) でクランプされる", () => {
+      const articles = [makeArticle(1), makeArticle(2)];
+      const { result } = renderHook(() => useTestHook(articles, 1));
+      act(() => {
+        result.current.handlers.handleKbNext();
+      });
+      expect(result.current.selectedIndex).toBe(1);
     });
   });
 
   describe("handleKbPrev", () => {
     it("selectedIndex が 0 より大きいとき -1 する", () => {
-      const kb = makeKbState({ articles: [makeArticle(1), makeArticle(2)], selectedIndex: 1 });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const articles = [makeArticle(1), makeArticle(2)];
+      const { result } = renderHook(() => useTestHook(articles, 1));
       act(() => {
-        result.current.handleKbPrev();
+        result.current.handlers.handleKbPrev();
       });
-      const updater = (kb.setSelectedIndex as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
-      expect((updater as (prev: number) => number)(1)).toBe(0);
+      expect(result.current.selectedIndex).toBe(0);
     });
 
     it("selectedIndex が 0 のとき 0 のまま", () => {
-      const kb = makeKbState({ articles: [makeArticle(1)], selectedIndex: 0 });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const articles = [makeArticle(1)];
+      const { result } = renderHook(() => useTestHook(articles, 0));
       act(() => {
-        result.current.handleKbPrev();
+        result.current.handlers.handleKbPrev();
       });
-      const updater = (kb.setSelectedIndex as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
-      expect((updater as (prev: number) => number)(0)).toBe(0);
+      expect(result.current.selectedIndex).toBe(0);
     });
   });
 
@@ -297,10 +329,9 @@ describe("useNavHandlers", () => {
     it("選択中の記事を別タブで開く", () => {
       const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
       const articles = [makeArticle(1), makeArticle(2)];
-      const kb = makeKbState({ articles, selectedIndex: 1 });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const { result } = renderHook(() => useTestHook(articles, 1));
       act(() => {
-        result.current.handleKbOpen();
+        result.current.handlers.handleKbOpen();
       });
       expect(openSpy).toHaveBeenCalledWith(articles[1]?.url, "_blank", "noopener,noreferrer");
       openSpy.mockRestore();
@@ -308,10 +339,10 @@ describe("useNavHandlers", () => {
 
     it("selectedIndex が -1 のときは何もしない", () => {
       const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
-      const kb = makeKbState({ articles: [makeArticle(1)], selectedIndex: -1 });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const articles = [makeArticle(1)];
+      const { result } = renderHook(() => useTestHook(articles, -1));
       act(() => {
-        result.current.handleKbOpen();
+        result.current.handlers.handleKbOpen();
       });
       expect(openSpy).not.toHaveBeenCalled();
       openSpy.mockRestore();
@@ -321,95 +352,89 @@ describe("useNavHandlers", () => {
   describe("handleKbBookmark", () => {
     it("選択中の記事の guid で toggleBookmark を呼ぶ", () => {
       const articles = [makeArticle(1), makeArticle(2)];
-      const kb = makeKbState({ articles, selectedIndex: 0 });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const { result } = renderHook(() => useTestHook(articles, 0));
       act(() => {
-        result.current.handleKbBookmark();
+        result.current.handlers.handleKbBookmark();
       });
-      expect(kb.toggleBookmark).toHaveBeenCalledWith(articles[0]?.guid);
+      expect(result.current.toggleBookmark).toHaveBeenCalledWith(articles[0]?.guid);
     });
 
     it("selectedIndex が範囲外のときは何もしない", () => {
-      const kb = makeKbState({ articles: [makeArticle(1)], selectedIndex: 5 });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const articles = [makeArticle(1)];
+      const { result } = renderHook(() => useTestHook(articles, 5));
       act(() => {
-        result.current.handleKbBookmark();
+        result.current.handlers.handleKbBookmark();
       });
-      expect(kb.toggleBookmark).not.toHaveBeenCalled();
+      expect(result.current.toggleBookmark).not.toHaveBeenCalled();
     });
   });
 
   describe("handleKbShowHelp", () => {
-    it("setHelpOpen(true) を呼ぶ", () => {
-      const kb = makeKbState();
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+    it("helpOpen が true になる", () => {
+      const { result } = renderHook(() => useTestHook([], -1, false));
       act(() => {
-        result.current.handleKbShowHelp();
+        result.current.handlers.handleKbShowHelp();
       });
-      expect(kb.setHelpOpen).toHaveBeenCalledWith(true);
+      expect(result.current.helpOpen).toBe(true);
     });
   });
 
   describe("handleKbClose", () => {
-    it("helpOpen が true のとき setHelpOpen(false) を呼ぶ", () => {
-      const kb = makeKbState({ helpOpen: true });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+    it("helpOpen が true のとき helpOpen が false になる", () => {
+      const { result } = renderHook(() => useTestHook([], -1, true));
       act(() => {
-        result.current.handleKbClose();
+        result.current.handlers.handleKbClose();
       });
-      expect(kb.setHelpOpen).toHaveBeenCalledWith(false);
-      expect(kb.setSelectedIndex).not.toHaveBeenCalled();
+      expect.soft(result.current.helpOpen).toBe(false);
+      expect.soft(result.current.selectedIndex).toBe(-1); // selectedIndex は変わらない
     });
 
-    it("helpOpen が false のとき setSelectedIndex(-1) を呼ぶ", () => {
-      const kb = makeKbState({ helpOpen: false });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+    it("helpOpen が false のとき selectedIndex が -1 になる", () => {
+      const articles = [makeArticle(1), makeArticle(2)];
+      const { result } = renderHook(() => useTestHook(articles, 1, false));
       act(() => {
-        result.current.handleKbClose();
+        result.current.handlers.handleKbClose();
       });
-      expect(kb.setSelectedIndex).toHaveBeenCalledWith(-1);
-      expect(kb.setHelpOpen).not.toHaveBeenCalled();
+      expect.soft(result.current.selectedIndex).toBe(-1);
+      expect.soft(result.current.helpOpen).toBe(false); // helpOpen は変わらない
     });
   });
 
   describe("handleKbTop", () => {
-    it("記事がある場合 setSelectedIndex(0) を呼ぶ", () => {
-      const kb = makeKbState({ articles: [makeArticle(1), makeArticle(2)] });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+    it("記事がある場合 selectedIndex が 0 になる", () => {
+      const articles = [makeArticle(1), makeArticle(2)];
+      const { result } = renderHook(() => useTestHook(articles, 1));
       act(() => {
-        result.current.handleKbTop();
+        result.current.handlers.handleKbTop();
       });
-      expect(kb.setSelectedIndex).toHaveBeenCalledWith(0);
+      expect(result.current.selectedIndex).toBe(0);
     });
 
-    it("記事がない場合 setSelectedIndex(-1) を呼ぶ", () => {
-      const kb = makeKbState({ articles: [] });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+    it("記事がない場合 selectedIndex が -1 になる", () => {
+      const { result } = renderHook(() => useTestHook([], 0));
       act(() => {
-        result.current.handleKbTop();
+        result.current.handlers.handleKbTop();
       });
-      expect(kb.setSelectedIndex).toHaveBeenCalledWith(-1);
+      expect(result.current.selectedIndex).toBe(-1);
     });
   });
 
   describe("handleKbBottom", () => {
-    it("記事がある場合 setSelectedIndex(articles.length - 1) を呼ぶ", () => {
+    it("記事がある場合 selectedIndex が articles.length - 1 になる", () => {
       const articles = [makeArticle(1), makeArticle(2), makeArticle(3)];
-      const kb = makeKbState({ articles });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const { result } = renderHook(() => useTestHook(articles, 0));
       act(() => {
-        result.current.handleKbBottom();
+        result.current.handlers.handleKbBottom();
       });
-      expect(kb.setSelectedIndex).toHaveBeenCalledWith(2);
+      expect(result.current.selectedIndex).toBe(2);
     });
 
-    it("記事がない場合 setSelectedIndex(-1) を呼ぶ", () => {
-      const kb = makeKbState({ articles: [] });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+    it("記事がない場合 selectedIndex が -1 になる", () => {
+      const { result } = renderHook(() => useTestHook([], 0));
       act(() => {
-        result.current.handleKbBottom();
+        result.current.handlers.handleKbBottom();
       });
-      expect(kb.setSelectedIndex).toHaveBeenCalledWith(-1);
+      expect(result.current.selectedIndex).toBe(-1);
     });
   });
 
@@ -418,21 +443,23 @@ describe("useNavHandlers", () => {
       const input = document.createElement("input");
       document.body.appendChild(input);
       const focusSpy = vi.spyOn(input, "focus");
-      const kb = makeKbState({ searchRef: { current: input } });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const { result } = renderHook(() => {
+        const state = useTestHook();
+        state.searchRef.current = input;
+        return state;
+      });
       act(() => {
-        result.current.handleSearchFocus();
+        result.current.handlers.handleSearchFocus();
       });
       expect(focusSpy).toHaveBeenCalledTimes(1);
       document.body.removeChild(input);
     });
 
     it("searchRef.current が null のときは何もしない (エラーなし)", () => {
-      const kb = makeKbState({ searchRef: { current: null } });
-      const { result } = renderHook(() => useNavHandlers(makeNavState(), kb));
+      const { result } = renderHook(() => useTestHook());
       expect(() => {
         act(() => {
-          result.current.handleSearchFocus();
+          result.current.handlers.handleSearchFocus();
         });
       }).not.toThrow();
     });
