@@ -2,9 +2,12 @@
 // production 既存の period-overlap レポートを 1 行にマージする one-shot スクリプト。
 //
 // Usage:
-//   node tools/d1-client/merge-overlapping-reports.mjs --target=local|remote [--apply]
+//   node tools/d1-client/merge-overlapping-reports.mjs --target=local|remote [--kind=<k1,k2,...>] [--apply]
 //
 // Default: dry-run (DB 変更なし)。--apply で実際に UPDATE / DELETE を実行する。
+// --kind= 指定時は対象 kind に絞って overlap 検出 (例: --kind=weekly,monthly)。
+// daily の period は generated_at ベースで暦日に揃っていないため、隣接日の row が
+// 境界誤差で部分 overlap してしまう。誤って巻き込まないために --kind フィルタを使うこと。
 //
 // 出力 (stdout): JSON
 //   {
@@ -29,8 +32,10 @@ const DB_NAME = "tech-news-bot-db";
 
 // ---- CLI args ----
 
+const VALID_KINDS = new Set(["daily", "weekly", "monthly"]);
+
 function parseArgs(argv) {
-  const out = { target: "local", apply: false };
+  const out = { target: "local", apply: false, kinds: null };
   for (const arg of argv.slice(2)) {
     if (arg === "--apply") {
       out.apply = true;
@@ -40,6 +45,12 @@ function parseArgs(argv) {
     if (!m) continue;
     const [, k, v] = m;
     if (k === "target") out.target = v;
+    else if (k === "kind") {
+      out.kinds = v
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
   }
   return out;
 }
@@ -150,6 +161,15 @@ function main() {
     process.stderr.write(`Invalid --target=${opts.target}. Use local or remote.\n`);
     process.exit(2);
   }
+  if (opts.kinds) {
+    const invalid = opts.kinds.filter((k) => !VALID_KINDS.has(k));
+    if (invalid.length > 0) {
+      process.stderr.write(
+        `Invalid --kind value(s): ${invalid.join(",")}. Allowed: ${[...VALID_KINDS].join(",")}\n`,
+      );
+      process.exit(2);
+    }
+  }
 
   let rows;
   try {
@@ -157,6 +177,11 @@ function main() {
   } catch (err) {
     process.stderr.write(`Failed to fetch rows: ${err.message}\n`);
     process.exit(1);
+  }
+
+  if (opts.kinds) {
+    const allowed = new Set(opts.kinds);
+    rows = rows.filter((r) => allowed.has(r.kind));
   }
 
   const clusters = clusterRows(rows);
