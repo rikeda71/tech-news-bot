@@ -34,10 +34,16 @@ jobs:
       - name: Run tech-news-weekly skill (monthly)
         uses: anthropics/claude-code-base-action@beta
         env:
+          # claude-code-base-action 内部の Setup Node.js が default 18 を入れるため、
+          # wrangler d1 (Node v20+ 必須) が落ちる。skill が呼ぶ recent.mjs のために 24 を強制。
+          NODE_VERSION: "24"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 廃止モデル (claude-3-5-haiku-20241022) への自動 fallback で 404 が出るため
+          # 現行 sonnet を明示する。
+          model: "claude-sonnet-4-5-20250929"
           allowed_tools: "Bash,Read,Write,WebFetch,Skill"
           timeout_minutes: 45
           # monthly digest 生成プロンプト。tech-news-weekly skill を since=month で起動する。
