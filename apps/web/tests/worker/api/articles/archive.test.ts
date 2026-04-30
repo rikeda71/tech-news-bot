@@ -95,30 +95,30 @@ describe("GET /api/articles/archive", () => {
     ]);
 
     const res = await SELF.fetch("https://example.com/api/articles/archive?year=2024&month=4");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{
       year: number;
       month: number;
       items: { published_at: string }[];
       total: number;
     }>();
-    expect(body.year).toBe(2024);
-    expect(body.month).toBe(4);
-    expect(body.total).toBe(3);
-    expect(body.items.length).toBe(3);
+    expect.soft(body.year).toBe(2024);
+    expect.soft(body.month).toBe(4);
+    expect.soft(body.total).toBe(3);
+    expect.soft(body.items.length).toBe(3);
     for (const item of body.items) {
-      expect(item.published_at >= "2024-04-01T00:00:00.000Z").toBe(true);
-      expect(item.published_at < "2024-05-01T00:00:00.000Z").toBe(true);
+      expect.soft(item.published_at >= "2024-04-01T00:00:00.000Z").toBe(true);
+      expect.soft(item.published_at < "2024-05-01T00:00:00.000Z").toBe(true);
     }
   });
 
   it("returns items in published_at descending order", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/archive?year=2024&month=4");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ items: { published_at: string }[] }>();
     const dates = body.items.map((a) => a.published_at);
     const sorted = dates.toSorted((a, b) => b.localeCompare(a));
-    expect(dates).toEqual(sorted);
+    expect.soft(dates).toEqual(sorted);
   });
 
   it("returns limited items but total reflects full count (total > limit)", async () => {
@@ -139,10 +139,10 @@ describe("GET /api/articles/archive", () => {
     const res = await SELF.fetch(
       "https://example.com/api/articles/archive?year=2024&month=4&limit=10",
     );
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ items: unknown[]; total: number }>();
-    expect(body.items.length).toBe(10);
-    expect(body.total).toBe(15);
+    expect.soft(body.items.length).toBe(10);
+    expect.soft(body.total).toBe(15);
   });
 
   it("correctly handles December to January year wrap (2025-12)", async () => {
@@ -172,38 +172,39 @@ describe("GET /api/articles/archive", () => {
     ]);
 
     const res = await SELF.fetch("https://example.com/api/articles/archive?year=2025&month=12");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ items: { published_at: string }[]; total: number }>();
-    expect(body.total).toBe(1);
+    expect.soft(body.total).toBe(1);
+    // items[0] へのアクセスは length > 0 が前提のため fail-fast で確認
     expect(body.items.length).toBe(1);
-    expect(body.items[0].published_at).toBe("2025-12-15T12:00:00.000Z");
+    expect.soft(body.items[0].published_at).toBe("2025-12-15T12:00:00.000Z");
   });
 
   it("returns Cache-Control: public, max-age=600", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/archive?year=2024&month=4");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=600");
   });
 
   it("returns Content-Type application/json", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/archive?year=2024&month=4");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toMatch(/application\/json/);
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toMatch(/application\/json/);
   });
 
   it("filters by year + month + category simultaneously", async () => {
     const res = await SELF.fetch(
       "https://example.com/api/articles/archive?year=2024&month=4&category=ai",
     );
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{
       items: { category: string; published_at: string }[];
       total: number;
     }>();
     // 2024-04 に ai が 2 件 (o-ai-1, o-ai-2)
-    expect(body.total).toBe(2);
+    expect.soft(body.total).toBe(2);
     for (const item of body.items) {
-      expect(item.category).toBe("ai");
+      expect.soft(item.category).toBe("ai");
     }
   });
 });

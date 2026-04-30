@@ -14,23 +14,23 @@ describe("GET /api/articles/:guid/related", () => {
     const res = await SELF.fetch(
       "https://example.com/api/articles/unknown-guid-does-not-exist/related",
     );
-    expect(res.status).toBe(404);
+    expect.soft(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("not found");
+    expect.soft(body.error).toBe("not found");
   });
 
   it("returns 400 when n=0", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/related?n=0");
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("n must be 1-20");
+    expect.soft(body.error).toBe("n must be 1-20");
   });
 
   it("returns 400 when n=21", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/related?n=21");
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("n must be 1-20");
+    expect.soft(body.error).toBe("n must be 1-20");
   });
 
   it("returns same feed articles when enough exist", async () => {
@@ -94,11 +94,11 @@ describe("GET /api/articles/:guid/related", () => {
     ]);
 
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/related?n=5");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ items: Article[] }>();
     expect(body.items.length).toBe(5);
     for (const item of body.items) {
-      expect(item.feed_id).toBe("openai-blog");
+      expect.soft(item.feed_id).toBe("openai-blog");
     }
   });
 
@@ -188,25 +188,26 @@ describe("GET /api/articles/:guid/related", () => {
     // g-bt-1 の関連記事を n=5 で取得
     // 同 feed (google-research) には g-bt-2 の 1 件、残り 4 件は meta-engineering から
     const res = await SELF.fetch("https://example.com/api/articles/g-bt-1/related?n=5");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ items: Article[] }>();
+    // items[0] へのアクセスは length > 0 が前提のため fail-fast
     expect(body.items.length).toBe(5);
 
     // 先頭が同 feed
-    expect(body.items[0].feed_id).toBe("google-research");
+    expect.soft(body.items[0].feed_id).toBe("google-research");
     // 残りは meta-engineering (同 category)
     for (const item of body.items.slice(1)) {
-      expect(item.feed_id).toBe("meta-engineering");
-      expect(item.category).toBe("bigtech");
+      expect.soft(item.feed_id).toBe("meta-engineering");
+      expect.soft(item.category).toBe("bigtech");
     }
   });
 
   it("does not include the target article itself in items", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/related");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ items: Article[] }>();
     for (const item of body.items) {
-      expect(item.guid).not.toBe("o-ai-1");
+      expect.soft(item.guid).not.toBe("o-ai-1");
     }
   });
 
@@ -228,23 +229,24 @@ describe("GET /api/articles/:guid/related", () => {
 
     // o-ai-1 の関連: o-ai-3 (2024-04-04) → o-ai-2 (2024-04-03) の順
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/related?n=5");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ items: Article[] }>();
     const sameFeed = body.items.filter((i) => i.feed_id === "openai-blog");
+    // sameFeed[0/1] アクセスは length >= 2 が前提のため fail-fast
     expect(sameFeed.length).toBeGreaterThanOrEqual(2);
-    expect(sameFeed[0].published_at >= sameFeed[1].published_at).toBe(true);
+    expect.soft(sameFeed[0].published_at >= sameFeed[1].published_at).toBe(true);
   });
 
   it("returns Content-Type application/json", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/related");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toMatch(/application\/json/);
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toMatch(/application\/json/);
   });
 
   it("returns Cache-Control with max-age=300", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/related");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const cc = res.headers.get("Cache-Control");
-    expect(cc).toContain("max-age=300");
+    expect.soft(cc).toContain("max-age=300");
   });
 });
