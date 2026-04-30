@@ -99,6 +99,14 @@ beforeEach(async () => {
   ]);
 });
 
+describe("GET /api/stats — response headers", () => {
+  it("sets Cache-Control: public, max-age=60, stale-while-revalidate=300", async () => {
+    const res = await SELF.fetch("https://example.com/api/stats");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60, stale-while-revalidate=300");
+  });
+});
+
 describe("GET /api/stats — category_trend_30d", () => {
   it("returns exactly 30 entries", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");

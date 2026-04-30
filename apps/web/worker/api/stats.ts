@@ -47,126 +47,135 @@ const STALE_FEEDS_SQL = `
 app.get("/", async (c) => {
   const db = c.env.DB;
 
-  // 6 クエリを 1 回の db.batch で発行してラウンドトリップを 1 本に削減する
-  // (SUMMARY_SQL で全期間集計 4→1、feedActivity から top_publishers を派生させて 2→1)
-  const [
-    summaryResult,
-    staleResult,
-    categoryTrendRaw,
-    feedActivityRaw,
-    topAuthorsRaw,
-    byLang30dRaw,
-  ] = await db.batch([
-    db.prepare(SUMMARY_SQL),
-    db.prepare(STALE_FEEDS_SQL),
-    db.prepare(
-      `SELECT date(published_at) AS date, category, COUNT(*) AS n
-       FROM articles
-       WHERE published_at >= date('now', '-30 days')
-       GROUP BY date(published_at), category
-       ORDER BY date(published_at) ASC`,
-    ),
-    db.prepare(
-      `SELECT a.feed_id,
-              COALESCE(f.name, a.feed_id) AS feed_name,
-              COUNT(*) AS articles_30d,
-              MAX(a.published_at) AS last_published_at
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
-       WHERE a.published_at >= date('now', '-30 days')
-       GROUP BY a.feed_id
-       ORDER BY articles_30d DESC`,
-    ),
-    db.prepare(
-      `SELECT author, COUNT(*) AS count
-       FROM articles
-       WHERE author IS NOT NULL
-         AND author != ''
-         AND category != 'zenn'
-         AND published_at >= datetime('now', '-30 days')
-       GROUP BY author
-       ORDER BY count DESC
-       LIMIT 10`,
-    ),
-    db.prepare(
-      `SELECT lang, COUNT(*) AS count
-       FROM articles
-       WHERE published_at >= datetime('now', '-30 days')
-       GROUP BY lang`,
-    ),
-  ]);
+  // 集計データなので 1 分キャッシュを許容する (stale-while-revalidate でエッジキャッシュ効率を上げる)
+  c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
 
-  const summaryRow = (summaryResult.results?.[0] ?? null) as {
-    total: number;
-    last_published: string | null;
-    last_fetched: string | null;
-    last24h: number;
-    cat_bigtech: number;
-    cat_ai: number;
-    cat_jp: number;
-    cat_zenn: number;
-    lang_ja: number;
-    lang_en: number;
-  } | null;
+  try {
+    // 6 クエリを 1 回の db.batch で発行してラウンドトリップを 1 本に削減する
+    // (SUMMARY_SQL で全期間集計 4→1、feedActivity から top_publishers を派生させて 2→1)
+    const [
+      summaryResult,
+      staleResult,
+      categoryTrendRaw,
+      feedActivityRaw,
+      topAuthorsRaw,
+      byLang30dRaw,
+    ] = await db.batch([
+      db.prepare(SUMMARY_SQL),
+      db.prepare(STALE_FEEDS_SQL),
+      db.prepare(
+        `SELECT date(published_at) AS date, category, COUNT(*) AS n
+         FROM articles
+         WHERE published_at >= date('now', '-30 days')
+         GROUP BY date(published_at), category
+         ORDER BY date(published_at) ASC`,
+      ),
+      db.prepare(
+        `SELECT a.feed_id,
+                COALESCE(f.name, a.feed_id) AS feed_name,
+                COUNT(*) AS articles_30d,
+                MAX(a.published_at) AS last_published_at
+         FROM articles a
+         LEFT JOIN feeds f ON f.id = a.feed_id
+         WHERE a.published_at >= date('now', '-30 days')
+         GROUP BY a.feed_id
+         ORDER BY articles_30d DESC`,
+      ),
+      db.prepare(
+        `SELECT author, COUNT(*) AS count
+         FROM articles
+         WHERE author IS NOT NULL
+           AND author != ''
+           AND category != 'zenn'
+           AND published_at >= datetime('now', '-30 days')
+         GROUP BY author
+         ORDER BY count DESC
+         LIMIT 10`,
+      ),
+      db.prepare(
+        `SELECT lang, COUNT(*) AS count
+         FROM articles
+         WHERE published_at >= datetime('now', '-30 days')
+         GROUP BY lang`,
+      ),
+    ]);
 
-  // getCategoryTrend30d と同等の 0 埋め処理
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  const points: CategoryTrendPoint[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setUTCDate(today.getUTCDate() - i);
-    points.push({ date: d.toISOString().slice(0, 10), ai: 0, bigtech: 0, jp: 0, zenn: 0 });
+    const summaryRow = (summaryResult.results?.[0] ?? null) as {
+      total: number;
+      last_published: string | null;
+      last_fetched: string | null;
+      last24h: number;
+      cat_bigtech: number;
+      cat_ai: number;
+      cat_jp: number;
+      cat_zenn: number;
+      lang_ja: number;
+      lang_en: number;
+    } | null;
+
+    // getCategoryTrend30d と同等の 0 埋め処理
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const points: CategoryTrendPoint[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setUTCDate(today.getUTCDate() - i);
+      points.push({ date: d.toISOString().slice(0, 10), ai: 0, bigtech: 0, jp: 0, zenn: 0 });
+    }
+    const trendMap = new Map<string, CategoryTrendPoint>();
+    for (const p of points) trendMap.set(p.date, p);
+    for (const row of (categoryTrendRaw.results ?? []) as {
+      date: string;
+      category: string;
+      n: number;
+    }[]) {
+      const point = trendMap.get(row.date);
+      if (!point) continue;
+      const cat = row.category as keyof Omit<CategoryTrendPoint, "date">;
+      if (cat in point) (point[cat] as number) += row.n;
+    }
+
+    // getByLang30d と同等の集計
+    const byLang30d: ByLang30d = { ja: 0, en: 0 };
+    for (const row of (byLang30dRaw.results ?? []) as { lang: string; count: number }[]) {
+      if (row.lang === "ja") byLang30d.ja = row.count;
+      else if (row.lang === "en") byLang30d.en = row.count;
+    }
+    const feedActivity = (feedActivityRaw.results ?? []) as FeedActivityRow[];
+    // feedActivity は articles_30d DESC 済みなので先頭 10 件が top_publishers と等価
+    const topPublishers: TopPublisherRow[] = feedActivity.slice(0, 10).map((r) => ({
+      feed_id: r.feed_id,
+      feed_name: r.feed_name,
+      count: r.articles_30d,
+    }));
+
+    return c.json<StatsResponse>({
+      total: summaryRow?.total ?? 0,
+      last_published_at: summaryRow?.last_published ?? null,
+      last_fetched_at: summaryRow?.last_fetched ?? null,
+      last24h: summaryRow?.last24h ?? 0,
+      by_category: {
+        bigtech: summaryRow?.cat_bigtech ?? 0,
+        ai: summaryRow?.cat_ai ?? 0,
+        jp: summaryRow?.cat_jp ?? 0,
+        zenn: summaryRow?.cat_zenn ?? 0,
+      },
+      by_lang: {
+        ja: summaryRow?.lang_ja ?? 0,
+        en: summaryRow?.lang_en ?? 0,
+      },
+      stale_feeds: (staleResult.results ?? []) as StatsResponse["stale_feeds"],
+      category_trend_30d: points,
+      feed_activity: feedActivity,
+      top_authors_30d: (topAuthorsRaw.results ?? []) as TopAuthorRow[],
+      top_publishers_30d: topPublishers,
+      by_lang_30d: byLang30d,
+    });
+  } catch (err) {
+    // D1 エラーの詳細 (SQL/テーブル名等) をクライアントに漏らさない
+    console.error("[stats] D1 batch failed:", err instanceof Error ? err.message : String(err));
+    return c.json({ error: "Internal Server Error" }, 500);
   }
-  const trendMap = new Map<string, CategoryTrendPoint>();
-  for (const p of points) trendMap.set(p.date, p);
-  for (const row of (categoryTrendRaw.results ?? []) as {
-    date: string;
-    category: string;
-    n: number;
-  }[]) {
-    const point = trendMap.get(row.date);
-    if (!point) continue;
-    const cat = row.category as keyof Omit<CategoryTrendPoint, "date">;
-    if (cat in point) (point[cat] as number) += row.n;
-  }
-
-  // getByLang30d と同等の集計
-  const byLang30d: ByLang30d = { ja: 0, en: 0 };
-  for (const row of (byLang30dRaw.results ?? []) as { lang: string; count: number }[]) {
-    if (row.lang === "ja") byLang30d.ja = row.count;
-    else if (row.lang === "en") byLang30d.en = row.count;
-  }
-  const feedActivity = (feedActivityRaw.results ?? []) as FeedActivityRow[];
-  // feedActivity は articles_30d DESC 済みなので先頭 10 件が top_publishers と等価
-  const topPublishers: TopPublisherRow[] = feedActivity.slice(0, 10).map((r) => ({
-    feed_id: r.feed_id,
-    feed_name: r.feed_name,
-    count: r.articles_30d,
-  }));
-
-  return c.json<StatsResponse>({
-    total: summaryRow?.total ?? 0,
-    last_published_at: summaryRow?.last_published ?? null,
-    last_fetched_at: summaryRow?.last_fetched ?? null,
-    last24h: summaryRow?.last24h ?? 0,
-    by_category: {
-      bigtech: summaryRow?.cat_bigtech ?? 0,
-      ai: summaryRow?.cat_ai ?? 0,
-      jp: summaryRow?.cat_jp ?? 0,
-      zenn: summaryRow?.cat_zenn ?? 0,
-    },
-    by_lang: {
-      ja: summaryRow?.lang_ja ?? 0,
-      en: summaryRow?.lang_en ?? 0,
-    },
-    stale_feeds: (staleResult.results ?? []) as StatsResponse["stale_feeds"],
-    category_trend_30d: points,
-    feed_activity: feedActivity,
-    top_authors_30d: (topAuthorsRaw.results ?? []) as TopAuthorRow[],
-    top_publishers_30d: topPublishers,
-    by_lang_30d: byLang30d,
-  });
 });
 
 export default app;
