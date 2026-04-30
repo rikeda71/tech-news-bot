@@ -3,7 +3,8 @@
  *
  * handleNotModified / handleSuccess / handleError の各ブランチを独立して検証する。
  * 古典派: 実 D1 (miniflare) を使い、過剰モックを避ける。
- * fetch のみ vi.spyOn でモックして外部アクセスを抑止する。
+ * handleSuccess / handleNotModified は XML を直接受け取るため fetch は呼ばれない。
+ * handleError も fetch を発行しないため、ここでは外部アクセスのモックは不要。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { env } from "cloudflare:test";
@@ -287,10 +288,9 @@ describe("handleError", () => {
     expect.soft(result.feedId).toBe(FEED.id);
     expect.soft(result.inserted).toBe(0);
     expect.soft(result.parsed).toBe(0);
-    if (result.status === "error") {
-      expect.soft(result.error).toContain("HTTP 503");
-      expect.soft(result.errorKind).toBe("http_server");
-    }
+    if (result.status !== "error") throw new Error("expected status error");
+    expect.soft(result.error).toContain("HTTP 503");
+    expect.soft(result.errorKind).toBe("http_server");
   });
 
   it("classifies network error correctly", async () => {
@@ -307,9 +307,9 @@ describe("handleError", () => {
       p.d1Acc,
     );
 
-    if (result.status === "error") {
-      expect(result.errorKind).toBe("network");
-    }
+    expect(result.status).toBe("error");
+    if (result.status !== "error") throw new Error("expected status error");
+    expect.soft(result.errorKind).toBe("network");
   });
 
   it("records consecutive_failures increment in feeds table", async () => {
