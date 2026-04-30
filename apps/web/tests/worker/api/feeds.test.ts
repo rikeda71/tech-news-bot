@@ -408,7 +408,7 @@ describe("GET /api/feeds/:id/health", () => {
 
   it("returns 200 with correct structure and counts", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog/health?days=7");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{
       feed_id: string;
       window_days: number;
@@ -468,9 +468,9 @@ describe("GET /api/feeds/:id/health", () => {
 
   it("uses default days=7 when days param is omitted", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog/health");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = await res.json<{ window_days: number }>();
-    expect(body.window_days).toBe(7);
+    expect.soft(body.window_days).toBe(7);
   });
 
   it("sets Cache-Control: public, max-age=300", async () => {
