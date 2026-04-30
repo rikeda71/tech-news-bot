@@ -4,8 +4,8 @@ import {
   appendCursorCondition,
   buildPaginatedQuery,
   extractWithCursor,
-  insertArticles,
-} from "../../../worker/db/articles";
+} from "../../../worker/db/articles-cursor";
+import { insertArticles } from "../../../worker/db/articles-write";
 import { syncFeeds } from "../../../worker/db/feeds";
 import type { FeedConfig } from "../../../worker/types";
 import type { Article } from "../../../worker/types";
