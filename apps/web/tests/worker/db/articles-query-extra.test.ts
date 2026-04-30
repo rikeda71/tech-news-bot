@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env } from "cloudflare:test";
 import { insertArticles } from "../../../worker/db/articles";
-import { searchArticles } from "../../../worker/db/articles-query-extra";
+import { escapeFtsQuery, searchArticles } from "../../../worker/db/articles-query-extra";
 import { syncFeeds } from "../../../worker/db/feeds";
 import type { FeedConfig } from "../../../worker/types";
 
@@ -75,6 +75,28 @@ describe("searchArticles (FTS5 only)", () => {
         category: "personal",
         lang: "ja",
       },
+      {
+        guid: "en-3",
+        feed_id: "feed-a",
+        title: "async-std vs tokio benchmark",
+        url: "https://example.com/5",
+        summary: "Comparing async-std and tokio performance",
+        author: null,
+        published_at: "2024-05-05T00:00:00.000Z",
+        category: "bigtech",
+        lang: "en",
+      },
+      {
+        guid: "en-4",
+        feed_id: "feed-a",
+        title: "C++ memory management tips",
+        url: "https://example.com/6",
+        summary: "Modern C++ patterns for safe memory handling",
+        author: null,
+        published_at: "2024-05-06T00:00:00.000Z",
+        category: "bigtech",
+        lang: "en",
+      },
     ]);
   });
 
@@ -125,28 +147,53 @@ describe("searchArticles (FTS5 only)", () => {
   it("handles FTS5 special characters gracefully (double-quote in query)", async () => {
     // ダブルクォートを含む入力はエスケープされてクラッシュしない
     const result = await searchArticles(env.DB, '"TypeScript"', 10, null);
-    // クラッシュしないことと、マッチ結果が返ることを確認
-    expect(result.articles).toBeDefined();
+    expect(result).toMatchObject({ articles: expect.any(Array) });
+    expect(result.articles.map((a) => a.guid)).toContain("en-1");
   });
 
   it("handles FTS5 special characters gracefully (asterisk)", async () => {
     const result = await searchArticles(env.DB, "Type*", 10, null);
-    expect(result.articles).toBeDefined();
+    expect(result).toMatchObject({ articles: expect.any(Array) });
+    expect(result.articles.map((a) => a.guid)).toContain("en-1");
   });
 
   it("handles FTS5 special characters gracefully (caret)", async () => {
     const result = await searchArticles(env.DB, "^TypeScript", 10, null);
-    expect(result.articles).toBeDefined();
+    expect(result).toMatchObject({ articles: expect.any(Array) });
+    expect(result.articles.map((a) => a.guid)).toContain("en-1");
   });
 
   it("handles FTS5 special characters gracefully (parentheses)", async () => {
     const result = await searchArticles(env.DB, "(TypeScript)", 10, null);
-    expect(result.articles).toBeDefined();
+    expect(result).toMatchObject({ articles: expect.any(Array) });
+    expect(result.articles.map((a) => a.guid)).toContain("en-1");
   });
 
   it("handles FTS5 special characters gracefully (colon)", async () => {
+    // "title:TypeScript" → "title" と "TypeScript" の 2 トークンになる。
+    // FTS5 は AND なので両方含む記事がなければ 0 件。クラッシュしないことを確認する。
     const result = await searchArticles(env.DB, "title:TypeScript", 10, null);
-    expect(result.articles).toBeDefined();
+    expect(result).toMatchObject({ articles: expect.any(Array) });
+  });
+
+  it("handles hyphen in query (async-std) — - must not be treated as NOT operator", async () => {
+    // "async-std" の `-` は除去され "async std" の 2 トークンとして FTS5 に渡る
+    const result = await searchArticles(env.DB, "async-std", 10, null);
+    expect(result).toMatchObject({ articles: expect.any(Array) });
+    // async と std 両方を含む en-3 (async-std vs tokio benchmark) がヒットする
+    expect(result.articles.map((a) => a.guid)).toContain("en-3");
+  });
+
+  it("handles plus sign in query (C++) — + must not break FTS5 syntax", async () => {
+    // "C++" の `+` は除去され "C" として FTS5 に渡る (1 文字だが trigram では 0 件)
+    // クラッシュしないことを確認
+    const result = await searchArticles(env.DB, "C++", 10, null);
+    expect(result).toMatchObject({ articles: expect.any(Array) });
+  });
+
+  it("handles hyphen-separated query (a-b style) without crashing", async () => {
+    const result = await searchArticles(env.DB, "a-b", 10, null);
+    expect(result).toMatchObject({ articles: expect.any(Array) });
   });
 
   it("handles single character query without crashing", async () => {
@@ -173,6 +220,16 @@ describe("searchArticles (FTS5 only)", () => {
     expect(page2.articles[0]?.guid).not.toBe(page1.articles[0]?.guid);
   });
 
+  it("is case-insensitive — TypeScript and typescript both hit FTS5 index", async () => {
+    // FTS5 trigram tokenizer は case-insensitive
+    const lower = await searchArticles(env.DB, "typescript", 10, null);
+    const upper = await searchArticles(env.DB, "TypeScript", 10, null);
+    expect(lower.articles.map((a) => a.guid)).toContain("en-1");
+    expect(upper.articles.map((a) => a.guid)).toContain("en-1");
+    // 同じ件数がヒットする
+    expect(lower.articles.length).toBe(upper.articles.length);
+  });
+
   it("does NOT fall back to LIKE — 2-char query returns no results for trigram", async () => {
     // LIKE fallback があれば 'TS' (2 文字) で TypeScript 記事がヒットしていた。
     // FTS5 trigram は 3 文字未満のトークンにはマッチしないため 0 件になる。
@@ -180,5 +237,40 @@ describe("searchArticles (FTS5 only)", () => {
     const result = await searchArticles(env.DB, "TS", 10, null);
     // trigram は 3 文字未満のトークンをインデックスしないので 0 件
     expect(result.articles).toHaveLength(0);
+  });
+});
+
+describe("escapeFtsQuery", () => {
+  it("wraps each token in double quotes", () => {
+    expect(escapeFtsQuery("TypeScript")).toBe('"TypeScript"');
+  });
+
+  it("splits on whitespace and wraps each token", () => {
+    expect(escapeFtsQuery("Rust async")).toBe('"Rust" "async"');
+  });
+
+  it("removes hyphen from token (async-std → two tokens)", () => {
+    // `-` は NOT 演算子になり得るため除去。async と std の 2 トークンになる
+    expect(escapeFtsQuery("async-std")).toBe('"async" "std"');
+  });
+
+  it("removes plus sign from token (C++ → C)", () => {
+    expect(escapeFtsQuery("C++")).toBe('"C"');
+  });
+
+  it("removes a-b style hyphens (a-b → two tokens)", () => {
+    expect(escapeFtsQuery("a-b")).toBe('"a" "b"');
+  });
+
+  it("removes FTS5 special chars: double-quote, parens, asterisk, colon, caret", () => {
+    expect(escapeFtsQuery('"()*:^')).toBe('""');
+  });
+
+  it("returns '\"\"' for empty input", () => {
+    expect(escapeFtsQuery("")).toBe('""');
+  });
+
+  it("returns '\"\"' for whitespace-only input", () => {
+    expect(escapeFtsQuery("   ")).toBe('""');
   });
 });

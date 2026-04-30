@@ -305,8 +305,8 @@ app.get("/search", async (c) => {
   const qRaw = c.req.query("q");
   if (!qRaw || !qRaw.trim()) return c.json({ error: "missing q" }, 400);
 
-  // lower-case + trim してトークン分割
-  const tokens = qRaw.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  // FTS5 trigram は case-insensitive のため toLowerCase() は不要。trim のみ行う。
+  const tokens = qRaw.trim().split(/\s+/).filter(Boolean);
 
   if (tokens.length === 0 || tokens.length > MAX_SEARCH_TOKENS) {
     return c.json({ error: `q must have 1 to ${MAX_SEARCH_TOKENS} tokens` }, 400);

@@ -192,16 +192,18 @@ export async function searchArticles(
 /**
  * FTS5 MATCH クエリの特殊文字をエスケープして安全なフレーズクエリに変換する。
  * 入力をスペース区切りトークンに分割し、各トークンをダブルクォートで括る。
- * FTS5 特殊文字 ( " ( ) * : ^ ) は除去してから括る。
+ * FTS5 特殊文字 ( " ( ) * : ^ + - ) は除去してから括る。
+ * `-` は NOT 演算子、`+` もフレーズクォート外で特殊扱いされる場合があるため除去。
  * 空クエリになった場合は '""' を返す (ヒット 0 件)。
  */
-function escapeFtsQuery(input: string): string {
+export function escapeFtsQuery(input: string): string {
+  if (!input.trim()) return '""';
   const tokens = input
-    .replace(/["()*:^]/g, " ")
+    .replace(/["()*:^+-]/g, " ")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 8)
-    .map((t) => `"${t.replace(/"/g, "")}"`);
+    .map((t) => `"${t}"`);
   return tokens.length > 0 ? tokens.join(" ") : '""';
 }
 
