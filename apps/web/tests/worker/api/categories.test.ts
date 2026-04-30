@@ -154,11 +154,11 @@ describe("GET /api/categories - テストデータあり", () => {
     const body = await res.json<CategoriesResponse>();
 
     const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
-    expect(byCategory["ai"]!.feeds_count).toBe(2);
-    expect(byCategory["bigtech"]!.feeds_count).toBe(1);
-    expect(byCategory["personal"]!.feeds_count).toBe(1);
+    expect.soft(byCategory["ai"]!.feeds_count).toBe(2);
+    expect.soft(byCategory["bigtech"]!.feeds_count).toBe(1);
+    expect.soft(byCategory["personal"]!.feeds_count).toBe(1);
     // jp フィードは登録していないので 0
-    expect(byCategory["jp"]!.feeds_count).toBe(0);
+    expect.soft(byCategory["jp"]!.feeds_count).toBe(0);
   });
 
   it("articles_30d は 30 日以内の記事のみカウント (31d 前の記事は含まれない)", async () => {
@@ -167,8 +167,8 @@ describe("GET /api/categories - テストデータあり", () => {
 
     const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
     // ai: daysAgo(5) + daysAgo(20) = 2件。daysAgo(31) は除外
-    expect(byCategory["ai"]!.articles_30d).toBe(2);
-    expect(byCategory["bigtech"]!.articles_30d).toBe(1);
+    expect.soft(byCategory["ai"]!.articles_30d).toBe(2);
+    expect.soft(byCategory["bigtech"]!.articles_30d).toBe(1);
   });
 
   it("articles_30d=0 のカテゴリは 0 で返る (jp と personal)", async () => {
@@ -176,8 +176,8 @@ describe("GET /api/categories - テストデータあり", () => {
     const body = await res.json<CategoriesResponse>();
 
     const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
-    expect(byCategory["jp"]!.articles_30d).toBe(0);
-    expect(byCategory["personal"]!.articles_30d).toBe(0);
+    expect.soft(byCategory["jp"]!.articles_30d).toBe(0);
+    expect.soft(byCategory["personal"]!.articles_30d).toBe(0);
   });
 
   it("last_published_at は各カテゴリの MAX(published_at)", async () => {
@@ -190,14 +190,14 @@ describe("GET /api/categories - テストデータあり", () => {
     expect(byCategory["ai"]!.last_published_at).not.toBeNull();
     const aiLatest = new Date(byCategory["ai"]!.last_published_at!);
     const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-    expect(aiLatest.getTime()).toBeGreaterThan(fiveDaysAgo.getTime() - 60_000);
+    expect.soft(aiLatest.getTime()).toBeGreaterThan(fiveDaysAgo.getTime() - 60_000);
 
     // bigtech: bt-1 (10d前)
     expect(byCategory["bigtech"]!.last_published_at).not.toBeNull();
 
     // 記事なし -> null
-    expect(byCategory["jp"]!.last_published_at).toBeNull();
-    expect(byCategory["personal"]!.last_published_at).toBeNull();
+    expect.soft(byCategory["jp"]!.last_published_at).toBeNull();
+    expect.soft(byCategory["personal"]!.last_published_at).toBeNull();
   });
 
   it("Cache-Control: public, max-age=300 が設定されている", async () => {

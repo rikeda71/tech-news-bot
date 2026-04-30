@@ -60,9 +60,9 @@ describe("POST /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportSaveResponse;
-    expect(body.ok).toBe(true);
-    expect(typeof body.id).toBe("number");
-    expect(body.id).toBeGreaterThan(0);
+    expect.soft(body.ok).toBe(true);
+    expect.soft(typeof body.id).toBe("number");
+    expect.soft(body.id).toBeGreaterThan(0);
   });
 
   it("200: accepts ADMIN_TOKEN_NEXT (rotation)", async () => {
@@ -561,8 +561,8 @@ describe("GET /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportListResponse;
-    expect(body.reports.length).toBeGreaterThanOrEqual(2);
-    expect(body.reports[0].generated_at >= body.reports[1].generated_at).toBe(true);
+    expect.soft(body.reports.length).toBeGreaterThanOrEqual(2);
+    expect.soft(body.reports[0].generated_at >= body.reports[1].generated_at).toBe(true);
   });
 
   it("200: filters by kind", async () => {
@@ -621,7 +621,7 @@ describe("GET /api/admin/reports/:id", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportDetailResponse;
-    expect(body.report.content).toBe("with meta");
-    expect(body.report.meta_json).toContain("dedup_total");
+    expect.soft(body.report.content).toBe("with meta");
+    expect.soft(body.report.meta_json).toContain("dedup_total");
   });
 });
