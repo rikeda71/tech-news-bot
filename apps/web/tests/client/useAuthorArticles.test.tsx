@@ -43,9 +43,9 @@ describe("useAuthorArticles", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.articles).toHaveLength(2);
-    expect(result.current.error).toBeNull();
-    expect(result.current.hasMore).toBe(false);
+    expect.soft(result.current.articles).toHaveLength(2);
+    expect.soft(result.current.error).toBeNull();
+    expect.soft(result.current.hasMore).toBe(false);
   });
 
   it("fetch エラー時に error が設定され記事は空", async () => {
@@ -57,8 +57,8 @@ describe("useAuthorArticles", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toContain("500");
-    expect(result.current.articles).toEqual([]);
+    expect.soft(result.current.error).toContain("500");
+    expect.soft(result.current.articles).toEqual([]);
   });
 
   it("author が変わると再 fetch が発火する", async () => {
@@ -101,8 +101,8 @@ describe("useAuthorArticles", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.articles).toHaveLength(2);
-    expect(result.current.hasMore).toBe(true);
+    expect.soft(result.current.articles).toHaveLength(2);
+    expect.soft(result.current.hasMore).toBe(true);
 
     await act(async () => {
       await result.current.loadMore();
@@ -112,7 +112,7 @@ describe("useAuthorArticles", () => {
       expect(result.current.articles).toHaveLength(3);
     });
 
-    expect(result.current.hasMore).toBe(false);
+    expect.soft(result.current.hasMore).toBe(false);
   });
 
   it("author が空文字の場合は fetch が発火しない", async () => {

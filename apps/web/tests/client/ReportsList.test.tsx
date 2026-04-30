@@ -53,8 +53,8 @@ describe("ReportsList", () => {
     });
 
     // 日次・週次ラベルが表示される
-    expect(screen.getAllByText("日次").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("週次").length).toBeGreaterThanOrEqual(1);
+    expect.soft(screen.getAllByText("日次").length).toBeGreaterThanOrEqual(1);
+    expect.soft(screen.getAllByText("週次").length).toBeGreaterThanOrEqual(1);
   });
 
   it("レポートが 0 件のとき '...ありません' が表示される", async () => {
@@ -105,10 +105,12 @@ describe("ReportsList", () => {
 
     // 「日次」クリック後: aria-pressed が切り替わる
     await user.click(screen.getByRole("button", { name: "日次" }));
-    expect(screen.getByRole("button", { name: "日次" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "すべて" }).getAttribute("aria-pressed")).toBe(
-      "false",
-    );
+    expect
+      .soft(screen.getByRole("button", { name: "日次" }).getAttribute("aria-pressed"))
+      .toBe("true");
+    expect
+      .soft(screen.getByRole("button", { name: "すべて" }).getAttribute("aria-pressed"))
+      .toBe("false");
   });
 
   it("kind フィルタ chip をクリックすると fetch URL が変わる", async () => {

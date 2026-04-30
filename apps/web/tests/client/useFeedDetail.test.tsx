@@ -56,9 +56,9 @@ describe("useFeedDetail", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.feed?.id).toBe("feed-1");
-    expect(result.current.articles).toHaveLength(2);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.feed?.id).toBe("feed-1");
+    expect.soft(result.current.articles).toHaveLength(2);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("404 エラー時に feed_not_found が設定される", async () => {
@@ -70,9 +70,9 @@ describe("useFeedDetail", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBe("feed_not_found");
-    expect(result.current.feed).toBeNull();
-    expect(result.current.articles).toEqual([]);
+    expect.soft(result.current.error).toBe("feed_not_found");
+    expect.soft(result.current.feed).toBeNull();
+    expect.soft(result.current.articles).toEqual([]);
   });
 
   it("500 エラー時に HTTP エラーメッセージが設定される", async () => {
@@ -84,8 +84,8 @@ describe("useFeedDetail", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBe("HTTP 500");
-    expect(result.current.feed).toBeNull();
+    expect.soft(result.current.error).toBe("HTTP 500");
+    expect.soft(result.current.feed).toBeNull();
   });
 
   it("feedId が変わると再 fetch が発火する", async () => {
@@ -122,8 +122,8 @@ describe("useFeedDetail", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBe("Network failed");
-    expect(result.current.feed).toBeNull();
-    expect(result.current.articles).toEqual([]);
+    expect.soft(result.current.error).toBe("Network failed");
+    expect.soft(result.current.feed).toBeNull();
+    expect.soft(result.current.articles).toEqual([]);
   });
 });

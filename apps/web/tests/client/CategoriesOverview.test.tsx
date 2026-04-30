@@ -71,9 +71,9 @@ describe("CategoriesOverview", () => {
       expect(screen.getByText("Big Tech")).toBeTruthy();
     });
 
-    expect(screen.getByText("AI")).toBeTruthy();
-    expect(screen.getByText("日本企業")).toBeTruthy();
-    expect(screen.getByText("個人ブログ")).toBeTruthy();
+    expect.soft(screen.getByText("AI")).toBeTruthy();
+    expect.soft(screen.getByText("日本企業")).toBeTruthy();
+    expect.soft(screen.getByText("個人ブログ")).toBeTruthy();
   });
 
   it("feeds_count と articles_30d を表示する", async () => {
@@ -93,8 +93,8 @@ describe("CategoriesOverview", () => {
 
     // bigtech: feeds_count=5, articles_30d=120
     const statValues = screen.getAllByText("5");
-    expect(statValues.length).toBeGreaterThan(0);
-    expect(screen.getByText("120")).toBeTruthy();
+    expect.soft(statValues.length).toBeGreaterThan(0);
+    expect.soft(screen.getByText("120")).toBeTruthy();
   });
 
   it("last_published_at が null の場合は「—」を表示する", async () => {

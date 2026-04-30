@@ -31,8 +31,8 @@ describe("StatsChart", () => {
     const data = makeTrendData(30);
     render(<StatsChart data={data} categories={CATEGORIES} />);
     const svg = screen.getByRole("img");
-    expect(svg).toBeTruthy();
-    expect(svg.tagName.toLowerCase()).toBe("svg");
+    expect.soft(svg).toBeTruthy();
+    expect.soft(svg.tagName.toLowerCase()).toBe("svg");
   });
 
   it("renders legend items for each category", () => {
@@ -69,7 +69,7 @@ describe("StatsChart", () => {
     const { container } = render(<StatsChart data={singleData} categories={CATEGORIES} />);
     const titles = container.querySelectorAll("title");
     const titleTexts = Array.from(titles).map((t) => t.textContent ?? "");
-    expect(titleTexts.some((t) => t.includes("bigtech") && t.includes("5"))).toBe(true);
-    expect(titleTexts.some((t) => t.includes("ai") && t.includes("3"))).toBe(true);
+    expect.soft(titleTexts.some((t) => t.includes("bigtech") && t.includes("5"))).toBe(true);
+    expect.soft(titleTexts.some((t) => t.includes("ai") && t.includes("3"))).toBe(true);
   });
 });

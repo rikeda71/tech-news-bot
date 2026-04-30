@@ -97,8 +97,8 @@ describe("FeedDetail", () => {
       expect(screen.getByText("Test Feed")).toBeTruthy();
     });
 
-    expect(screen.getByText("https://example.com/feed")).toBeTruthy();
-    expect(screen.getByText("42")).toBeTruthy();
+    expect.soft(screen.getByText("https://example.com/feed")).toBeTruthy();
+    expect.soft(screen.getByText("42")).toBeTruthy();
   });
 
   it("記事 5 件の場合に 5 枚のカードが表示される", async () => {

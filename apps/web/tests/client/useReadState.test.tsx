@@ -43,15 +43,15 @@ describe("useReadState", () => {
     act(() => {
       result.current.clearAll();
     });
-    expect(result.current.isRead(1)).toBe(false);
-    expect(result.current.isRead(2)).toBe(false);
+    expect.soft(result.current.isRead(1)).toBe(false);
+    expect.soft(result.current.isRead(2)).toBe(false);
   });
 
   it("returns the same Set reference when raw is unchanged", () => {
     // raw が変わっていなければ getSnapshot が同じ参照を返すことを確認する
     localStorage.setItem("tnb-read-articles", JSON.stringify([5, 6]));
     const { result } = renderHook(() => useReadState());
-    expect(result.current.isRead(5)).toBe(true);
-    expect(result.current.isRead(99)).toBe(false);
+    expect.soft(result.current.isRead(5)).toBe(true);
+    expect.soft(result.current.isRead(99)).toBe(false);
   });
 });

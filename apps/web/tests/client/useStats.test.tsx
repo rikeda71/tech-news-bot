@@ -41,8 +41,8 @@ describe("useStats", () => {
       expect(result.current.stats).not.toBeNull();
     });
 
-    expect(result.current.stats?.total).toBe(42);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.stats?.total).toBe(42);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("fetch エラー時に error が設定される", async () => {
@@ -66,8 +66,8 @@ describe("useStats", () => {
       expect(result.current.error).toBeTruthy();
     });
 
-    expect(result.current.error).toBe("Network timeout");
-    expect(result.current.stats).toBeNull();
+    expect.soft(result.current.error).toBe("Network timeout");
+    expect.soft(result.current.stats).toBeNull();
   });
 
   it("refreshSignal が変わると再 fetch が発火する", async () => {
@@ -102,7 +102,7 @@ describe("useStats", () => {
       expect(result.current.stats).not.toBeNull();
     });
 
-    expect(result.current.stats?.by_category["ai"]).toBe(99);
-    expect(result.current.stats?.by_category["bigtech"]).toBe(1);
+    expect.soft(result.current.stats?.by_category["ai"]).toBe(99);
+    expect.soft(result.current.stats?.by_category["bigtech"]).toBe(1);
   });
 });

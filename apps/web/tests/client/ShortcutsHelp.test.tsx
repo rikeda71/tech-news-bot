@@ -12,20 +12,20 @@ describe("ShortcutsHelp", () => {
 
   it("renders the modal when open is true", () => {
     render(<ShortcutsHelp open={true} onClose={vi.fn<() => void>()} />);
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.getByText("キーボードショートカット")).toBeTruthy();
+    expect.soft(screen.getByRole("dialog")).toBeTruthy();
+    expect.soft(screen.getByText("キーボードショートカット")).toBeTruthy();
   });
 
   it("shows all shortcut rows", () => {
     render(<ShortcutsHelp open={true} onClose={vi.fn<() => void>()} />);
     // j/k, Enter, b, /, ?, g g, G, Esc の各ショートカット説明を確認
-    expect(screen.getByText("次の記事に移動")).toBeTruthy();
-    expect(screen.getByText("前の記事に移動")).toBeTruthy();
-    expect(screen.getByText("選択中の記事を新規タブで開く")).toBeTruthy();
-    expect(screen.getByText("選択中の記事をブックマーク切り替え")).toBeTruthy();
-    expect(screen.getByText("検索ボックスにフォーカス")).toBeTruthy();
-    expect(screen.getByText("このヘルプを開く / 閉じる")).toBeTruthy();
-    expect(screen.getByText("ヘルプを閉じる / 選択解除")).toBeTruthy();
+    expect.soft(screen.getByText("次の記事に移動")).toBeTruthy();
+    expect.soft(screen.getByText("前の記事に移動")).toBeTruthy();
+    expect.soft(screen.getByText("選択中の記事を新規タブで開く")).toBeTruthy();
+    expect.soft(screen.getByText("選択中の記事をブックマーク切り替え")).toBeTruthy();
+    expect.soft(screen.getByText("検索ボックスにフォーカス")).toBeTruthy();
+    expect.soft(screen.getByText("このヘルプを開く / 閉じる")).toBeTruthy();
+    expect.soft(screen.getByText("ヘルプを閉じる / 選択解除")).toBeTruthy();
   });
 
   it("calls onClose when close button is clicked", async () => {
