@@ -252,13 +252,114 @@ Stage 2 で選定した重要記事のリンク集。
 <jp カテゴリの技術動向 2〜3 点>
 ```
 
+## 自動 daily report 生成モード
+
+GitHub Actions (`.github/workflows/report-daily.yml`) から本 skill を起動する場合、本節の手順に厳密に従う。workflow yaml には skill 起動パラメータのみが書かれており、出力フォーマット・ファイル書き出し・no-articles 挙動・URL grounding はすべて本節を一次ソースとする。
+
+### 起動パラメータ (workflow から渡される想定)
+
+- `since=today` (固定)
+- `mode=deep` (固定)
+- `target=remote` (固定)
+- 対象カテゴリ: `bigtech,ai,jp` (zenn は除外)
+- `lang`: 指定なし
+
+### Stage 1 の呼び方
+
+```sh
+node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=remote --limit=600
+```
+
+`recent.mjs` の `--category` カンマ区切り対応版を使用する (1 回呼び出しで bigtech/ai/jp を取得)。返り値の `articles[]` は `recent.mjs` 側で URL de-dup 済み (古い `published_at` 優先)。
+
+### 出力ファイル (Stage 4 完了時に書き出す)
+
+#### 1. `/tmp/report.md`
+
+**記事が 1 件以上ある場合**: 出力フォーマット節の構造に従う。次の節は省略禁止:
+
+- `## Pick 記事リンク一覧`: 各記事に `[<title>](url)` _(<feed_name>, <category>, <YYYY-MM-DD>)_ — 1〜2 文要約。`url` は `articles[].url` の copy-paste のみ
+- `## カテゴリ別動向`: bigtech / ai / jp の `###` サブセクションでカテゴリごとの技術動向 2〜3 点
+
+**記事が 0 件の場合 (`articles.length === 0`)**: 以下の最小レポートを書き出す。creative writing は禁止 — 「ない」事実を「ない」と書く。
+
+```md
+# Tech News Digest — <YYYY-MM-DD> (daily)
+
+期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): 0 / カテゴリ: bigtech=0, ai=0, jp=0
+
+## 概要
+
+本日 (<YYYY-MM-DD>) は対象期間 (UTC 過去 24 時間) 内に bigtech / ai / jp カテゴリの新規収集記事はありませんでした。
+
+## カテゴリ別件数
+
+| Category | 件数 |
+| -------- | ---- |
+| bigtech  | 0    |
+| ai       | 0    |
+| jp       | 0    |
+```
+
+Stage 2〜4 は articles 0 件のためスキップする (`/tmp/report.md` のみ書き出して終了)。
+
+#### 2. `/tmp/report-meta.json`
+
+記事件数に関わらず必ず書き出す (Worker API は記事 0 件でも記録する):
+
+```json
+{
+  "kind": "daily",
+  "period_start": "<since の ISO 8601 (実行時刻 -24h)>",
+  "period_end": "<実行時刻の ISO 8601>",
+  "category": null,
+  "lang": null,
+  "included_categories": ["bigtech", "ai", "jp"],
+  "source_skill": "tech-news-digest",
+  "generated_at": "<実行時刻の ISO 8601>",
+  "dedup_total": <number — 0 でもよい>,
+  "by_category": <object — 0 件のときは {"bigtech": 0, "ai": 0, "jp": 0}>,
+  "by_feed": <object — 0 件のときは {}>
+}
+```
+
+#### 3. `/tmp/slack-message.md`
+
+Slack mrkdwn 記法 (`*bold*`, `_italic_`, `<URL|label>`)。30000 文字以内 (上限。長くても構わない)。末尾に viewer URL は付けない (Actions 側で自動付与される)。
+
+**記事が 1 件以上ある場合**:
+
+- 冒頭にレポート概要 1〜2 文
+- 「カテゴリ別ハイライト (bigtech / ai / jp)」「注目記事 (各記事は 1 行、リンク付き)」を Slack で読みやすく整形
+
+**記事が 0 件の場合**:
+
+```
+本日 (<YYYY-MM-DD>) は対象カテゴリ (bigtech / ai / jp) の新規収集記事はありませんでした。
+```
+
+の 1 行のみで終える。リンクや注目記事節は出さない。
+
+### URL grounding (再掲・絶対遵守)
+
+出力する markdown link `[text](url)` の `url` はすべて **Stage 1 で取得した `articles[].url` から copy-paste したもの**のみ許容する (詳細は「URL 捏造禁止」節)。Stage 4 完了時点で、Stage 1 取得 `articles[].url` の全 URL を「許容 URL 一覧」として内部で保持し、`/tmp/report.md` および `/tmp/slack-message.md` 内のすべての `[text](url)` link が許容 URL 一覧に含まれることを確認してから書き出す。含まれない link は url 部分を削除してテキストのみにする。
+
+### Workflow 側の補助挙動 (skill 側からの期待事項)
+
+skill 自身は触らないが、`/tmp/report.md` `/tmp/report-meta.json` `/tmp/slack-message.md` の 3 ファイルが必ず存在することを前提に Workflow が以下を行う:
+
+- `/api/admin/reports` への POST (記事 0 件でも実行履歴として記録)
+- Slack thread への 2 段投稿 (parent: title + severity / child: 本文 chunk + viewer URL)
+
+skill は上記 3 ファイルを必ず書き出す責務を持つ。書き出さないと workflow が `Skill did not produce required output files; aborting.` で失敗する。
+
 ## ガードレール
 
 - **PII / 機密情報**: 公開記事のみ蓄積されている前提だが、author 名以外の個人情報が混ざっていたら出力から除外する
 - **D1 接続失敗時**:
   - `--target=remote` で 401/403 → `pnpm --filter @tnb/web exec wrangler login` を案内
   - `--target=local` で 0 件 → `pnpm migrate:local` + `pnpm dev` でローカル収集を 1 回回すよう案内
-- **記事 0 件**: 「該当期間に記事なし」と正直に報告する。creative writing で埋めない
+- **記事 0 件**: 「該当期間に記事なし」と正直に報告する。creative writing で埋めない (自動 daily report モードでは「自動 daily report 生成モード」節の最小レポートを書き出す)
 - **WebFetch 連続失敗**: deep モードで選定記事の半数以上が fetch 失敗したら、残りは `quick` 相当 (`(summary based)` 付き) に退避し、出力末尾に `_注: WebFetch が複数失敗したため一部 summary ベース_` を付ける
 - **ストーリー形式・読み物が要求された場合**: 本 skill はリスト形式のダイジェスト専用。テーマ別ストーリーやニュースレター形式が必要な場合は `tech-news-weekly` を案内する
 
