@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { loadAllFeeds } from "../feed-config";
 import {
@@ -17,6 +18,7 @@ import {
   listArticles,
   searchArticles,
 } from "../db/articles";
+import type { Cursor } from "../db/articles";
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
 import type { FeedsFile } from "../types";
@@ -50,7 +52,7 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 // YYYY-MM-DD または YYYY-MM-DDTHH:MM:SS 形式を受け付ける
 const DATE_RANGE_RE = /^\d{4}-\d{2}-\d{2}/;
 
-function decodeCursor(input: string | undefined): { publishedAt: string; id: number } | null {
+function decodeCursor(input: string | undefined): Cursor | null {
   if (!input) return null;
   try {
     const decoded = atob(input);
@@ -75,6 +77,38 @@ function decodeCursor(input: string | undefined): { publishedAt: string; id: num
 function encodeCursor(cursor: { publishedAt: string; id: number } | null): string | null {
   if (!cursor) return null;
   return btoa(JSON.stringify(cursor));
+}
+
+type ParsedListQuery =
+  | { ok: true; limit: number; cursor: Cursor | null }
+  | { ok: false; response: Response };
+
+// limit / cursor の parse + 400 チェックを共通化。
+// エラーメッセージ・ステータスコードは各 endpoint の仕様に揃える。
+function parseListQuery(
+  c: Context<{ Bindings: Env }>,
+  opts: { defaultLimit?: number; maxLimit?: number } = {},
+): ParsedListQuery {
+  const defaultLimit = opts.defaultLimit ?? 20;
+  const maxLimit = opts.maxLimit ?? 50;
+
+  const limitRaw = c.req.query("limit") ?? String(defaultLimit);
+  const limitNum = Number(limitRaw);
+  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > maxLimit) {
+    return {
+      ok: false,
+      response: c.json({ error: `limit must be an integer between 1 and ${maxLimit}` }, 400),
+    };
+  }
+
+  const cursorRaw = c.req.query("cursor");
+  const cursor = decodeCursor(cursorRaw);
+  // cursor が指定されているのに decode に失敗した場合は 400
+  if (cursorRaw && !cursor) {
+    return { ok: false, response: c.json({ error: "invalid cursor" }, 400) };
+  }
+
+  return { ok: true, limit: limitNum, cursor };
 }
 
 app.get("/", async (c) => {
@@ -153,16 +187,9 @@ app.get("/by-author/:author", async (c) => {
   const author = decodeURIComponent(authorRaw);
   if (!author) return c.json({ error: "author must not be empty" }, 400);
 
-  const limitRaw = c.req.query("limit") ?? "20";
-  const limitNum = Number(limitRaw);
-  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 50) {
-    return c.json({ error: "limit must be an integer between 1 and 50" }, 400);
-  }
-
-  const cursorRaw = c.req.query("cursor");
-  const cursor = decodeCursor(cursorRaw);
-  // cursor が指定されているのに decode に失敗した場合は 400
-  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+  const parsed = parseListQuery(c);
+  if (!parsed.ok) return parsed.response;
+  const { limit: limitNum, cursor } = parsed;
 
   const result = await getArticlesByAuthor(c.env.DB, author, limitNum, cursor);
 
@@ -178,16 +205,9 @@ app.get("/by-feed/:feedId", async (c) => {
   const feedId = decodeURIComponent(feedIdRaw).trim();
   if (!feedId) return c.json({ error: "feedId must not be empty" }, 400);
 
-  const limitRaw = c.req.query("limit") ?? "20";
-  const limitNum = Number(limitRaw);
-  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 50) {
-    return c.json({ error: "limit must be an integer between 1 and 50" }, 400);
-  }
-
-  const cursorRaw = c.req.query("cursor");
-  const cursor = decodeCursor(cursorRaw);
-  // cursor が指定されているのに decode に失敗した場合は 400
-  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+  const parsed = parseListQuery(c);
+  if (!parsed.ok) return parsed.response;
+  const { limit: limitNum, cursor } = parsed;
 
   const result = await getArticlesByFeed(c.env.DB, feedId, limitNum, cursor);
 
@@ -205,16 +225,9 @@ app.get("/by-category/:cat", async (c) => {
   }
   const category = catRaw;
 
-  const limitRaw = c.req.query("limit") ?? "20";
-  const limitNum = Number(limitRaw);
-  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 50) {
-    return c.json({ error: "limit must be an integer between 1 and 50" }, 400);
-  }
-
-  const cursorRaw = c.req.query("cursor");
-  const cursor = decodeCursor(cursorRaw);
-  // cursor が指定されているのに decode に失敗した場合は 400
-  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+  const parsed = parseListQuery(c);
+  if (!parsed.ok) return parsed.response;
+  const { limit: limitNum, cursor } = parsed;
 
   const result = await getArticlesByCategory(c.env.DB, category, limitNum, cursor);
 
@@ -272,15 +285,9 @@ app.get("/search", async (c) => {
     }
   }
 
-  const limitRaw = c.req.query("limit") ?? "50";
-  const limitNum = Number(limitRaw);
-  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 100) {
-    return c.json({ error: "limit must be an integer between 1 and 100" }, 400);
-  }
-
-  const cursorRaw = c.req.query("cursor");
-  const cursor = decodeCursor(cursorRaw);
-  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+  const parsed = parseListQuery(c, { defaultLimit: 50, maxLimit: 100 });
+  if (!parsed.ok) return parsed.response;
+  const { limit: limitNum, cursor } = parsed;
 
   const result = await searchArticles(c.env.DB, tokens, limitNum, cursor);
 
@@ -373,16 +380,9 @@ app.get("/by-day/:date", async (c) => {
     return c.json({ error: "invalid date" }, 400);
   }
 
-  const limitRaw = c.req.query("limit") ?? "50";
-  const limitNum = Number(limitRaw);
-  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > 100) {
-    return c.json({ error: "limit must be an integer between 1 and 100" }, 400);
-  }
-
-  const cursorRaw = c.req.query("cursor");
-  const cursor = decodeCursor(cursorRaw);
-  // cursor が指定されているのに decode に失敗した場合は 400
-  if (cursorRaw && !cursor) return c.json({ error: "invalid cursor" }, 400);
+  const parsed = parseListQuery(c, { defaultLimit: 50, maxLimit: 100 });
+  if (!parsed.ok) return parsed.response;
+  const { limit: limitNum, cursor } = parsed;
 
   // handler 側で UTC の日付境界文字列を計算して DB に渡す
   const [yStr, mStr, dStr] = dateRaw.split("-");
