@@ -3,6 +3,7 @@ import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Article } from "../../client/types/api";
 
+// dynamic import でモジュールキャッシュをリセットし、テスト間の副作用を防ぐ
 const { ArticleCard } = await import("../../client/components/ArticleCard");
 
 const baseArticle: Article = {
@@ -70,5 +71,70 @@ describe("ArticleCard", () => {
     );
     await user.click(screen.getByText("AI"));
     expect(onFilterByCategory).toHaveBeenCalledWith("ai");
+  });
+
+  describe("highlight", () => {
+    it("wraps a matching query term in the title with mark element", () => {
+      render(
+        <ArticleCard
+          article={{ ...baseArticle, title: "Hello World" }}
+          q="World"
+          onFilterByCategory={noop}
+          onFilterByFeedId={noop}
+        />,
+      );
+      const mark = document.querySelector("mark");
+      expect(mark?.textContent).toBe("World");
+    });
+
+    it("is case-insensitive when highlighting the title", () => {
+      render(
+        <ArticleCard
+          article={{ ...baseArticle, title: "Hello World" }}
+          q="hello"
+          onFilterByCategory={noop}
+          onFilterByFeedId={noop}
+        />,
+      );
+      const mark = document.querySelector("mark");
+      expect(mark?.textContent).toBe("Hello");
+    });
+
+    it("renders plain title without mark when q is empty", () => {
+      render(
+        <ArticleCard
+          article={{ ...baseArticle, title: "Hello World" }}
+          q=""
+          onFilterByCategory={noop}
+          onFilterByFeedId={noop}
+        />,
+      );
+      expect(document.querySelector("mark")).toBeNull();
+      expect(screen.getByText("Hello World")).toBeTruthy();
+    });
+
+    it("escapes regex special characters in the query (e.g. C++)", () => {
+      render(
+        <ArticleCard
+          article={{ ...baseArticle, title: "Use C++ today" }}
+          q="C++"
+          onFilterByCategory={noop}
+          onFilterByFeedId={noop}
+        />,
+      );
+      expect(document.querySelector("mark")?.textContent).toBe("C++");
+    });
+
+    it("wraps multiple matches in the title with mark elements", () => {
+      render(
+        <ArticleCard
+          article={{ ...baseArticle, title: "foo bar foo" }}
+          q="foo"
+          onFilterByCategory={noop}
+          onFilterByFeedId={noop}
+        />,
+      );
+      expect(document.querySelectorAll("mark")).toHaveLength(2);
+    });
   });
 });
