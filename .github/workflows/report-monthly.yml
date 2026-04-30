@@ -39,8 +39,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # 廃止モデル (claude-3-5-haiku-20241022) への自動 fallback で 404 が出るため
-          # 現行 sonnet を明示する。alias で CLI 側が最新を解決。
-          claude_args: "--model sonnet"
+          # 現行 sonnet を明示する。
+          model: "claude-sonnet-4-5-20250929"
           allowed_tools: "Bash,Read,Write,WebFetch,Skill"
           timeout_minutes: 45
           # monthly digest 生成プロンプト。tech-news-weekly skill を since=month で起動する。
