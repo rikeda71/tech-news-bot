@@ -7,6 +7,7 @@ import {
   buildPaginatedQuery,
   extractWithCursor,
 } from "./articles-cursor";
+import type { D1BindParameter } from "./types";
 
 // ---------------------------------------------------------------------------
 // 単純 read 系
@@ -64,7 +65,7 @@ export async function listArticles(
 ): Promise<ListArticlesResult> {
   const limit = Math.min(Math.max(params.limit, 1), 100);
   const conds: string[] = [];
-  const binds: unknown[] = [];
+  const binds: D1BindParameter[] = [];
 
   if (params.category) {
     conds.push(`a.category = ?${binds.length + 1}`);
@@ -124,7 +125,7 @@ export async function getRandomArticles(
   params: GetRandomArticlesParams,
 ): Promise<Article[]> {
   const conds: string[] = [];
-  const binds: unknown[] = [];
+  const binds: D1BindParameter[] = [];
 
   if (params.category) {
     conds.push(`a.category = ?${binds.length + 1}`);

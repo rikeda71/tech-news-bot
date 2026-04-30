@@ -6,6 +6,7 @@ import {
   appendCursorCondition,
   extractWithCursor,
 } from "./articles-cursor";
+import type { D1BindParameter } from "./types";
 
 // ---------------------------------------------------------------------------
 // 月次系
@@ -28,7 +29,7 @@ export async function getArticlesByMonth(
   const limit = Math.min(Math.max(opts?.limit ?? 200, 1), 500);
 
   const conds: string[] = [`a.published_at >= ?1`, `a.published_at < ?2`];
-  const binds: unknown[] = [start, end];
+  const binds: D1BindParameter[] = [start, end];
 
   if (opts?.category) {
     conds.push(`a.category = ?${binds.length + 1}`);
@@ -71,7 +72,7 @@ export async function countArticlesByMonth(
   const end = new Date(Date.UTC(year, month, 1)).toISOString();
 
   const conds: string[] = [`published_at >= ?1`, `published_at < ?2`];
-  const binds: unknown[] = [start, end];
+  const binds: D1BindParameter[] = [start, end];
 
   if (opts?.category) {
     conds.push(`category = ?${binds.length + 1}`);
@@ -110,7 +111,7 @@ export async function getArticlesCalendar(
   category?: FeedCategory | null,
 ): Promise<CalendarItem[]> {
   const conds: string[] = [`published_at >= datetime('now', ?1)`];
-  const binds: unknown[] = [`-${days} days`];
+  const binds: D1BindParameter[] = [`-${days} days`];
 
   if (lang) {
     conds.push(`lang = ?${binds.length + 1}`);
@@ -162,7 +163,7 @@ export async function searchArticles(
   cursor: Cursor | null,
 ): Promise<SearchArticlesResult> {
   const conds: string[] = [];
-  const binds: unknown[] = [];
+  const binds: D1BindParameter[] = [];
 
   // FTS5 MATCH 条件: rowid (= articles.id) で articles テーブルと JOIN する
   conds.push(

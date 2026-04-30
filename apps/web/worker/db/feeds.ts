@@ -1,5 +1,5 @@
 import type { FeedCategory, FeedConfig, FeedLang } from "../types";
-import type { FeedWithStatsDbRow } from "./types";
+import type { D1BindParameter, FeedWithStatsDbRow } from "./types";
 
 export interface FeedHeaders {
   last_etag: string | null;
@@ -281,7 +281,7 @@ export async function listFeedsWithStats(
   opts?: ListFeedsWithStatsOpts,
 ): Promise<FeedWithStats[]> {
   const conds: string[] = [];
-  const binds: unknown[] = [];
+  const binds: D1BindParameter[] = [];
 
   if (opts?.category !== undefined) {
     binds.push(opts.category);
