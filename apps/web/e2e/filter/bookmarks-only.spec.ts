@@ -7,11 +7,14 @@ test.describe("bookmarks only toggle", () => {
     await waitForArticles(page);
 
     // ブックマークボタン (BookmarkButton) をクリック — aria-label "ブックマークに追加"
+    // hover してから click することで ArticleCard の onFocus による DOM 変化の前に
+    // hover 状態を安定させ、確実に BookmarkButton の onClick を発火させる
     const bookmarkBtn = page
       .locator("[data-article-id]")
       .first()
       .getByRole("button", { name: "ブックマークに追加" });
-    await bookmarkBtn.click({ force: true });
+    await bookmarkBtn.hover();
+    await bookmarkBtn.click();
 
     // ブックマーク件数ボタンが ★ 1 件 以上に更新されるまで待つ
     // (localStorage への書き込みと React 再レンダリングが完了するのを確認)
