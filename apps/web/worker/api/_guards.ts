@@ -6,10 +6,8 @@ export const VALID_CATEGORIES = [
   "jp",
   "personal",
 ] as const satisfies readonly FeedCategory[];
-export type Category = (typeof VALID_CATEGORIES)[number];
 
 export const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
-export type Lang = (typeof VALID_LANGS)[number];
 
 // unknown を受け取れるよう定義することで、URL パラメータ (string | null | undefined) と
 // リクエスト body のフィールド (unknown) の両方から呼び出せる。

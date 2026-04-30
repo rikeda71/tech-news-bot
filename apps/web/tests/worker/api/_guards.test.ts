@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { VALID_CATEGORIES, VALID_LANGS, isCategory, isLang } from "../../../worker/api/_guards";
-import type { Category, Lang } from "../../../worker/api/_guards";
+import type { FeedCategory, FeedLang } from "../../../worker/types";
 
 describe("VALID_CATEGORIES / VALID_LANGS — 配列の不変性", () => {
   it("VALID_CATEGORIES は 4 要素を持つ", () => {
@@ -45,11 +45,11 @@ describe("isCategory", () => {
     expect.soft(isCategory({})).toBe(false);
   });
 
-  it("narrow 後の値を Category 型として代入できる", () => {
+  it("narrow 後の値を FeedCategory 型として代入できる", () => {
     const raw: unknown = "ai";
     if (isCategory(raw)) {
       // コンパイルエラーなく代入できれば型が正しく narrow されている
-      const cat: Category = raw;
+      const cat: FeedCategory = raw;
       expect(cat).toBe("ai");
     } else {
       expect.fail("isCategory('ai') should return true");
@@ -78,11 +78,11 @@ describe("isLang", () => {
     expect.soft(isLang(false)).toBe(false);
   });
 
-  it("narrow 後の値を Lang 型として代入できる", () => {
+  it("narrow 後の値を FeedLang 型として代入できる", () => {
     const raw: unknown = "ja";
     if (isLang(raw)) {
       // コンパイルエラーなく代入できれば型が正しく narrow されている
-      const lang: Lang = raw;
+      const lang: FeedLang = raw;
       expect(lang).toBe("ja");
     } else {
       expect.fail("isLang('ja') should return true");

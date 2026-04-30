@@ -3,13 +3,10 @@ import { loadAllFeeds } from "../feed-config";
 import type { Env, FeedCategory, FeedLang } from "../types";
 import { findFeedWithStats, getRecentArticlesByFeed, listFeedsWithStats } from "../db/feeds";
 import { getFeedHealth } from "../db/runs";
-import { makeOneOf } from "../utils/types";
+import { isCategory, isLang } from "./_guards";
 import type { FeedsListResponse, FeedDetailResponse, FeedRunHealthResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
-
-const isCategory = makeOneOf<FeedCategory>(["bigtech", "ai", "jp", "personal"]);
-const isLang = makeOneOf<FeedLang>(["ja", "en"]);
 
 app.get("/", async (c) => {
   const { req } = c;
