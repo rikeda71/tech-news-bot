@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { loadAllFeeds } from "../feed-config";
 import type { Env, FeedCategory, FeedLang } from "../types";
-import { findFeedWithStats, getRecentArticlesByFeed, listFeedsWithStats } from "../db/feeds";
+import { findFeedWithStats, listFeedsWithStats } from "../db/feeds";
+import { getRecentArticlesByFeed } from "../db/feed-stats";
 import { getFeedHealth } from "../db/runs";
 import { makeOneOf } from "../utils/types";
 import type { FeedsListResponse, FeedDetailResponse, FeedRunHealthResponse } from "./types";

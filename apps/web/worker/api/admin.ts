@@ -3,7 +3,8 @@ import type { Env } from "../types";
 import { adminAuthMiddleware } from "../utils/auth";
 import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
-import { getFeedsDiagnostics, setFeedEnabled } from "../db/feeds";
+import { setFeedEnabled } from "../db/feeds";
+import { getFeedsDiagnostics } from "../db/feed-stats";
 import { getCronHealth, getFeedFailures, getRun, listRuns, startRun } from "../db/runs";
 import type {
   AdminCollectResponse,
