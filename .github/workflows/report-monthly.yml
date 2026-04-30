@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   generate-and-save:
@@ -40,6 +39,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_tools: "Bash,Read,Write,WebFetch,Skill"
+          timeout_minutes: 45
           # monthly digest 生成プロンプト。tech-news-weekly skill を since=month で起動する。
           prompt: |
             あなたは tech-news-bot の自動レポート生成エージェントです。
@@ -115,11 +115,16 @@ jobs:
               meta: { dedup_total: .dedup_total, by_category: .by_category, by_feed: .by_feed, included_categories: .included_categories }
             }' /tmp/report-meta.json > /tmp/report-payload.json
 
-          curl -fsS -X POST "$WORKER_URL/api/admin/reports" \
+          HTTP_STATUS=$(curl -sS -w '%{http_code}' -X POST "$WORKER_URL/api/admin/reports" \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
             -H "Content-Type: application/json" \
             -o /tmp/post-resp.json \
-            --data-binary @/tmp/report-payload.json
+            --data-binary @/tmp/report-payload.json)
+          if [[ "$HTTP_STATUS" != 2* ]]; then
+            echo "API returned HTTP $HTTP_STATUS" >&2
+            cat /tmp/post-resp.json >&2
+            exit 1
+          fi
 
       - name: Post to Slack (threaded)
         if: ${{ success() }}
@@ -148,31 +153,14 @@ jobs:
           fi
           VIEWER_URL="$WORKER_URL/reports/$REPORT_ID"
 
-          KIND=$(jq -r '.kind' /tmp/report-meta.json)
           PERIOD_START=$(jq -r '.period_start' /tmp/report-meta.json)
           PERIOD_END=$(jq -r '.period_end' /tmp/report-meta.json)
           GENERATED_AT=$(jq -r '.generated_at' /tmp/report-meta.json)
 
-          # Build title (emoji + label + period)
-          case "$KIND" in
-            daily)
-              EMOJI="🟢"; SEVERITY="重要度: 低"; LABEL="Daily"
-              DATE_LABEL=$(echo "$PERIOD_END" | cut -c1-10)
-              TITLE="$EMOJI $LABEL Tech Report ($DATE_LABEL)"
-              ;;
-            weekly)
-              EMOJI="🟡"; SEVERITY="重要度: 中"; LABEL="Weekly"
-              START=$(echo "$PERIOD_START" | cut -c1-10); END=$(echo "$PERIOD_END" | cut -c1-10)
-              TITLE="$EMOJI $LABEL Tech Report ($START 〜 $END)"
-              ;;
-            monthly)
-              EMOJI="🔴"; SEVERITY="重要度: 高"; LABEL="Monthly"
-              START=$(echo "$PERIOD_START" | cut -c1-10); END=$(echo "$PERIOD_END" | cut -c1-10)
-              TITLE="$EMOJI $LABEL Tech Report ($START 〜 $END)"
-              ;;
-            *)
-              echo "Unknown kind $KIND – skipping"; exit 0 ;;
-          esac
+          # Build title (monthly is fixed)
+          START=$(echo "$PERIOD_START" | cut -c1-10); END=$(echo "$PERIOD_END" | cut -c1-10)
+          TITLE="🔴 Monthly Tech Report ($START 〜 $END)"
+          SEVERITY="重要度: 高"
 
           # ===== Step A: post parent (title + severity) =====
           PARENT_PAYLOAD=$(jq -n \
@@ -205,14 +193,31 @@ jobs:
           fi
 
           # ===== Step B: post child (chunked body in thread) =====
-          # python で安全に chunk 分割。runner 標準で python3 が入っている。
+          # python で UTF-8 バイト境界で安全に chunk 分割。runner 標準で python3 が入っている。
           CHILD_PAYLOAD=$(VIEWER_URL="$VIEWER_URL" SLACK_CHANNEL_ID="$SLACK_CHANNEL_ID" THREAD_TS="$THREAD_TS" python3 - <<'PYEOF'
           import json, os
+          def split_by_utf8_bytes(text, max_bytes):
+              """Split text into chunks where each chunk is at most max_bytes UTF-8 bytes.
+              Splits only at character boundaries to avoid breaking surrogates."""
+              encoded = text.encode('utf-8')
+              chunks = []
+              start = 0
+              while start < len(encoded):
+                  end = start + max_bytes
+                  if end >= len(encoded):
+                      chunks.append(encoded[start:].decode('utf-8'))
+                      break
+                  # Walk back to a valid UTF-8 character boundary
+                  while end > start and (encoded[end] & 0xC0) == 0x80:
+                      end -= 1
+                  chunks.append(encoded[start:end].decode('utf-8'))
+                  start = end
+              return chunks
           with open('/tmp/slack-message.md', encoding='utf-8') as f:
               msg = f.read().rstrip()
-          CHUNK = 2800       # Slack mrkdwn block limit 3000 chars 安全側
+          MAX_BYTES = 2800   # Slack mrkdwn block limit 3000 bytes (UTF-8) 安全側
           MAX_BLOCKS = 48    # divider + section (viewer link) のために 2 枠残す
-          chunks = [msg[i:i+CHUNK] for i in range(0, len(msg), CHUNK)]
+          chunks = split_by_utf8_bytes(msg, MAX_BYTES)
           truncated = False
           if len(chunks) > MAX_BLOCKS:
               chunks = chunks[:MAX_BLOCKS]
