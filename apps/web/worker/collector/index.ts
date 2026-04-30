@@ -24,11 +24,52 @@ const ALLOWED_URL_PREFIXES = ["http://", "https://"];
 // backoff: 500ms, 1000ms の 2 回まで。並列度 4 × max 1.5s = 6s < 30s cron 制限
 const BACKOFF_BASE_MS = 500;
 
-/** discriminated union: status に応じて error フィールドの有無が変わる */
+/**
+ * エラーの種別。alert や監視ダッシュボードでエラーをフィルタリングできるよう型で区別する。
+ * - timeout: AbortError (fetchFeed のタイムアウト)
+ * - network: TypeError (DNS 解決失敗・接続拒否など)
+ * - http_client: HTTP 4xx (404, 403 など恒久エラー)
+ * - http_server: HTTP 5xx / 429 (一時障害。リトライ後も失敗した場合)
+ * - parse: XML パース失敗または空フィード
+ * - unknown: 上記に分類できないエラー
+ */
+export type CollectErrorKind =
+  | "timeout"
+  | "network"
+  | "http_client"
+  | "http_server"
+  | "parse"
+  | "unknown";
+
+/** discriminated union: status に応じて error / errorKind フィールドの有無が変わる */
 export type CollectResult =
   | { feedId: string; status: "ok"; inserted: number; parsed: number }
   | { feedId: string; status: "not_modified"; inserted: number; parsed: number }
-  | { feedId: string; status: "error"; inserted: number; parsed: number; error: string };
+  | {
+      feedId: string;
+      status: "error";
+      inserted: number;
+      parsed: number;
+      error: string;
+      errorKind: CollectErrorKind;
+    };
+
+/**
+ * 例外からエラー種別を分類する。
+ * isRetryableError と対になる分類で、同じ判定ロジックを使う。
+ */
+export function classifyError(err: unknown): CollectErrorKind {
+  if (!(err instanceof Error)) return "unknown";
+  if (err.name === "AbortError") return "timeout";
+  if (err instanceof TypeError) return "network";
+  const m = /^HTTP (\d+)/.exec(err.message);
+  if (m) {
+    const code = Number(m[1]);
+    if (code === 429 || (code >= 500 && code < 600)) return "http_server";
+    if (code >= 400 && code < 500) return "http_client";
+  }
+  return "unknown";
+}
 
 export interface CollectAllResult {
   total: number;
@@ -248,6 +289,7 @@ async function collectFeed(
     return { feedId: feed.id, status: "ok", inserted, parsed: allItems.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const errorKind = classifyError(err);
     try {
       await recordFetchError(env.DB, feed.id, fetchedAt, message);
     } catch (logErr) {
@@ -262,7 +304,14 @@ async function collectFeed(
       ms: Math.round(performance.now() - t0),
       statusCode,
     });
-    return { feedId: feed.id, status: "error", inserted: 0, parsed: 0, error: message };
+    return {
+      feedId: feed.id,
+      status: "error",
+      inserted: 0,
+      parsed: 0,
+      error: message,
+      errorKind,
+    };
   }
 }
 
@@ -478,9 +527,13 @@ export async function collectAll(
       `[collector] writeD1CostEvent failed: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
+  // feedId → url のマップを作り、失敗ログに URL と errorKind を含める。
+  // wrangler tail で直接問題 URL を確認できるようにするため。
+  const feedUrlMap = new Map(activeFeeds.map((f) => [f.id, f.url]));
   for (const r of results) {
     if (r.status === "error") {
-      console.warn(`[collector] ${r.feedId} ERROR: ${r.error}`);
+      const url = feedUrlMap.get(r.feedId) ?? "(unknown)";
+      console.warn(`[collector] ${r.feedId} ERROR kind=${r.errorKind} url=${url}: ${r.error}`);
     }
   }
 
