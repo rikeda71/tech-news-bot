@@ -34,7 +34,48 @@ const DB_NAME = "tech-news-bot-db";
 
 const VALID_KINDS = new Set(["daily", "weekly", "monthly"]);
 
+/**
+ * @typedef {"local" | "remote"} Target
+ */
+
+/**
+ * @typedef {Object} ParsedArgs
+ * @property {Target} target - D1 ターゲット
+ * @property {boolean} apply - true の場合は実際に DB 変更を実行
+ * @property {string[] | null} kinds - 対象 kind の配列。null は全 kind
+ */
+
+/**
+ * @typedef {Object} ReportRow
+ * @property {number} id
+ * @property {string} kind
+ * @property {string} period_start
+ * @property {string} period_end
+ * @property {string} cat - COALESCE(category, '__all__') の値
+ * @property {string} lng - COALESCE(lang, '__all__') の値
+ * @property {string | null} category
+ * @property {string | null} lang
+ * @property {string} generated_at
+ */
+
+/**
+ * @typedef {Object} ClusterResult
+ * @property {number} keep_id
+ * @property {number[]} dropped_ids
+ * @property {string} period_start
+ * @property {string} period_end
+ * @property {string} kind
+ * @property {string | null} category
+ * @property {string | null} lang
+ */
+
+/**
+ * コマンドライン引数をパースする。
+ * @param {string[]} argv - process.argv
+ * @returns {ParsedArgs}
+ */
 function parseArgs(argv) {
+  /** @type {ParsedArgs} */
   const out = { target: "local", apply: false, kinds: null };
   for (const arg of argv.slice(2)) {
     if (arg === "--apply") {
@@ -44,7 +85,7 @@ function parseArgs(argv) {
     const m = arg.match(/^--([\w-]+)=(.+)$/);
     if (!m) continue;
     const [, k, v] = m;
-    if (k === "target") out.target = v;
+    if (k === "target") out.target = /** @type {Target} */ (v);
     else if (k === "kind") {
       out.kinds = v
         .split(",")
@@ -57,6 +98,12 @@ function parseArgs(argv) {
 
 // ---- wrangler helper (inline from recent.mjs) ----
 
+/**
+ * wrangler d1 execute を実行して results 配列を返す。
+ * @param {string} sql - 実行する SQL
+ * @param {Target} target - D1 ターゲット
+ * @returns {ReportRow[]}
+ */
 function execWrangler(sql, target) {
   const args = [
     "exec",
@@ -80,6 +127,7 @@ function execWrangler(sql, target) {
   if (start < 0 || end < 0 || end <= start) {
     throw new Error(`wrangler stdout did not contain JSON array:\n${stdout}`);
   }
+  /** @type {Array<{ results?: ReportRow[] }>} */
   const parsed = JSON.parse(stdout.slice(start, end + 1));
   return parsed[0]?.results ?? [];
 }
@@ -95,15 +143,34 @@ FROM reports
 ORDER BY kind, cat, lng, period_start;
 `.trim();
 
-// 半開区間 [a_start, a_end) と [b_start, b_end) が overlap するか判定
-// 完全一致は UNIQUE 制約で重複しないはずだが、念のため除外しない (merge 対象にする)。
+/**
+ * 半開区間 [a.period_start, a.period_end) と [b.period_start, b.period_end) が overlap するか判定。
+ * 完全一致は UNIQUE 制約で重複しないはずだが、念のため除外しない (merge 対象にする)。
+ * @param {ReportRow} a
+ * @param {ReportRow} b
+ * @returns {boolean}
+ */
 function overlaps(a, b) {
   return a.period_start < b.period_end && a.period_end > b.period_start;
 }
 
-// Union-Find
+/**
+ * @typedef {Object} UnionFind
+ * @property {(x: number) => number} find
+ * @property {(x: number, y: number) => void} union
+ */
+
+/**
+ * Union-Find データ構造を生成する。
+ * @param {number} n - 要素数
+ * @returns {UnionFind}
+ */
 function makeUF(n) {
   const parent = Array.from({ length: n }, (_, i) => i);
+  /**
+   * @param {number} x
+   * @returns {number}
+   */
   function find(x) {
     while (parent[x] !== x) {
       parent[x] = parent[parent[x]];
@@ -111,22 +178,33 @@ function makeUF(n) {
     }
     return x;
   }
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @returns {void}
+   */
   function union(x, y) {
     parent[find(x)] = find(y);
   }
   return { find, union };
 }
 
-// 同 (kind, cat, lng) グループ内で overlap するペアを Union-Find でクラスタ化
+/**
+ * 同 (kind, cat, lng) グループ内で overlap するペアを Union-Find でクラスタ化する。
+ * @param {ReportRow[]} rows
+ * @returns {ReportRow[][]} overlap するメンバーが 2 件以上のクラスタ配列
+ */
 function clusterRows(rows) {
   // グループ化
+  /** @type {Map<string, ReportRow[]>} */
   const groups = new Map();
   for (const row of rows) {
     const key = `${row.kind}|${row.cat}|${row.lng}`;
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(row);
+    /** @type {ReportRow[]} */ (groups.get(key)).push(row);
   }
 
+  /** @type {ReportRow[][]} */
   const clusters = [];
   for (const group of groups.values()) {
     if (group.length < 2) continue;
@@ -139,11 +217,12 @@ function clusterRows(rows) {
       }
     }
     // クラスタごとに集約
+    /** @type {Map<number, ReportRow[]>} */
     const clusterMap = new Map();
     for (let i = 0; i < group.length; i++) {
       const root = uf.find(i);
       if (!clusterMap.has(root)) clusterMap.set(root, []);
-      clusterMap.get(root).push(group[i]);
+      /** @type {ReportRow[]} */ (clusterMap.get(root)).push(group[i]);
     }
     for (const members of clusterMap.values()) {
       if (members.length < 2) continue; // overlap なし
@@ -179,11 +258,14 @@ function main() {
     }
   }
 
+  /** @type {ReportRow[]} */
   let rows;
   try {
     rows = execWrangler(FETCH_ROWS_SQL, opts.target);
   } catch (err) {
-    process.stderr.write(`Failed to fetch rows: ${err.message}\n`);
+    process.stderr.write(
+      `Failed to fetch rows: ${err instanceof Error ? err.message : String(err)}\n`,
+    );
     process.exit(1);
   }
 
@@ -194,6 +276,7 @@ function main() {
 
   const clusters = clusterRows(rows);
 
+  /** @type {{ target: Target; dry_run: boolean; clusters: ClusterResult[]; total_dropped: number }} */
   const output = {
     target: opts.target,
     dry_run: !opts.apply,
@@ -240,7 +323,9 @@ function main() {
       try {
         execWrangler(mergeSQL, opts.target);
       } catch (err) {
-        process.stderr.write(`Failed to apply merge for keep_id=${keep.id}: ${err.message}\n`);
+        process.stderr.write(
+          `Failed to apply merge for keep_id=${keep.id}: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
         process.exit(1);
       }
     }
