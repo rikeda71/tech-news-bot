@@ -292,8 +292,8 @@ Stage 2〜4 は articles 0 件のためスキップする (`/tmp/report.md` の�
 ```json
 {
   "kind": "daily",
-  "period_start": "<since の ISO 8601 (実行時刻 -24h でよい)>",
-  "period_end": "<実行時刻の ISO 8601>",
+  "period_start": "<任意の仮値。workflow が JST 暦日に上書きする>",
+  "period_end": "<任意の仮値。workflow が JST 暦日に上書きする>",
   "category": null,
   "lang": null,
   "included_categories": ["bigtech", "ai", "jp"],
