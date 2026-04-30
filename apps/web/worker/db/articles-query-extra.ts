@@ -148,31 +148,31 @@ export interface SearchArticlesResult {
 }
 
 /**
- * LIKE ベースの全文検索。
- * token ごとに LOWER(title || ' ' || COALESCE(summary, '')) LIKE '%token%' を AND で連鎖する。
- * FTS5 への切替時はこの関数を差し替えるだけで済むようにクリーンに分離している。
+ * FTS5 (trigram tokenizer) を使った全文検索。
+ * LIKE fallback は削除済み。FTS5 が機能している前提で単一クエリで完結する。
+ * D1 subrequest: before = 1 (LIKE) → after = 1 (FTS5 subquery 込み) で同数だが、
+ * LIKE は token 数分の AND 連鎖だったため実行コストを削減。
+ *
+ * q が空文字の場合は全件検索相当になるため、呼び出し元で事前に弾くこと。
  */
 export async function searchArticles(
   db: D1Database,
-  tokens: string[],
+  q: string,
   limit: number,
   cursor: Cursor | null,
 ): Promise<SearchArticlesResult> {
   const conds: string[] = [];
   const binds: unknown[] = [];
 
-  for (const token of tokens) {
-    // LIKE のメタ文字をエスケープしてプレースホルダ経由で渡す
-    const escaped = token.replace(/[%_\\]/g, (ch) => `\\${ch}`);
-    conds.push(
-      `LOWER(a.title || ' ' || COALESCE(a.summary, '')) LIKE ?${binds.length + 1} ESCAPE '\\'`,
-    );
-    binds.push(`%${escaped}%`);
-  }
+  // FTS5 MATCH 条件: rowid (= articles.id) で articles テーブルと JOIN する
+  conds.push(
+    `a.id IN (SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?${binds.length + 1})`,
+  );
+  binds.push(escapeFtsQuery(q));
 
   appendCursorCondition(conds, binds, cursor);
 
-  const where = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
+  const where = `WHERE ${conds.join(" AND ")}`;
   const sql = `
     SELECT ${ARTICLES_SELECT_FIELDS}
     ${ARTICLES_FROM_JOIN}
@@ -187,6 +187,22 @@ export async function searchArticles(
     .bind(...binds)
     .all<Article>();
   return extractWithCursor(result.results ?? [], limit);
+}
+
+/**
+ * FTS5 MATCH クエリの特殊文字をエスケープして安全なフレーズクエリに変換する。
+ * 入力をスペース区切りトークンに分割し、各トークンをダブルクォートで括る。
+ * FTS5 特殊文字 ( " ( ) * : ^ ) は除去してから括る。
+ * 空クエリになった場合は '""' を返す (ヒット 0 件)。
+ */
+function escapeFtsQuery(input: string): string {
+  const tokens = input
+    .replace(/["()*:^]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((t) => `"${t.replace(/"/g, "")}"`);
+  return tokens.length > 0 ? tokens.join(" ") : '""';
 }
 
 // ---------------------------------------------------------------------------

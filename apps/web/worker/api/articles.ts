@@ -321,7 +321,7 @@ app.get("/search", async (c) => {
   if (!parsed.ok) return parsed.response;
   const { limit: limitNum, cursor } = parsed;
 
-  const result = await searchArticles(c.env.DB, tokens, limitNum, cursor);
+  const result = await searchArticles(c.env.DB, tokens.join(" "), limitNum, cursor);
 
   return c.json<ArticleSearchResponse>(
     {
