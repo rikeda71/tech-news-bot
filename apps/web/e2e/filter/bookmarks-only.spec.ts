@@ -13,8 +13,9 @@ test.describe("bookmarks only toggle", () => {
       .getByRole("button", { name: /ブックマーク/i });
     await bookmarkBtn.first().click();
 
-    // ブックマークのみ表示ボタンをクリック (aria-pressed 属性を持つ ★ N 件ボタン)
-    const bookmarkOnlyBtn = page.getByRole("button", { name: /★.+件/ });
+    // ブックマークのみ表示ボタンをクリック (aria-label "ブックマーク N 件のみ表示")
+    // ブックマーク追加後に aria-label が 1 件以上になるまで待ってからクリック
+    const bookmarkOnlyBtn = page.getByRole("button", { name: /ブックマーク [1-9]/ });
     await bookmarkOnlyBtn.click();
 
     // URL に bookmarks=only が付く
