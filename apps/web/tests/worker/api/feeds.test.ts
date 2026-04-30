@@ -23,10 +23,10 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "zenn-ai",
-    name: "Zenn AI",
-    url: "https://zenn.dev/topics/ai/feed",
-    category: "zenn",
+    id: "zenn-mizchi",
+    name: "mizchi",
+    url: "https://zenn.dev/mizchi/feed",
+    category: "personal",
     lang: "ja",
     enabled: false,
   },
@@ -97,7 +97,7 @@ beforeEach(async () => {
       lang: "en",
     },
     // cyberagent-blog: 記事なし (articles_30d=0, last_published_at=null を確認)
-    // zenn-ai: 記事なし
+    // zenn-mizchi: 記事なし
   ]);
 });
 
@@ -200,7 +200,7 @@ describe("GET /api/feeds - filter by enabled", () => {
     const body = (await res.json()) as { feeds: { id: string; enabled: boolean }[] };
     expect.soft(res.status).toBe(200);
     expect.soft(body.feeds.every((f) => !f.enabled)).toBe(true);
-    expect.soft(body.feeds.some((f) => f.id === "zenn-ai")).toBe(true);
+    expect.soft(body.feeds.some((f) => f.id === "zenn-mizchi")).toBe(true);
     expect.soft(body.feeds.some((f) => f.id === "openai-blog")).toBe(false);
   });
 
@@ -209,7 +209,7 @@ describe("GET /api/feeds - filter by enabled", () => {
     const body = (await res.json()) as { feeds: { id: string; enabled: boolean }[] };
     expect.soft(res.status).toBe(200);
     expect.soft(body.feeds.every((f) => f.enabled)).toBe(true);
-    expect.soft(body.feeds.some((f) => f.id === "zenn-ai")).toBe(false);
+    expect.soft(body.feeds.some((f) => f.id === "zenn-mizchi")).toBe(false);
   });
 
   it("returns 400 for invalid enabled value", async () => {
@@ -318,8 +318,8 @@ describe("GET /api/feeds/:id", () => {
 
   it("returns 0 articles_30d and null last_published_at for feed with no articles", async () => {
     // google-research には 30d 以内の記事が 1 件 (beforeEach で投入済み)
-    // 新しいフィードで確認するため zenn-ai を使う
-    const res = await SELF.fetch("https://example.com/api/feeds/zenn-ai");
+    // 新しいフィードで確認するため zenn-mizchi を使う
+    const res = await SELF.fetch("https://example.com/api/feeds/zenn-mizchi");
     const body = await res.json<{
       feed: { articles_30d: number; last_published_at: string | null };
       recent_articles: Article[];

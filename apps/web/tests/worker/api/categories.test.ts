@@ -4,7 +4,7 @@ import { insertArticles } from "../../../worker/db/articles";
 import { syncFeeds } from "../../../worker/db/feeds";
 import type { FeedCategory, FeedConfig } from "../../../worker/types";
 
-const ALL_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
+const ALL_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "personal"];
 
 const FEEDS: FeedConfig[] = [
   {
@@ -32,10 +32,10 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "zenn-ai",
-    name: "Zenn AI",
-    url: "https://zenn.dev/topics/ai/feed",
-    category: "zenn",
+    id: "zenn-mizchi",
+    name: "mizchi",
+    url: "https://zenn.dev/mizchi/feed",
+    category: "personal",
     lang: "ja",
     enabled: true,
   },
@@ -135,7 +135,7 @@ describe("GET /api/categories - テストデータあり", () => {
         category: "bigtech",
         lang: "en",
       },
-      // zenn: 記事なし (articles_30d=0, last_published_at=null)
+      // personal: 記事なし (articles_30d=0, last_published_at=null)
     ]);
   });
 
@@ -149,14 +149,14 @@ describe("GET /api/categories - テストデータあり", () => {
     expect(cats).toEqual(ALL_CATEGORIES.toSorted());
   });
 
-  it("feeds_count が正しい (ai=2, bigtech=1, zenn=1, jp=0)", async () => {
+  it("feeds_count が正しい (ai=2, bigtech=1, personal=1, jp=0)", async () => {
     const res = await SELF.fetch("https://example.com/api/categories");
     const body = await res.json<CategoriesResponse>();
 
     const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
     expect(byCategory["ai"]!.feeds_count).toBe(2);
     expect(byCategory["bigtech"]!.feeds_count).toBe(1);
-    expect(byCategory["zenn"]!.feeds_count).toBe(1);
+    expect(byCategory["personal"]!.feeds_count).toBe(1);
     // jp フィードは登録していないので 0
     expect(byCategory["jp"]!.feeds_count).toBe(0);
   });
@@ -171,13 +171,13 @@ describe("GET /api/categories - テストデータあり", () => {
     expect(byCategory["bigtech"]!.articles_30d).toBe(1);
   });
 
-  it("articles_30d=0 のカテゴリは 0 で返る (jp と zenn)", async () => {
+  it("articles_30d=0 のカテゴリは 0 で返る (jp と personal)", async () => {
     const res = await SELF.fetch("https://example.com/api/categories");
     const body = await res.json<CategoriesResponse>();
 
     const byCategory = Object.fromEntries(body.categories.map((c) => [c.id, c]));
     expect(byCategory["jp"]!.articles_30d).toBe(0);
-    expect(byCategory["zenn"]!.articles_30d).toBe(0);
+    expect(byCategory["personal"]!.articles_30d).toBe(0);
   });
 
   it("last_published_at は各カテゴリの MAX(published_at)", async () => {
@@ -197,7 +197,7 @@ describe("GET /api/categories - テストデータあり", () => {
 
     // 記事なし -> null
     expect(byCategory["jp"]!.last_published_at).toBeNull();
-    expect(byCategory["zenn"]!.last_published_at).toBeNull();
+    expect(byCategory["personal"]!.last_published_at).toBeNull();
   });
 
   it("Cache-Control: public, max-age=300 が設定されている", async () => {

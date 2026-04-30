@@ -9,7 +9,7 @@
  * 正当な値の配列から型を絞り込む。
  *
  * @example
- *   const isCategory = makeOneOf<FeedCategory>(["bigtech", "ai", "jp", "zenn"]);
+ *   const isCategory = makeOneOf<FeedCategory>(["bigtech", "ai", "jp", "personal"]);
  *   if (isCategory(raw)) { ... } // raw は FeedCategory として利用可能
  */
 export function makeOneOf<T extends string>(

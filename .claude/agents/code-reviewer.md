@@ -111,8 +111,8 @@ model: inherit
 ### 7. feeds.yaml / フィード設定 (`.claude/rules/04-feed-config.md`)
 
 - [ ] `id` がユニーク + kebab-case か
-- [ ] `category` は `bigtech | ai | jp | zenn` のみか
-- [ ] Zenn 由来は `category: zenn` で統一されているか
+- [ ] `category` は `bigtech | ai | jp | personal` のみか
+- [ ] 個人ブログ (Zenn の個人 user feed など) は `category: personal` で統一されているか
 - [ ] `enabled: false` で残すべき所を物理削除していないか
 
 ### 8. セキュリティ / 秘密情報

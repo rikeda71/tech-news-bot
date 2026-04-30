@@ -321,21 +321,21 @@ export async function findFeedWithStats(db: D1Database, id: string): Promise<Fee
 }
 
 export interface CategorySummary {
-  id: "bigtech" | "ai" | "jp" | "zenn";
+  id: FeedCategory;
   label: string;
   feeds_count: number;
   articles_30d: number;
   last_published_at: string | null;
 }
 
-const ALL_CATEGORIES: Array<"bigtech" | "ai" | "jp" | "zenn"> = ["bigtech", "ai", "jp", "zenn"];
+const ALL_CATEGORIES: FeedCategory[] = ["bigtech", "ai", "jp", "personal"];
 
 // client 側の CategorySummary.label に対応するマッピング
-const CATEGORY_LABELS: Record<"bigtech" | "ai" | "jp" | "zenn", string> = {
+const CATEGORY_LABELS: Record<FeedCategory, string> = {
   bigtech: "ビッグテック",
   ai: "AI",
   jp: "日本企業",
-  zenn: "Zenn",
+  personal: "個人ブログ",
 };
 
 /**

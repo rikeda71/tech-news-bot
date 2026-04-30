@@ -291,31 +291,52 @@ feeds:
     lang: ja
     enabled: true
 
-  # ─────────── Zenn (community / topic feeds) ───────────
-  - id: zenn-trending
-    name: Zenn トレンド
-    url: https://zenn.dev/feed
-    category: zenn
+  - id: layerx-zenn
+    name: LayerX Tech Blog (Zenn)
+    url: https://zenn.dev/p/layerx/feed
+    category: jp
     lang: ja
     enabled: true
 
-  - id: zenn-llm
-    name: Zenn LLM トピック
-    url: https://zenn.dev/topics/llm/feed
-    category: zenn
+  - id: cybozu-ept-zenn
+    name: サイボウズ 生産性向上チーム (Zenn)
+    url: https://zenn.dev/p/cybozu_ept/feed
+    category: jp
     lang: ja
     enabled: true
 
-  - id: zenn-typescript
-    name: Zenn TypeScript トピック
-    url: https://zenn.dev/topics/typescript/feed
-    category: zenn
+  - id: zenn-team-blog
+    name: Zenn Tech Blog
+    url: https://zenn.dev/p/team_zenn/feed
+    category: jp
     lang: ja
     enabled: true
 
-  - id: zenn-cloudflare
-    name: Zenn Cloudflare トピック
-    url: https://zenn.dev/topics/cloudflare/feed
-    category: zenn
+  # ─────────── Personal (個人ブログ。report 対象からは除外) ───────────
+  - id: zenn-mizchi
+    name: mizchi (Zenn)
+    url: https://zenn.dev/mizchi/feed
+    category: personal
+    lang: ja
+    enabled: true
+
+  - id: zenn-mattn
+    name: mattn (Zenn)
+    url: https://zenn.dev/mattn/feed
+    category: personal
+    lang: ja
+    enabled: true
+
+  - id: zenn-uhyo
+    name: uhyo (Zenn)
+    url: https://zenn.dev/uhyo/feed
+    category: personal
+    lang: ja
+    enabled: true
+
+  - id: zenn-sosukesuzuki
+    name: Sosuke Suzuki (Zenn)
+    url: https://zenn.dev/sosukesuzuki/feed
+    category: personal
     lang: ja
     enabled: true

@@ -18,7 +18,7 @@ const CATEGORY_META: Record<string, { icon: string; description: string }> = {
   bigtech: { icon: "🏢", description: "Big Tech 企業の技術ブログ" },
   ai: { icon: "🤖", description: "AI・機械学習関連の最新情報" },
   jp: { icon: "🇯🇵", description: "国内企業のエンジニアブログ" },
-  zenn: { icon: "📝", description: "Zenn のトレンド記事" },
+  personal: { icon: "👤", description: "著名なエンジニアの個人ブログ" },
 };
 
 // カテゴリカードの左ボーダー色: CSS custom properties を任意プロパティ記法で参照
@@ -26,7 +26,7 @@ const CATEGORY_BORDER_CLASS: Record<string, string> = {
   bigtech: "border-l-[4px] border-l-[var(--cat-bigtech)]",
   ai: "border-l-[4px] border-l-[var(--cat-ai)]",
   jp: "border-l-[4px] border-l-[var(--cat-jp)]",
-  zenn: "border-l-[4px] border-l-[var(--cat-zenn)]",
+  personal: "border-l-[4px] border-l-[var(--cat-personal)]",
 };
 
 // カテゴリバッジの色
@@ -34,7 +34,7 @@ const CATEGORY_BADGE_CLASS: Record<string, string> = {
   bigtech: "bg-[var(--cat-bigtech-bg)] text-[var(--cat-bigtech)]",
   ai: "bg-[var(--cat-ai-bg)] text-[var(--cat-ai)]",
   jp: "bg-[var(--cat-jp-bg)] text-[var(--cat-jp)]",
-  zenn: "bg-[var(--cat-zenn-bg)] text-[var(--cat-zenn)]",
+  personal: "bg-[var(--cat-personal-bg)] text-[var(--cat-personal)]",
 };
 
 interface Props {

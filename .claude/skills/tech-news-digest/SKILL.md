@@ -46,7 +46,7 @@ D1 (`articles` テーブル) から期間指定で記事メタデータを取得
 
 - `--since=<today|week|month|N>` (必須)
 - `--target=<local|remote>` (省略時 `local`)
-- `--category=<bigtech|ai|jp>` (任意。`zenn` は対象外 — フィードノイズが多いため)
+- `--category=<bigtech|ai|jp>` (任意。`personal` は対象外 — 個人ブログは別途扱うため)
 - `--lang=<ja|en>` (任意)
 - `--limit=<N>` (デフォルト 200)
 

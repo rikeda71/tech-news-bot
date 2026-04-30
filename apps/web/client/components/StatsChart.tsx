@@ -10,7 +10,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   bigtech: "#4493f8",
   ai: "#d29922",
   jp: "#3fb950",
-  zenn: "#3ea8ff",
+  personal: "#a371f7",
 };
 
 const CHART_W = 800;

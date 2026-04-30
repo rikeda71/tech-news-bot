@@ -14,7 +14,7 @@ const CATEGORY_LABELS: Record<FeedCategory, string> = {
   bigtech: "ビッグテック",
   ai: "AI",
   jp: "日本企業",
-  zenn: "Zenn",
+  personal: "個人ブログ",
 };
 
 // ---------------------------------------------------------------------------

@@ -9,11 +9,11 @@ const CATEGORY_DISPLAY_NAMES: Record<FeedCategory, string> = {
   bigtech: "Big Tech",
   ai: "AI Labs",
   jp: "国内エンジニアリング",
-  zenn: "Zenn",
+  personal: "個人ブログ",
 };
 
 // カテゴリの表示順序
-const CATEGORY_ORDER: FeedCategory[] = ["bigtech", "ai", "jp", "zenn"];
+const CATEGORY_ORDER: FeedCategory[] = ["bigtech", "ai", "jp", "personal"];
 
 function escapeXml(input: string): string {
   return input

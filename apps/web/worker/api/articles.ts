@@ -41,7 +41,12 @@ const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
 const app = new Hono<{ Bindings: Env }>();
 
-const VALID_CATEGORIES = ["bigtech", "ai", "jp", "zenn"] as const satisfies readonly FeedCategory[];
+const VALID_CATEGORIES = [
+  "bigtech",
+  "ai",
+  "jp",
+  "personal",
+] as const satisfies readonly FeedCategory[];
 const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
 const VALID_FEED_IDS = new Set(loadAllFeeds().map((f) => f.id));
 
@@ -221,7 +226,7 @@ app.get("/by-feed/:feedId", async (c) => {
 app.get("/by-category/:cat", async (c) => {
   const catRaw = c.req.param("cat");
   if (!isCategory(catRaw)) {
-    return c.json({ error: "invalid category: must be one of bigtech, ai, jp, zenn" }, 400);
+    return c.json({ error: "invalid category: must be one of bigtech, ai, jp, personal" }, 400);
   }
   const category = catRaw;
 

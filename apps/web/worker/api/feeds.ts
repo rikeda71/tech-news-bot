@@ -8,7 +8,7 @@ import type { FeedsListResponse, FeedDetailResponse, FeedRunHealthResponse } fro
 
 const app = new Hono<{ Bindings: Env }>();
 
-const isCategory = makeOneOf<FeedCategory>(["bigtech", "ai", "jp", "zenn"]);
+const isCategory = makeOneOf<FeedCategory>(["bigtech", "ai", "jp", "personal"]);
 const isLang = makeOneOf<FeedLang>(["ja", "en"]);
 
 app.get("/", async (c) => {

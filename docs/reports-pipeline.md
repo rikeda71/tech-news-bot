@@ -87,7 +87,7 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
   "kind": "daily",                    // "daily" | "weekly" | "monthly"
   "period_start": "ISO 8601",
   "period_end":   "ISO 8601",
-  "category": null,                   // null | "bigtech" | "ai" | "jp" | "zenn"
+  "category": null,                   // null | "bigtech" | "ai" | "jp" | "personal"
   "lang": null,                       // null | "ja" | "en"
   "content": "# Daily Tech News ...", // markdown 本体 (≤ 1MB)
   "meta": { "dedup_total": 42, ... }, // 任意 JSON (meta_json として保存)
@@ -124,11 +124,11 @@ CORS は付けず、Bearer `ADMIN_TOKEN` (rotation 中は `ADMIN_TOKEN_NEXT` も
 
 各 workflow は `.github/workflows/` 配下に置く。
 
-| File                 | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | skill 引数                                                          |
-| -------------------- | ------------------ | ------------------ | ------------------ | ------------------------------------------------------------------- |
-| `report-daily.yml`   | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | `since=today, deep, categories=bigtech+ai+jp (3 回呼び), zenn 除外` |
-| `report-weekly.yml`  | `0 22 * * 0`       | 毎週月曜 07:00     | `tech-news-weekly` | `since=week, categories=bigtech+ai (2 回呼び)`                      |
-| `report-monthly.yml` | `0 22 1 * *`       | 毎月 2 日 07:00    | `tech-news-weekly` | `since=month, limit=500, categories=bigtech+ai (2 回呼び)`          |
+| File                 | スケジュール (UTC) | スケジュール (JST) | 起動する skill     | skill 引数                                                              |
+| -------------------- | ------------------ | ------------------ | ------------------ | ----------------------------------------------------------------------- |
+| `report-daily.yml`   | `0 22 * * *`       | 毎日 07:00         | `tech-news-digest` | `since=today, deep, categories=bigtech+ai+jp (3 回呼び), personal 除外` |
+| `report-weekly.yml`  | `0 22 * * 0`       | 毎週月曜 07:00     | `tech-news-weekly` | `since=week, categories=bigtech+ai (2 回呼び)`                          |
+| `report-monthly.yml` | `0 22 1 * *`       | 毎月 2 日 07:00    | `tech-news-weekly` | `since=month, limit=500, categories=bigtech+ai (2 回呼び)`              |
 
 > monthly は GitHub Actions cron が `L` (月末) を非対応のため、「翌月 2 日 JST 07:00 に
 > 過去 30 日を集計」として暦月とほぼ等価のレポートを作る。`since=month` は skill 仕様で
@@ -212,7 +212,7 @@ GitHub Actions UI から `workflow_dispatch` で再実行するだけで OK。
 レポートなどが欲しくなったら、既存 workflow をコピーして以下を変える:
 
 1. ファイル名 / `name:` / `concurrency.group` を `report-<kind>-<category>.yml` 等に変更
-2. prompt の `category 指定なし` を `category=<bigtech|ai|jp|zenn>` に変更
+2. prompt の `category 指定なし` を `category=<bigtech|ai|jp>` に変更 (`personal` はレポート対象外)
 3. meta JSON の `category` を該当カテゴリ名に変更
 
 UNIQUE index が `(kind, period, category)` で張られているため、category 違いは別行として

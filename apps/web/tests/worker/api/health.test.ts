@@ -149,8 +149,8 @@ describe("/api/health", () => {
 // feeds.yaml に実際に存在するフィード ID を使う (loadAllFeeds() が返す一覧に基づく)
 // google-developers は enabled: true のフィード
 const GOOGLE_DEVELOPERS_ID = "google-developers";
-// zenn-trending は enabled: true の Zenn フィード
-const ZENN_TRENDING_ID = "zenn-trending";
+// zenn-mizchi は enabled: true の personal カテゴリのフィード
+const PERSONAL_FEED_ID = "zenn-mizchi";
 
 describe("GET /api/health/feeds", () => {
   it("returns 200 with an array", async () => {
@@ -270,7 +270,7 @@ describe("GET /api/health/feeds", () => {
     // feeds.yaml の全フィードが含まれることを確認 (enabled/disabled 問わず)
     const ids = body.map((f) => f.feed_id);
     expect(ids).toContain(GOOGLE_DEVELOPERS_ID);
-    expect(ids).toContain(ZENN_TRENDING_ID);
+    expect(ids).toContain(PERSONAL_FEED_ID);
   });
 
   it("sets Cache-Control: public, max-age=60", async () => {

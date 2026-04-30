@@ -36,7 +36,7 @@ D1 (`articles` テーブル) から週次・月次の記事を取得し、意味
 
 - `--since=<week|month>` (必須)
 - `--target=<local|remote>` (省略時 `local`)
-- `--category=<bigtech|ai|jp>` (任意。`zenn` は対象外 — フィードノイズが多いため)
+- `--category=<bigtech|ai|jp>` (任意。`personal` は対象外 — 個人ブログは別途扱うため)
 - `--lang=<ja|en>` (任意)
 - `--limit=<N>` (デフォルト 200、月次は 500 推奨)
 

@@ -10,7 +10,7 @@ function makeStats(overrides: Partial<Stats> = {}): Stats {
     last_published_at: "2026-04-28T12:00:00Z",
     last_fetched_at: "2026-04-28T13:00:00Z",
     last24h: 5,
-    by_category: { ai: 50, bigtech: 30, jp: 15, zenn: 5 },
+    by_category: { ai: 50, bigtech: 30, jp: 15, personal: 5 },
     by_lang: { en: 70, ja: 30 },
     stale_feeds: [],
     category_trend_30d: [],

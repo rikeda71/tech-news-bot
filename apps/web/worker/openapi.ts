@@ -251,7 +251,7 @@ const openApiSchema = {
     schemas: {
       FeedCategory: {
         type: "string",
-        enum: ["bigtech", "ai", "jp", "zenn"],
+        enum: ["bigtech", "ai", "jp", "personal"],
         description: "Feed category",
       },
       FeedLang: {

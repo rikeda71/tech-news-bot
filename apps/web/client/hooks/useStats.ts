@@ -13,7 +13,7 @@ export interface TrendPoint {
   ai: number;
   bigtech: number;
   jp: number;
-  zenn: number;
+  personal: number;
 }
 
 export interface FeedActivity {

@@ -30,10 +30,10 @@ const FEEDS: FeedConfig[] = [
     enabled: true,
   },
   {
-    id: "zenn-trending",
-    name: "Zenn トレンド",
+    id: "zenn-mizchi",
+    name: "mizchi",
     url: "https://x.test/z",
-    category: "zenn",
+    category: "personal",
     lang: "ja",
     enabled: true,
   },
@@ -113,29 +113,47 @@ describe("GET /api/stats — category_trend_30d", () => {
   it("returns exactly 30 entries", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as {
-      category_trend_30d: { date: string; ai: number; bigtech: number; jp: number; zenn: number }[];
+      category_trend_30d: {
+        date: string;
+        ai: number;
+        bigtech: number;
+        jp: number;
+        personal: number;
+      }[];
     };
     expect.soft(res.status).toBe(200);
     expect.soft(body.category_trend_30d).toHaveLength(30);
   });
 
-  it("each entry has date, ai, bigtech, jp, zenn fields", async () => {
+  it("each entry has date, ai, bigtech, jp, personal fields", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as {
-      category_trend_30d: { date: string; ai: number; bigtech: number; jp: number; zenn: number }[];
+      category_trend_30d: {
+        date: string;
+        ai: number;
+        bigtech: number;
+        jp: number;
+        personal: number;
+      }[];
     };
     const point = body.category_trend_30d[0];
     expect.soft(typeof point.date).toBe("string");
     expect.soft(typeof point.ai).toBe("number");
     expect.soft(typeof point.bigtech).toBe("number");
     expect.soft(typeof point.jp).toBe("number");
-    expect.soft(typeof point.zenn).toBe("number");
+    expect.soft(typeof point.personal).toBe("number");
   });
 
   it("counts match inserted articles for days with data", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as {
-      category_trend_30d: { date: string; ai: number; bigtech: number; jp: number; zenn: number }[];
+      category_trend_30d: {
+        date: string;
+        ai: number;
+        bigtech: number;
+        jp: number;
+        personal: number;
+      }[];
     };
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
@@ -161,7 +179,13 @@ describe("GET /api/stats — category_trend_30d", () => {
   it("days with no articles have all counts as 0", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
     const body = (await res.json()) as {
-      category_trend_30d: { date: string; ai: number; bigtech: number; jp: number; zenn: number }[];
+      category_trend_30d: {
+        date: string;
+        ai: number;
+        bigtech: number;
+        jp: number;
+        personal: number;
+      }[];
     };
     // 今日 (0 日前) は記事なし
     const today = new Date();
@@ -172,7 +196,7 @@ describe("GET /api/stats — category_trend_30d", () => {
     expect.soft(todayPoint!.ai).toBe(0);
     expect.soft(todayPoint!.bigtech).toBe(0);
     expect.soft(todayPoint!.jp).toBe(0);
-    expect.soft(todayPoint!.zenn).toBe(0);
+    expect.soft(todayPoint!.personal).toBe(0);
   });
 });
 
@@ -389,22 +413,22 @@ describe("GET /api/stats — top_authors_30d", () => {
     expect(body.top_authors_30d.length).toBeLessThanOrEqual(10);
   });
 
-  it("excludes Zenn authors (category = 'zenn') from the ranking", async () => {
-    // Zenn 投稿 5 件 (本来なら count=5 で 1 位になるはず)
-    const zennPosts = Array.from({ length: 5 }, (_, i) => ({
-      guid: `zenn-post-${i}`,
-      feed_id: "zenn-trending",
-      title: `Zenn Post ${i}`,
-      url: `https://zenn.dev/x/${i}`,
+  it("excludes personal authors (category = 'personal') from the ranking", async () => {
+    // personal 投稿 5 件 (本来なら count=5 で 1 位になるはず)
+    const personalPosts = Array.from({ length: 5 }, (_, i) => ({
+      guid: `personal-post-${i}`,
+      feed_id: "zenn-mizchi",
+      title: `Personal Post ${i}`,
+      url: `https://zenn.dev/mizchi/${i}`,
       summary: null as null,
-      author: "Zenn Heavy Poster",
+      author: "Personal Heavy Poster",
       published_at: daysAgo(2),
-      category: "zenn" as const,
+      category: "personal" as const,
       lang: "ja" as const,
     }));
     // 比較用に bigtech から 1 件
     await insertArticles(env.DB, [
-      ...zennPosts,
+      ...personalPosts,
       {
         guid: "bigtech-author-1",
         feed_id: "openai-blog",
@@ -422,8 +446,8 @@ describe("GET /api/stats — top_authors_30d", () => {
     const body = (await res.json()) as {
       top_authors_30d: { author: string; count: number }[];
     };
-    // Zenn の author は除外される
-    expect.soft(body.top_authors_30d.some((a) => a.author === "Zenn Heavy Poster")).toBe(false);
+    // personal の author は除外される
+    expect.soft(body.top_authors_30d.some((a) => a.author === "Personal Heavy Poster")).toBe(false);
     // bigtech の author は含まれる
     expect.soft(body.top_authors_30d.some((a) => a.author === "Bigtech Author")).toBe(true);
   });

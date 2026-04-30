@@ -130,11 +130,11 @@ describe("useUrlState", () => {
     expect(result.current[0].category).toBe("");
 
     act(() => {
-      window.history.replaceState(null, "", "/?category=zenn");
+      window.history.replaceState(null, "", "/?category=personal");
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    expect(result.current[0].category).toBe("zenn");
+    expect(result.current[0].category).toBe("personal");
   });
 
   it("debounce: 連続 setFilters の URL 更新は 300ms 後の最後の値になる", () => {

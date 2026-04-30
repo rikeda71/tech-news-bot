@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { StatsChart } from "../../client/components/StatsChart";
 import type { TrendPoint } from "../../client/hooks/useStats";
 
-const CATEGORIES: Array<keyof Omit<TrendPoint, "date">> = ["bigtech", "ai", "jp", "zenn"];
+const CATEGORIES: Array<keyof Omit<TrendPoint, "date">> = ["bigtech", "ai", "jp", "personal"];
 
 function makeTrendData(n: number): TrendPoint[] {
   const today = new Date();
@@ -16,7 +16,7 @@ function makeTrendData(n: number): TrendPoint[] {
       bigtech: i,
       ai: i + 1,
       jp: i + 2,
-      zenn: i + 3,
+      personal: i + 3,
     };
   });
 }
@@ -47,7 +47,7 @@ describe("StatsChart", () => {
     const data = makeTrendData(30);
     const { container } = render(<StatsChart data={data} categories={CATEGORIES} />);
     const rects = container.querySelectorAll("rect");
-    // 29 日 × 4 カテゴリ (index 0 の日は bigtech=0, jp=2, ai=1, zenn=3 — ai/jp/zenn は非ゼロ)
+    // 29 日 × 4 カテゴリ (index 0 の日は bigtech=0, jp=2, ai=1, personal=3 — ai/jp/personal は非ゼロ)
     // ただし h=0 の rect も DOM に存在するため、rect の数は 30 × 4 = 120
     expect(rects.length).toBe(120);
   });
@@ -63,7 +63,9 @@ describe("StatsChart", () => {
   });
 
   it("renders title elements with date/category/count inside rects", () => {
-    const singleData: TrendPoint[] = [{ date: "2026-04-01", bigtech: 5, ai: 3, jp: 1, zenn: 2 }];
+    const singleData: TrendPoint[] = [
+      { date: "2026-04-01", bigtech: 5, ai: 3, jp: 1, personal: 2 },
+    ];
     const { container } = render(<StatsChart data={singleData} categories={CATEGORIES} />);
     const titles = container.querySelectorAll("title");
     const titleTexts = Array.from(titles).map((t) => t.textContent ?? "");

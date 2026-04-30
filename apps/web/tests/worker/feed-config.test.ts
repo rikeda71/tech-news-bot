@@ -21,7 +21,7 @@ describe("loadAllFeeds", () => {
       expect(feed.name.length).toBeGreaterThan(0);
       expect(typeof feed.url).toBe("string");
       expect(feed.url).toMatch(/^https?:\/\//);
-      expect(["bigtech", "ai", "jp", "zenn"]).toContain(feed.category);
+      expect(["bigtech", "ai", "jp", "personal"]).toContain(feed.category);
       expect(["ja", "en"]).toContain(feed.lang);
       expect(typeof feed.enabled).toBe("boolean");
     }
@@ -43,12 +43,12 @@ describe("loadAllFeeds", () => {
     expect(all.length).toBeGreaterThanOrEqual(enabled.length);
   });
 
-  it("includes well-known feeds (google-research, openai-blog, zenn-trending)", () => {
+  it("includes well-known feeds (google-research, openai-blog, zenn-mizchi)", () => {
     const feeds = loadAllFeeds();
     const ids = feeds.map((f) => f.id);
     expect(ids).toContain("google-research");
     expect(ids).toContain("openai-blog");
-    expect(ids).toContain("zenn-trending");
+    expect(ids).toContain("zenn-mizchi");
   });
 });
 
@@ -79,10 +79,10 @@ describe("loadEnabledFeeds", () => {
     }
   });
 
-  it("each feed has valid category (bigtech | ai | jp | zenn)", () => {
+  it("each feed has valid category (bigtech | ai | jp | personal)", () => {
     const feeds = loadEnabledFeeds();
     for (const feed of feeds) {
-      expect(["bigtech", "ai", "jp", "zenn"]).toContain(feed.category);
+      expect(["bigtech", "ai", "jp", "personal"]).toContain(feed.category);
     }
   });
 
@@ -93,13 +93,13 @@ describe("loadEnabledFeeds", () => {
     }
   });
 
-  it("covers all 4 categories (bigtech, ai, jp, zenn)", () => {
+  it("covers all 4 categories (bigtech, ai, jp, personal)", () => {
     const feeds = loadEnabledFeeds();
     const categories = new Set(feeds.map((f) => f.category));
     expect(categories.has("bigtech")).toBe(true);
     expect(categories.has("ai")).toBe(true);
     expect(categories.has("jp")).toBe(true);
-    expect(categories.has("zenn")).toBe(true);
+    expect(categories.has("personal")).toBe(true);
   });
 
   it("covers both langs (ja and en)", () => {

@@ -16,10 +16,10 @@ const SUMMARY_SQL = `
     MAX(published_at) AS last_published,
     MAX(fetched_at)   AS last_fetched,
     SUM(CASE WHEN published_at >= datetime('now','-1 day') THEN 1 ELSE 0 END) AS last24h,
-    SUM(CASE WHEN category='bigtech' THEN 1 ELSE 0 END) AS cat_bigtech,
-    SUM(CASE WHEN category='ai'      THEN 1 ELSE 0 END) AS cat_ai,
-    SUM(CASE WHEN category='jp'      THEN 1 ELSE 0 END) AS cat_jp,
-    SUM(CASE WHEN category='zenn'    THEN 1 ELSE 0 END) AS cat_zenn,
+    SUM(CASE WHEN category='bigtech'  THEN 1 ELSE 0 END) AS cat_bigtech,
+    SUM(CASE WHEN category='ai'       THEN 1 ELSE 0 END) AS cat_ai,
+    SUM(CASE WHEN category='jp'       THEN 1 ELSE 0 END) AS cat_jp,
+    SUM(CASE WHEN category='personal' THEN 1 ELSE 0 END) AS cat_personal,
     SUM(CASE WHEN lang='ja' THEN 1 ELSE 0 END) AS lang_ja,
     SUM(CASE WHEN lang='en' THEN 1 ELSE 0 END) AS lang_en
   FROM articles
@@ -86,7 +86,7 @@ app.get("/", async (c) => {
          FROM articles
          WHERE author IS NOT NULL
            AND author != ''
-           AND category != 'zenn'
+           AND category != 'personal'
            AND published_at >= datetime('now', '-30 days')
          GROUP BY author
          ORDER BY count DESC
@@ -108,7 +108,7 @@ app.get("/", async (c) => {
       cat_bigtech: number;
       cat_ai: number;
       cat_jp: number;
-      cat_zenn: number;
+      cat_personal: number;
       lang_ja: number;
       lang_en: number;
     } | null;
@@ -120,7 +120,7 @@ app.get("/", async (c) => {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setUTCDate(today.getUTCDate() - i);
-      points.push({ date: d.toISOString().slice(0, 10), ai: 0, bigtech: 0, jp: 0, zenn: 0 });
+      points.push({ date: d.toISOString().slice(0, 10), ai: 0, bigtech: 0, jp: 0, personal: 0 });
     }
     const trendMap = new Map<string, CategoryTrendPoint>();
     for (const p of points) trendMap.set(p.date, p);
@@ -158,7 +158,7 @@ app.get("/", async (c) => {
         bigtech: summaryRow?.cat_bigtech ?? 0,
         ai: summaryRow?.cat_ai ?? 0,
         jp: summaryRow?.cat_jp ?? 0,
-        zenn: summaryRow?.cat_zenn ?? 0,
+        personal: summaryRow?.cat_personal ?? 0,
       },
       by_lang: {
         ja: summaryRow?.lang_ja ?? 0,

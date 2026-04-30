@@ -4,7 +4,7 @@
 //
 // Usage:
 //   node tools/d1-client/recent.mjs --since=today [--target=local|remote]
-//                                   [--category=ai|bigtech|jp|zenn[,ai,...]] [--lang=ja|en]
+//                                   [--category=ai|bigtech|jp|personal[,ai,...]] [--lang=ja|en]
 //                                   [--limit=200]
 //
 // Output (stdout): JSON object as documented in SKILL.md
@@ -53,7 +53,7 @@ function sinceToISO(spec) {
   return new Date(now.getTime() - ms).toISOString();
 }
 
-const VALID_CATEGORIES = ["bigtech", "ai", "jp", "zenn"];
+const VALID_CATEGORIES = ["bigtech", "ai", "jp", "personal"];
 const VALID_LANGS = ["ja", "en"];
 
 function buildSQL({ since, category, lang, limit }) {
@@ -145,7 +145,7 @@ function main() {
     process.stderr.write(`${err.message}\n`);
     process.exit(1);
   }
-  // URL による de-dup: Zenn はトレンド・トピックが同一記事を複数フィードに出すため、
+  // URL による de-dup: 同一記事が複数フィード間で重複することがあるため、
   // 最も古い published_at のものを 1 件だけ残す。
   const sorted = articles.toSorted((a, b) => a.published_at.localeCompare(b.published_at));
   const seen = new Set();
