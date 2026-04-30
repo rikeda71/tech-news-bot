@@ -10,13 +10,15 @@ test.describe("bookmarks only toggle", () => {
     const bookmarkBtn = page
       .locator("[data-article-id]")
       .first()
-      .getByRole("button", { name: /ブックマーク/i });
-    await bookmarkBtn.first().click();
+      .getByRole("button", { name: "ブックマークに追加" });
+    await bookmarkBtn.click({ force: true });
 
-    // ブックマークのみ表示ボタンをクリック (aria-pressed 属性を持つ ★ N 件ボタン)
-    // /★ [1-9]/ を使って ★ 0 件 の状態では一致しないようにし、
-    // ブックマーク追加後 (★ 1 件以上) になるまで Playwright に待機させる
+    // ブックマーク件数ボタンが ★ 1 件 以上に更新されるまで待つ
+    // (localStorage への書き込みと React 再レンダリングが完了するのを確認)
     const bookmarkOnlyBtn = page.getByRole("button", { name: /★ [1-9]/ });
+    await expect(bookmarkOnlyBtn).toBeVisible({ timeout: 5_000 });
+
+    // ブックマークのみ表示ボタンをクリック
     await bookmarkOnlyBtn.click();
 
     // URL に bookmarks=only が付く
