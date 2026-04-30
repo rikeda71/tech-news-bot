@@ -32,6 +32,7 @@ Cloudflare Workers (無料枠) 上で 3 時間ごとに tech blog の RSS / Atom
 | `tech-news-search`  | 特定キーワードで FTS5 全文検索し深掘り解説                          |
 | `tech-news-related` | ピボット記事 1 本を起点に関連記事を D1 から探して関係性マップを生成 |
 | `tech-news-summary` | 単一の記事 URL を渡して本文ベースで深く日本語要約                   |
+| `tech-news-reports` | 保存済みのレポート一覧 / 詳細 / 重複検出 / 削除                     |
 
 ### 開発支援 skill
 
