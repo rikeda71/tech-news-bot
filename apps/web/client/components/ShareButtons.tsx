@@ -36,7 +36,7 @@ export function ShareButtons({ url, title }: Props) {
       <a
         href={xHref}
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         className={shareButtonBase}
         aria-label="X (Twitter) でシェア"
       >
@@ -55,7 +55,7 @@ export function ShareButtons({ url, title }: Props) {
       <a
         href={hatenaHref}
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         className={shareButtonBase}
         aria-label="はてなブックマークに追加"
       >

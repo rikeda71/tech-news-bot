@@ -192,17 +192,51 @@ describe("/api/articles", () => {
     expect(body.articles.map((a) => a.guid)).toEqual(["g-ai"]);
   });
 
-  it("ignores invalid date_from silently (returns all)", async () => {
+  it("rejects invalid date_from with 400", async () => {
     const res = await SELF.fetch("https://example.com/api/articles?date_from=not-a-date");
-    const body = (await res.json()) as { articles: { guid: string }[] };
-    expect(body.articles.length).toBe(3);
+    expect.soft(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect.soft(body.error).toBe("invalid date_from");
   });
 
-  it("ignores invalid date_to silently (returns all)", async () => {
+  it("rejects invalid date_to (out-of-range month) with 400", async () => {
     const res = await SELF.fetch("https://example.com/api/articles?date_to=2024-99-99");
-    // 形式チェックは YYYY-MM-DD 形式なのでパスするが、SQLite が正規化して結果が変わる可能性あり
-    // 不正な日付でもクラッシュせず 200 を返すことを確認
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect.soft(body.error).toBe("invalid date_to");
+  });
+
+  it("date_from: 9999-99-99 (overflowing date) → 400", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles?date_from=9999-99-99");
+    expect.soft(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect.soft(body.error).toBe("invalid date_from");
+  });
+
+  it("date_from: 2024-13-01 (invalid month) → 400", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles?date_from=2024-13-01");
+    expect.soft(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect.soft(body.error).toBe("invalid date_from");
+  });
+
+  it("date_from: 2024-02-30 (Feb 30 does not exist) → 400", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles?date_from=2024-02-30");
+    expect.soft(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect.soft(body.error).toBe("invalid date_from");
+  });
+
+  it("date_from: 2024-02-29 (leap year) → 200", async () => {
+    const res = await SELF.fetch("https://example.com/api/articles?date_from=2024-02-29");
+    expect.soft(res.status).toBe(200);
+  });
+
+  it("date_from and date_to both valid → 200", async () => {
+    const res = await SELF.fetch(
+      "https://example.com/api/articles?date_from=2024-01-01&date_to=2024-12-31",
+    );
+    expect.soft(res.status).toBe(200);
   });
 });
 
@@ -372,6 +406,22 @@ describe("CORS headers on public /api/* endpoints", () => {
     });
     expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
   }, 60000);
+
+  it("does NOT return Access-Control-Allow-Origin for unlisted origin", async () => {
+    // CORS_ALLOWED_ORIGINS に含まれていない origin からのリクエストはヘッダーなし
+    const res = await SELF.fetch("https://example.com/api/articles", {
+      headers: { origin: "https://attacker.example.com" },
+    });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
+
+  it("reflects only the matching origin (not wildcard) for allowed origin", async () => {
+    // origin: 関数を使っているため * ではなく origin 文字列を返す
+    const res = await SELF.fetch("https://example.com/api/health", {
+      headers: { origin: allowedOrigin },
+    });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
+  });
 });
 
 describe("security headers", () => {
@@ -380,6 +430,56 @@ describe("security headers", () => {
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
+  });
+
+  it("sets Strict-Transport-Security on /api/health", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    expect
+      .soft(res.headers.get("Strict-Transport-Security"))
+      .toBe("max-age=31536000; includeSubDomains");
+  });
+
+  it("sets Cross-Origin-Opener-Policy: same-origin on /api/health", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    expect.soft(res.headers.get("Cross-Origin-Opener-Policy")).toBe("same-origin");
+  });
+
+  it("sets Cross-Origin-Resource-Policy: same-origin on /api/health (non-syndication)", async () => {
+    const res = await SELF.fetch("https://example.com/api/health");
+    expect.soft(res.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
+  });
+
+  it("sets Cross-Origin-Resource-Policy: cross-origin on /feed.json (syndication)", async () => {
+    const res = await SELF.fetch("https://example.com/feed.json");
+    expect.soft(res.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+  });
+
+  it("sets Cross-Origin-Resource-Policy: cross-origin on /feed.xml (syndication)", async () => {
+    const res = await SELF.fetch("https://example.com/feed.xml");
+    expect.soft(res.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+  });
+
+  it("sets Cross-Origin-Resource-Policy: cross-origin on /feed.atom (syndication)", async () => {
+    const res = await SELF.fetch("https://example.com/feed.atom");
+    expect.soft(res.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+  });
+
+  it("sets Cross-Origin-Resource-Policy: cross-origin on /feeds/openai-blog.xml (per-feed syndication)", async () => {
+    const res = await SELF.fetch("https://example.com/feeds/openai-blog.xml");
+    expect.soft(res.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+  });
+
+  it("sets Cross-Origin-Resource-Policy: cross-origin on /feeds.opml", async () => {
+    const res = await SELF.fetch("https://example.com/feeds.opml");
+    expect.soft(res.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+  });
+
+  it("sets Strict-Transport-Security and COOP on static asset /assets/index-BYIbkfak.js", async () => {
+    const res = await SELF.fetch("https://example.com/assets/index-BYIbkfak.js");
+    expect
+      .soft(res.headers.get("Strict-Transport-Security"))
+      .toBe("max-age=31536000; includeSubDomains");
+    expect.soft(res.headers.get("Cross-Origin-Opener-Policy")).toBe("same-origin");
   });
 });
 

@@ -169,4 +169,12 @@ describe("GET /api/articles/by-feed/:feedId", () => {
     expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=300");
   });
+
+  it("returns 400 when feedId exceeds 200 characters", async () => {
+    const longFeedId = encodeURIComponent("f".repeat(201));
+    const res = await SELF.fetch(`https://example.com/api/articles/by-feed/${longFeedId}`);
+    expect.soft(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect.soft(body.error).toBe("feedId too long");
+  });
 });

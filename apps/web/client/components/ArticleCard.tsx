@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReadState } from "../hooks/useReadState";
 import { useStarredState } from "../hooks/useStarredState";
 import type { Article, FeedCategory } from "../types/api";
+import { safeHref } from "../utils/safe-href";
 import { BookmarkButton } from "./BookmarkButton";
 import { ShareButtons } from "./ShareButtons";
 
@@ -62,15 +63,6 @@ function formatDate(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function safeHref(url: string): string {
-  try {
-    const u = new URL(url);
-    return u.protocol === "https:" || u.protocol === "http:" ? url : "#";
-  } catch {
-    return "#";
-  }
 }
 
 export function ArticleCard({

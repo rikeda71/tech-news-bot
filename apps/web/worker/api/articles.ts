@@ -44,13 +44,39 @@ const app = new Hono<{ Bindings: Env }>();
 const VALID_CATEGORIES = ["bigtech", "ai", "jp", "zenn"] as const satisfies readonly FeedCategory[];
 const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
 const VALID_FEED_IDS = new Set(loadAllFeeds().map((f) => f.id));
+const VALID_CALENDAR_DAYS = [7, 30, 90, 365] as const;
+// URL パラメータの長さ上限。意図せず長い文字列が D1 クエリに流れ込むのを防ぐ
+const MAX_PARAM_LENGTH = 200;
 
 const isCategory = makeOneOf<FeedCategory>(VALID_CATEGORIES);
 const isLang = makeOneOf<FeedLang>(VALID_LANGS);
 
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-// YYYY-MM-DD または YYYY-MM-DDTHH:MM:SS 形式を受け付ける
-const DATE_RANGE_RE = /^\d{4}-\d{2}-\d{2}/;
+// ISO 8601 の日時部分 (時刻まで)。decodeCursor の publishedAt 検証と
+// since/until の ISO 形式チェック (時刻部分以降は内部で 10 文字に切り詰めて検証) に共用する。
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+// YYYY-MM-DD 形式のみ受け付ける (末尾 anchor で `9999-99-99foo` のような余剰文字を排除)
+const DATE_RANGE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// 実日付として妥当か検証する。Date が内部で繰り上げる (9999-99-99 → 3000-03-09 等) ことを
+// 再フォーマットして入力文字列と比較することで検出する。
+function isValidDate(s: string): boolean {
+  const t = Date.parse(`${s}T00:00:00Z`);
+  if (Number.isNaN(t)) return false;
+  const d = new Date(t);
+  const y = d.getUTCFullYear().toString().padStart(4, "0");
+  const m = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+  const day = d.getUTCDate().toString().padStart(2, "0");
+  return `${y}-${m}-${day}` === s;
+}
+
+function isValidDateRange(s: string | undefined): boolean {
+  if (!s) return true; // 未指定は OK
+  // YYYY-MM-DD 形式: 実日付として妥当かチェック
+  if (DATE_RANGE_RE.test(s)) return isValidDate(s);
+  // YYYY-MM-DDTHH:MM:SS... 形式: 先頭の日付部分のみ抽出して検証
+  if (ISO_DATETIME_RE.test(s)) return isValidDate(s.slice(0, 10));
+  return false;
+}
 
 function decodeCursor(input: string | undefined): Cursor | null {
   if (!input) return null;
@@ -61,7 +87,7 @@ function decodeCursor(input: string | undefined): Cursor | null {
       parsed &&
       typeof parsed === "object" &&
       typeof parsed.publishedAt === "string" &&
-      ISO_RE.test(parsed.publishedAt) &&
+      ISO_DATETIME_RE.test(parsed.publishedAt) &&
       typeof parsed.id === "number" &&
       Number.isInteger(parsed.id) &&
       parsed.id >= 0
@@ -117,7 +143,12 @@ app.get("/", async (c) => {
   const langRaw = req.query("lang");
   const feedIdRaw = req.query("feed_id") ?? undefined;
   const feedId = feedIdRaw && VALID_FEED_IDS.has(feedIdRaw) ? feedIdRaw : undefined;
-  const q = req.query("q") ?? undefined;
+  const qRaw = req.query("q") ?? undefined;
+  // 過度に長いクエリが FTS5 に渡るのを防ぐ
+  if (qRaw && qRaw.length > 100) {
+    return c.json({ error: "query too long" }, 400);
+  }
+  const q = qRaw;
   const limitRaw = req.query("limit");
   const cursorRaw = req.query("cursor");
 
@@ -128,9 +159,15 @@ app.get("/", async (c) => {
 
   const dateFromRaw = req.query("date_from") ?? undefined;
   const dateToRaw = req.query("date_to") ?? undefined;
-  // 不正な値は silently drop する既存パターンに合わせる
-  const dateFrom = dateFromRaw && DATE_RANGE_RE.test(dateFromRaw) ? dateFromRaw : undefined;
-  const dateTo = dateToRaw && DATE_RANGE_RE.test(dateToRaw) ? dateToRaw : undefined;
+  // 不正な日付文字列は 400 を返す (silently drop しない)
+  if (!isValidDateRange(dateFromRaw)) {
+    return c.json({ error: "invalid date_from" }, 400);
+  }
+  if (!isValidDateRange(dateToRaw)) {
+    return c.json({ error: "invalid date_to" }, 400);
+  }
+  const dateFrom = dateFromRaw;
+  const dateTo = dateToRaw;
 
   const etag = await computeArticlesEtag(c.env.DB, FEEDS_VERSION, {
     category,
@@ -186,6 +223,7 @@ app.get("/by-author/:author", async (c) => {
   const authorRaw = c.req.param("author");
   const author = decodeURIComponent(authorRaw);
   if (!author) return c.json({ error: "author must not be empty" }, 400);
+  if (author.length > MAX_PARAM_LENGTH) return c.json({ error: "author too long" }, 400);
 
   const parsed = parseListQuery(c);
   if (!parsed.ok) return parsed.response;
@@ -204,6 +242,7 @@ app.get("/by-feed/:feedId", async (c) => {
   const feedIdRaw = c.req.param("feedId");
   const feedId = decodeURIComponent(feedIdRaw).trim();
   if (!feedId) return c.json({ error: "feedId must not be empty" }, 400);
+  if (feedId.length > MAX_PARAM_LENGTH) return c.json({ error: "feedId too long" }, 400);
 
   const parsed = parseListQuery(c);
   if (!parsed.ok) return parsed.response;
@@ -237,8 +276,6 @@ app.get("/by-category/:cat", async (c) => {
     { "Cache-Control": "public, max-age=300" },
   );
 });
-
-const VALID_CALENDAR_DAYS = [7, 30, 90, 365] as const;
 
 app.get("/calendar", async (c) => {
   const daysRaw = c.req.query("days") ?? "30";

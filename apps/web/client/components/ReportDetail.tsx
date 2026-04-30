@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { useReport } from "../hooks/useReports";
+import { safeHref } from "../utils/safe-href";
 
 const KIND_LABELS: Record<string, string> = {
   daily: "日次",
@@ -36,10 +37,11 @@ function formatDate(iso: string): string {
   });
 }
 
-// markdown 内のリンクを新タブで開くカスタムレンダラ
+// markdown 内のリンクを新タブで開くカスタムレンダラ。
+// javascript:/data: などの危険な URI を遮断するため safeHref を通す
 const markdownComponents: Components = {
   a: ({ href, children, ...props }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+    <a href={safeHref(href)} target="_blank" rel="noopener noreferrer" {...props}>
       {children}
     </a>
   ),

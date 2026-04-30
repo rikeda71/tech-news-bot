@@ -103,4 +103,20 @@ describe("ReportDetail", () => {
 
     expect(screen.getByText("← 一覧に戻る")).toBeTruthy();
   });
+
+  it("markdown 内の javascript: リンクが href='#' にサニタイズされる", async () => {
+    const detail = makeDetail({
+      content: "[危険リンク](javascript:alert(1))",
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeDetailResponse(detail)));
+
+    const { container } = render(<ReportDetailComponent id={1} onBack={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("読み込み中...")).toBeNull();
+    });
+
+    const link = container.querySelector("a[href]");
+    expect(link?.getAttribute("href")).toBe("#");
+  });
 });

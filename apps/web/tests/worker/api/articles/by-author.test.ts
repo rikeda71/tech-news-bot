@@ -148,4 +148,12 @@ describe("GET /api/articles/by-author/:author", () => {
     expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=300");
   });
+
+  it("returns 400 when author exceeds 200 characters", async () => {
+    const longAuthor = encodeURIComponent("a".repeat(201));
+    const res = await SELF.fetch(`https://example.com/api/articles/by-author/${longAuthor}`);
+    expect.soft(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect.soft(body.error).toBe("author too long");
+  });
 });
