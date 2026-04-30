@@ -28,4 +28,10 @@ describe("EmptyState", () => {
     const span = container.querySelector("span");
     expect(span?.textContent).toBe("✨");
   });
+
+  it("icon span has aria-hidden to prevent screen reader from reading the emoji", () => {
+    const { container } = render(<EmptyState icon="✨" title="テスト" body="説明文" />);
+    const span = container.querySelector("span");
+    expect(span?.getAttribute("aria-hidden")).toBe("true");
+  });
 });

@@ -11,7 +11,9 @@ export function SearchSuggestions({ items, onPick, onRemove, onClearAll, visible
 
   return (
     <ul
+      id="search-suggestions"
       role="listbox"
+      aria-label="検索履歴"
       className="absolute top-full left-0 right-0 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-b-[var(--radius-md)] max-h-[300px] overflow-y-auto z-50 list-none m-0 py-[var(--space-1)] shadow-[var(--shadow-md)]"
     >
       {items.map((item) => (

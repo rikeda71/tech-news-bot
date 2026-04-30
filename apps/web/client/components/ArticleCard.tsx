@@ -106,6 +106,8 @@ export function ArticleCard({
       tabIndex={-1}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
     >
       {/* カードヘッダ行 (タイトル + アクションボタン) */}
       <div className="flex items-start gap-[var(--space-2)]">
@@ -146,6 +148,7 @@ export function ArticleCard({
           className={`inline-flex items-center px-[var(--space-2)] py-0.5 rounded-full text-[var(--font-size-xs)] font-semibold uppercase tracking-[0.04em] border-none font-[inherit] leading-[var(--line-height-tight)] whitespace-nowrap align-middle cursor-pointer transition-[opacity,filter] duration-100 hover:brightness-110 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2 ${catBadgeClass}`}
           onClick={() => onFilterByCategory(article.category)}
           title={`${CATEGORY_LABEL[article.category] ?? article.category} で絞り込む`}
+          aria-label={`${CATEGORY_LABEL[article.category] ?? article.category} で絞り込む`}
         >
           <span aria-hidden="true" className="mr-[3px]">
             {CATEGORY_ICON[article.category] ?? ""}
@@ -157,6 +160,7 @@ export function ArticleCard({
           className="text-[var(--fg-primary)] font-medium border-none bg-transparent font-[inherit] text-inherit p-0 cursor-pointer transition-colors duration-100 hover:text-[var(--accent)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2 focus-visible:rounded-[var(--radius-sm)]"
           onClick={() => onFilterByFeedId(article.feed_id)}
           title={`${article.feed_name ?? article.feed_id} で絞り込む`}
+          aria-label={`${article.feed_name ?? article.feed_id} で絞り込む`}
         >
           {article.feed_name ?? article.feed_id}
         </button>
@@ -173,6 +177,7 @@ export function ArticleCard({
                   if (article.author) onNavigateToAuthor(article.author);
                 }}
                 title={`${article.author} の記事一覧`}
+                aria-label={`${article.author} の記事一覧`}
               >
                 {article.author}
               </button>

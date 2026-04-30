@@ -67,4 +67,24 @@ describe("SearchInput", () => {
     expect(ref.current?.tagName).toBe("INPUT");
     expect(ref.current?.value).toBe("test");
   });
+
+  it("has aria-label for screen readers", () => {
+    render(<SearchInput value="" onChange={vi.fn<(q: string) => void>()} />);
+    const input = screen.getByRole("searchbox");
+    expect(input.getAttribute("aria-label")).toBe("記事を検索");
+  });
+
+  it("reflects suggestVisible in aria-expanded", () => {
+    const { rerender } = render(
+      <SearchInput value="" onChange={vi.fn<(q: string) => void>()} suggestVisible={false} />,
+    );
+    const input = screen.getByRole("searchbox");
+    // React は aria-* 属性を boolean false でも "false" として DOM に残す
+    expect(input.getAttribute("aria-expanded")).toBe("false");
+
+    rerender(
+      <SearchInput value="" onChange={vi.fn<(q: string) => void>()} suggestVisible={true} />,
+    );
+    expect(input.getAttribute("aria-expanded")).toBe("true");
+  });
 });

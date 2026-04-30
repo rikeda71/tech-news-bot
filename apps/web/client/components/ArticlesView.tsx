@@ -182,6 +182,7 @@ export function ArticlesView({
             onChange={onQChange}
             onFocus={handleSearchFocusIn}
             onBlur={handleSearchBlur}
+            suggestVisible={suggestVisible}
           />
           <SearchSuggestions
             items={recentSearches.items}
@@ -212,12 +213,19 @@ export function ArticlesView({
       </div>
 
       {loading && (
-        <div className="text-center text-[var(--fg-muted)] py-[var(--space-8)] px-[var(--space-3)] border border-dashed border-[var(--border-subtle)] rounded-[var(--radius-lg)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]">
+        <div
+          role="status"
+          aria-live="polite"
+          className="text-center text-[var(--fg-muted)] py-[var(--space-8)] px-[var(--space-3)] border border-dashed border-[var(--border-subtle)] rounded-[var(--radius-lg)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]"
+        >
           読み込み中…
         </div>
       )}
       {error && !loading && (
-        <div className="text-center text-[var(--danger)] py-[var(--space-8)] px-[var(--space-3)] border border-[rgba(207,34,46,0.3)] rounded-[var(--radius-lg)] bg-[var(--danger-soft)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]">
+        <div
+          role="alert"
+          className="text-center text-[var(--danger)] py-[var(--space-8)] px-[var(--space-3)] border border-[rgba(207,34,46,0.3)] rounded-[var(--radius-lg)] bg-[var(--danger-soft)] mt-[var(--space-4)] text-[var(--font-size-base)] leading-[var(--line-height-relaxed)]"
+        >
           取得エラー: {error}
         </div>
       )}

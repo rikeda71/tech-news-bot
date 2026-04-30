@@ -28,6 +28,13 @@ describe("FilterBar", () => {
     expect(screen.getByText("All categories")).toBeTruthy();
   });
 
+  it("each select has an accessible aria-label", () => {
+    render(<FilterBar {...defaultProps} />);
+    expect(screen.getByRole("combobox", { name: "カテゴリ" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "言語" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "フィード" })).toBeTruthy();
+  });
+
   it("calls onCategoryChange when a category is selected", async () => {
     const onCategoryChange = vi.fn<(c: string) => void>();
     const user = userEvent.setup();
