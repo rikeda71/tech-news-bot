@@ -63,6 +63,14 @@ jobs:
   cleanup-preview:
     if: github.event.action == 'closed'
     runs-on: ubuntu-latest
+    # deploy-preview と同じ concurrency group に入れる。
+    # PR を merge する直前に force-push が走ると synchronize → closed が連続発火し、
+    # cleanup の wrangler delete が完了した直後に deploy-preview が完走して
+    # worker を再 deploy してしまうレースがある。cancel-in-progress で先行する
+    # deploy-preview を打ち切ってから cleanup を走らせる。
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     permissions:
       pull-requests: write
     steps:
