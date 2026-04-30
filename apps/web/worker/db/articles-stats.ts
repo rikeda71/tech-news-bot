@@ -23,6 +23,13 @@ export interface CategoryTrendPoint {
   personal: number;
 }
 
+const CATEGORY_KEYS = ["ai", "bigtech", "jp", "personal"] as const;
+type CategoryKey = (typeof CATEGORY_KEYS)[number];
+
+function isCategoryKey(v: string): v is CategoryKey {
+  return (CATEGORY_KEYS as readonly string[]).includes(v);
+}
+
 export interface FeedActivityRow {
   feed_id: string;
   feed_name: string;
@@ -60,8 +67,8 @@ export async function getCategoryTrend30d(db: D1Database): Promise<CategoryTrend
   for (const row of rows.results ?? []) {
     const point = map.get(row.date);
     if (!point) continue;
-    const cat = row.category as keyof Omit<CategoryTrendPoint, "date">;
-    if (cat in point) point[cat] += row.n;
+    if (!isCategoryKey(row.category)) continue;
+    point[row.category] += row.n;
   }
 
   return points;
