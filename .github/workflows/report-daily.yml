@@ -67,7 +67,7 @@ jobs:
             - since=today
             - mode=deep
             - target=remote
-            - personal カテゴリは除外 (bigtech / ai / jp の 3 カテゴリを対象にする)
+            - personal / jp カテゴリは除外 (bigtech / ai の 2 カテゴリを対象にする)
             - lang 指定なし
 
             最終的に以下 3 ファイルを必ず書き出してください (記事 0 件でも書き出す):
