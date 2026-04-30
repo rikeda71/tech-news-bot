@@ -166,14 +166,14 @@ meta_json の `included_categories` にカバーしたカテゴリ配列を記�
 
 repository secrets に以下を登録する。
 
-| Secret                    | 用途                                                                 | 取得元                                                             |
-| ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由)                 | `claude /install-github-app` で発行                                |
-| `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                                  | `openssl rand -hex 32` などで生成 (GH 側で管理)                    |
-| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要                      | Cloudflare dashboard → API Tokens                                  |
-| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                                         | Cloudflare dashboard                                               |
-| `SLACK_BOT_TOKEN`         | report workflow の Slack スレッド投稿 (`chat.postMessage` API)       | Slack App 管理画面 → OAuth & Permissions → Bot Token (`xoxb-...`)  |
-| `SLACK_CHANNEL_ID`        | report workflow の投稿先 channel ID                                  | Slack channel の URL または右クリック → Copy link から取得         |
+| Secret                    | 用途                                                           | 取得元                                                            |
+| ------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由)           | `claude /install-github-app` で発行                               |
+| `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                            | `openssl rand -hex 32` などで生成 (GH 側で管理)                   |
+| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要                | Cloudflare dashboard → API Tokens                                 |
+| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                                   | Cloudflare dashboard                                              |
+| `SLACK_BOT_TOKEN`         | report workflow の Slack スレッド投稿 (`chat.postMessage` API) | Slack App 管理画面 → OAuth & Permissions → Bot Token (`xoxb-...`) |
+| `SLACK_CHANNEL_ID`        | report workflow の投稿先 channel ID                            | Slack channel の URL または右クリック → Copy link から取得        |
 
 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` は既に deploy workflow で使っている
 ものを流用できる。
