@@ -49,11 +49,6 @@ const DB_NAME = "tech-news-bot-db";
  */
 
 /**
- * @typedef {Object} AggregateMap
- * @type {Record<string, number>}
- */
-
-/**
  * コマンドライン引数をパースする。
  * @param {string[]} argv - process.argv
  * @returns {ParsedArgs}

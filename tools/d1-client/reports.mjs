@@ -112,9 +112,10 @@ function parseArgs(argv) {
 
 /**
  * wrangler d1 execute を実行して results 配列を返す。
+ * @template {object} T
  * @param {string} sql - 実行する SQL
  * @param {Target} target - D1 ターゲット
- * @returns {ReportRow[]}
+ * @returns {T[]}
  */
 function execWrangler(sql, target) {
   const args = [
@@ -140,7 +141,7 @@ function execWrangler(sql, target) {
   if (start < 0 || end < 0 || end <= start) {
     throw new Error(`wrangler stdout did not contain JSON array:\n${stdout}`);
   }
-  /** @type {Array<{ results?: ReportRow[] }>} */
+  /** @type {Array<{ results?: T[] }>} */
   const parsed = JSON.parse(stdout.slice(start, end + 1));
   // wrangler --json: [{ results: [...], success: true, meta: {...} }]
   return parsed[0]?.results ?? [];
@@ -416,9 +417,7 @@ ORDER BY a.kind, a.period_start, a.id, b.id;
   /** @type {OverlapRow[]} */
   let rows;
   try {
-    // execWrangler の戻り値は ReportRow[] 型だが、find-overlaps は JOIN 結果を返すため
-    // OverlapRow[] にキャストする。JOIN 結果のカラム構造は上記 SQL が保証する。
-    rows = /** @type {OverlapRow[]} */ (/** @type {unknown} */ (execWrangler(sql, opts.target)));
+    rows = /** @type {OverlapRow[]} */ (execWrangler(sql, opts.target));
   } catch (err) {
     process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
     process.exit(1);
