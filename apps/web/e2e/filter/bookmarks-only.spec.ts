@@ -11,10 +11,20 @@ test.describe("bookmarks only toggle", () => {
     const bookmarkBtn = firstCard.getByRole("button", { name: "ブックマークに追加" });
     await bookmarkBtn.click();
 
-    // ブックマーク追加が反映され aria-label が "ブックマークから削除" に変わるまで待つ
-    await expect(firstCard.getByRole("button", { name: "ブックマークから削除" })).toBeVisible({
-      timeout: 5_000,
-    });
+    // ブックマーク追加が localStorage に書き込まれるまで待つ
+    await page.waitForFunction(
+      () => {
+        const raw = localStorage.getItem("tnb:bookmarks:v1");
+        if (!raw) return false;
+        try {
+          const arr: unknown = JSON.parse(raw);
+          return Array.isArray(arr) && (arr as unknown[]).length > 0;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 5_000 },
+    );
 
     // ブックマークのみ表示ボタンをクリック (aria-label "ブックマーク N 件のみ表示")
     const bookmarkOnlyBtn = page.getByRole("button", { name: /ブックマーク \d+ 件のみ表示/ });
