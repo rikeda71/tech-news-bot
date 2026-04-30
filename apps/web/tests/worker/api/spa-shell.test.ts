@@ -74,14 +74,14 @@ describe("SPA shell rewrite: GET /articles/:id", () => {
 
     const res = await SELF.fetch(`https://example.com/articles/${id}`);
     expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toContain("max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
   });
 
   it("falls back to static index.html for unknown article id", async () => {
     const res = await SELF.fetch("https://example.com/articles/99999999");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     // fallback の場合は no-cache
-    expect(res.headers.get("Cache-Control")).toContain("no-cache");
+    expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
   });
 });
 
@@ -99,8 +99,8 @@ describe("SPA shell rewrite: GET /feed/:feedId", () => {
 
   it("falls back to static index.html for unknown feedId", async () => {
     const res = await SELF.fetch("https://example.com/feed/nonexistent-feed-xyz");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toContain("no-cache");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
   });
 });
 
@@ -159,9 +159,9 @@ describe("SPA shell rewrite: static routes (no rewriting)", () => {
   it("does not rewrite /api/* routes", async () => {
     // /api/* は JSON を返すため HTML ではない
     const res = await SELF.fetch("https://example.com/api/articles?limit=1");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const ct = res.headers.get("Content-Type") ?? "";
-    expect(ct).toContain("application/json");
+    expect.soft(ct).toContain("application/json");
   });
 });
 

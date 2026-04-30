@@ -100,7 +100,7 @@ describe("POST /api/admin/feeds/validate (integration)", () => {
     });
     expect(res.status).toBe(200);
     const cacheControl = res.headers.get("cache-control") ?? "";
-    expect(cacheControl).toContain("no-store");
+    expect.soft(cacheControl).toContain("no-store");
     const body = (await res.json()) as { ok: boolean };
     // CI では外部 fetch が失敗するため ok:false。テスト環境の制約上、ok:true は下記ユニットテストで検証する。
     expect(typeof body.ok).toBe("boolean");
@@ -121,9 +121,9 @@ describe("validateFeedUrl (unit)", () => {
     const result = await validateFeedUrl("https://example.com/feed.xml");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok:true");
-    expect(result.title).toBe("Example Tech Blog");
-    expect(result.lang).toBe("en");
-    expect(result.item_count).toBe(3);
+    expect.soft(result.title).toBe("Example Tech Blog");
+    expect.soft(result.lang).toBe("en");
+    expect.soft(result.item_count).toBe(3);
   });
 
   it("ok:true: valid Atom XML (日本語) → lang が ja", async () => {
@@ -137,9 +137,9 @@ describe("validateFeedUrl (unit)", () => {
     const result = await validateFeedUrl("https://example.com/feed.atom");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok:true");
-    expect(result.title).toBe("日本語テックブログ");
-    expect(result.lang).toBe("ja");
-    expect(result.item_count).toBe(2);
+    expect.soft(result.title).toBe("日本語テックブログ");
+    expect.soft(result.lang).toBe("ja");
+    expect.soft(result.item_count).toBe(2);
   });
 
   it("ok:false: fetch が 404 → ok:false と error を含む", async () => {
