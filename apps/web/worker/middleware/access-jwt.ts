@@ -26,8 +26,11 @@ export const accessJwtMiddleware: MiddlewareHandler<{
   Bindings: Env;
   Variables: { accessUser: AccessUser };
 }> = async (c, next) => {
-  // ローカル開発では Access が前段にいないためスキップする
+  // ローカル開発では Access が前段にいないためスキップする。
+  // 下流で c.var.accessUser を参照する route があるため、Variables 契約を維持するため
+  // 空の AccessUser を必ず set する (skip 中に未定義参照すると ReferenceError になる)。
   if (c.env.SKIP_ACCESS_JWT === "1") {
+    c.set("accessUser", { email: undefined, sub: undefined });
     return await next();
   }
 

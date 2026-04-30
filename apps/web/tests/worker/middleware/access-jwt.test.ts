@@ -22,6 +22,21 @@ describe("accessJwtMiddleware", () => {
     expect(await res.text()).toBe("ok");
   });
 
+  it("SKIP_ACCESS_JWT=1 でも accessUser が context に set される (Variables 契約維持)", async () => {
+    // 下流 handler が c.var.accessUser を参照しても ReferenceError にならないこと
+    const app = new Hono<{
+      Bindings: { SKIP_ACCESS_JWT?: string };
+      Variables: { accessUser: { email: string | undefined; sub: string | undefined } };
+    }>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    app.use("*", accessJwtMiddleware as any);
+    app.get("/", (c) => c.json({ user: c.get("accessUser") }));
+    const res = await app.fetch(new Request("https://x.test/"), { SKIP_ACCESS_JWT: "1" });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ user: { email: string | undefined; sub: string | undefined } }>();
+    expect(body.user).toEqual({ email: undefined, sub: undefined });
+  });
+
   it("CF_ACCESS_AUD / TEAM_DOMAIN 未設定で 503", async () => {
     const fetch = makeApp({});
     const res = await fetch(new Request("https://x.test/"));

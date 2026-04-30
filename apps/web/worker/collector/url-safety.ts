@@ -20,8 +20,9 @@ export function checkUrlSafety(input: string): UrlSafetyResult {
     return { ok: false, reason: `protocol not allowed: ${parsed.protocol}` };
   }
 
-  // URL.hostname は IPv6 リテラルの場合 "[::1]" のようにブラケット付きで返る
-  const host = parsed.hostname.toLowerCase();
+  // URL.hostname は IPv6 リテラルの場合 "[::1]" のようにブラケット付きで返る。
+  // 末尾ドット (FQDN 形式: "localhost.") を除去してから検査する (DNS では同一視されるため bypass を防ぐ)
+  const host = parsed.hostname.toLowerCase().replace(/\.+$/, "");
 
   // localhost / .localhost / .local / metadata.google.internal などのホスト名
   if (
@@ -68,8 +69,8 @@ function isPrivateIPv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
   if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return false;
 
-  const [a, b] = parts;
-  if (a === undefined || b === undefined) return false;
+  const [a, b, c] = parts;
+  if (a === undefined || b === undefined || c === undefined) return false;
 
   if (a === 0) return true; // 0.0.0.0/8
   if (a === 10) return true; // 10.0.0.0/8
@@ -77,11 +78,12 @@ function isPrivateIPv4(ip: string): boolean {
   if (a === 127) return true; // 127.0.0.0/8 loopback
   if (a === 169 && b === 254) return true; // 169.254.0.0/16 link-local (AWS/GCP metadata)
   if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
-  if (a === 192 && b === 0) return true; // 192.0.0.0/24 + 192.0.2.0/24 (TEST-NET-1)
+  if (a === 192 && b === 0 && c === 0) return true; // 192.0.0.0/24 IETF protocol assignments
+  if (a === 192 && b === 0 && c === 2) return true; // 192.0.2.0/24 TEST-NET-1
   if (a === 192 && b === 168) return true; // 192.168.0.0/16
   if (a === 198 && (b === 18 || b === 19)) return true; // 198.18.0.0/15 benchmark
-  if (a === 198 && b === 51) return true; // 198.51.100.0/24 (TEST-NET-2)
-  if (a === 203 && b === 0) return true; // 203.0.113.0/24 (TEST-NET-3)
+  if (a === 198 && b === 51 && c === 100) return true; // 198.51.100.0/24 TEST-NET-2
+  if (a === 203 && b === 0 && c === 113) return true; // 203.0.113.0/24 TEST-NET-3
   if (a >= 224) return true; // 224.0.0.0/4 multicast + 240.0.0.0/4 reserved + 255.255.255.255
 
   return false;

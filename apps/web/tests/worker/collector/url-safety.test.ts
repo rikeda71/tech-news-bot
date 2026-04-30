@@ -81,6 +81,22 @@ describe("checkUrlSafety", () => {
         expect.soft(result.reason).toContain("host blocked");
       }
     });
+
+    it("blocks localhost. with trailing dot (FQDN form)", () => {
+      // 末尾ドットは DNS 上 "localhost" と同義のため bypass を防ぐ
+      const result = checkUrlSafety("https://localhost./x");
+      expect.soft(result.ok).toBe(false);
+    });
+
+    it("blocks metadata.google.internal. with trailing dot", () => {
+      const result = checkUrlSafety("http://metadata.google.internal./latest/");
+      expect.soft(result.ok).toBe(false);
+    });
+
+    it("blocks foo.local. with trailing dot", () => {
+      const result = checkUrlSafety("https://foo.local./x");
+      expect.soft(result.ok).toBe(false);
+    });
   });
 
   describe("blocks private IPv4 addresses", () => {
@@ -153,6 +169,36 @@ describe("checkUrlSafety", () => {
     it("blocks 240.0.0.1 (reserved)", () => {
       const result = checkUrlSafety("https://240.0.0.1/x");
       expect.soft(result.ok).toBe(false);
+    });
+
+    it("blocks 192.0.2.1 (TEST-NET-1, 192.0.2.0/24)", () => {
+      const result = checkUrlSafety("https://192.0.2.1/x");
+      expect.soft(result.ok).toBe(false);
+    });
+
+    it("blocks 198.51.100.1 (TEST-NET-2, 198.51.100.0/24)", () => {
+      const result = checkUrlSafety("https://198.51.100.1/x");
+      expect.soft(result.ok).toBe(false);
+    });
+
+    it("blocks 203.0.113.1 (TEST-NET-3, 203.0.113.0/24)", () => {
+      const result = checkUrlSafety("https://203.0.113.1/x");
+      expect.soft(result.ok).toBe(false);
+    });
+
+    it("allows 192.1.1.1 (just outside 192.0.0.0/24 IETF range)", () => {
+      const result = checkUrlSafety("https://192.1.1.1/x");
+      expect.soft(result.ok).toBe(true);
+    });
+
+    it("allows 198.51.99.1 (just outside TEST-NET-2 /24)", () => {
+      const result = checkUrlSafety("https://198.51.99.1/x");
+      expect.soft(result.ok).toBe(true);
+    });
+
+    it("allows 203.0.112.1 (just outside TEST-NET-3 /24)", () => {
+      const result = checkUrlSafety("https://203.0.112.1/x");
+      expect.soft(result.ok).toBe(true);
     });
   });
 

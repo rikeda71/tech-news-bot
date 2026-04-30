@@ -5,7 +5,7 @@ tech-news-bot の管理エンドポイント (`/api/admin/*`) は **Cloudflare A
 
 ## アーキテクチャ
 
-```
+```text
 [ブラウザ] -> [Cloudflare Access (ネットワーク層)] -> [Worker]
                   | 未認証 -> ログインページへ
                   | 認証済み -> Cf-Access-Jwt-Assertion 付与
@@ -50,7 +50,7 @@ secret 登録後は `wrangler.toml` の `SKIP_ACCESS_JWT = "1"` を削除すれ�
 ローカルでは Access の前段がいないため、`accessJwtMiddleware` は早期 return で
 スキップする必要がある。`.dev.vars` (gitignore) に以下を記述:
 
-```
+```text
 SKIP_ACCESS_JWT=1
 ```
 
