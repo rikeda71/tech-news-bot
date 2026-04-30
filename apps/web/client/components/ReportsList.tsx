@@ -44,7 +44,11 @@ export function ReportsList({ onSelectReport }: Props) {
       </h2>
 
       {/* kind フィルタ chip */}
-      <div role="group" aria-label="レポートの種別フィルタ" className="flex flex-wrap gap-[var(--space-2)] mb-[var(--space-4)]">
+      <div
+        role="group"
+        aria-label="レポートの種別フィルタ"
+        className="flex flex-wrap gap-[var(--space-2)] mb-[var(--space-4)]"
+      >
         {chips.map(({ label, value }) => (
           <button
             key={label}
@@ -63,11 +67,19 @@ export function ReportsList({ onSelectReport }: Props) {
       </div>
 
       {loading && (
-        <p role="status" aria-live="polite" className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">読み込み中...</p>
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-[var(--fg-muted)] text-[var(--font-size-sm)]"
+        >
+          読み込み中...
+        </p>
       )}
 
       {error && (
-        <p role="alert" className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">エラー: {error}</p>
+        <p role="alert" className="text-[var(--fg-muted)] text-[var(--font-size-sm)]">
+          エラー: {error}
+        </p>
       )}
 
       {!loading && !error && reports.length === 0 && (
