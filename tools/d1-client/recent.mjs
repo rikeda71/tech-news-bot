@@ -4,7 +4,7 @@
 //
 // Usage:
 //   node tools/d1-client/recent.mjs --since=today [--target=local|remote]
-//                                   [--category=ai|bigtech|jp|zenn] [--lang=ja|en]
+//                                   [--category=ai|bigtech|jp|zenn[,ai,...]] [--lang=ja|en]
 //                                   [--limit=200]
 //
 // Output (stdout): JSON object as documented in SKILL.md
@@ -53,10 +53,33 @@ function sinceToISO(spec) {
   return new Date(now.getTime() - ms).toISOString();
 }
 
+const VALID_CATEGORIES = ["bigtech", "ai", "jp", "zenn"];
+const VALID_LANGS = ["ja", "en"];
+
 function buildSQL({ since, category, lang, limit }) {
   const where = [`a.published_at > '${since.replace(/'/g, "''")}'`];
-  if (category) where.push(`a.category = '${category.replace(/'/g, "''")}'`);
-  if (lang) where.push(`a.lang = '${lang.replace(/'/g, "''")}'`);
+  if (category) {
+    const cats = category
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    const invalid = cats.filter((c) => !VALID_CATEGORIES.includes(c));
+    if (invalid.length > 0) {
+      process.stderr.write(
+        `Invalid --category value(s): ${invalid.join(", ")}. Allowed: ${VALID_CATEGORIES.join(", ")}\n`,
+      );
+      process.exit(2);
+    }
+    const placeholders = cats.map((c) => `'${c.replace(/'/g, "''")}'`).join(", ");
+    where.push(`a.category IN (${placeholders})`);
+  }
+  if (lang) {
+    if (!VALID_LANGS.includes(lang)) {
+      process.stderr.write(`Invalid --lang value: ${lang}. Allowed: ${VALID_LANGS.join(", ")}\n`);
+      process.exit(2);
+    }
+    where.push(`a.lang = '${lang.replace(/'/g, "''")}'`);
+  }
   return `
 SELECT a.id, a.guid, a.feed_id, f.name AS feed_name,
        a.title, a.url, a.summary, a.author,

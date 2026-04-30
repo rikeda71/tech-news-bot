@@ -22,7 +22,7 @@ node tools/d1-client/recent.mjs --since=<today|week|month|N> [options]
 | ------------ | ---------- | ------------------------------------------------------------------------------------ |
 | `--since`    | (必須)     | `today` / `week` / `month` / `N`                                                     |
 | `--target`   | `local`    | `local` または `remote`                                                              |
-| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`                                                     |
+| `--category` | なし       | `bigtech` / `ai` / `jp` / `zenn`。カンマ区切りで複数指定可 (例: `bigtech,ai,jp`)     |
 | `--lang`     | なし       | `ja` または `en`                                                                     |
 | `--limit`    | `200`      | 最大取得件数 (上限 1000 — D1 の 1 invocation あたり 50 queries 制限に基づく実装上限) |
 
@@ -31,6 +31,7 @@ node tools/d1-client/recent.mjs --since=<today|week|month|N> [options]
 ```sh
 node tools/d1-client/recent.mjs --since=today --target=remote
 node tools/d1-client/recent.mjs --since=week --category=ai --target=remote
+node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=remote
 ```
 
 出力 JSON:
