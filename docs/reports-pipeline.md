@@ -166,15 +166,14 @@ meta_json の `included_categories` にカバーしたカテゴリ配列を記�
 
 repository secrets に以下を登録する。
 
-| Secret                    | 用途                                                                 | 取得元                                                             |
-| ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由)                 | `claude /install-github-app` で発行                                |
-| `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                                  | `openssl rand -hex 32` などで生成 (GH 側で管理)                    |
-| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要                      | Cloudflare dashboard → API Tokens                                  |
-| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                                         | Cloudflare dashboard                                               |
-| `SLACK_BOT_TOKEN`         | report workflow の Slack スレッド投稿 (`chat.postMessage` API)       | Slack App 管理画面 → OAuth & Permissions → Bot Token (`xoxb-...`)  |
-| `SLACK_CHANNEL_ID`        | report workflow の投稿先 channel ID                                  | Slack channel の URL または右クリック → Copy link から取得         |
-| `SLACK_WEBHOOK_URL`       | collector 日次ダイジェスト用 (apps/web/worker/notify/slack-daily.ts) | Slack ワークスペースで incoming webhook を作成 (report では未使用) |
+| Secret                    | 用途                                                           | 取得元                                                            |
+| ------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `claude-code-base-action` の認証 (subscription 経由)           | `claude /install-github-app` で発行                               |
+| `WORKER_ADMIN_TOKEN`      | `/api/admin/reports` の Bearer 認証                            | `openssl rand -hex 32` などで生成 (GH 側で管理)                   |
+| `CLOUDFLARE_API_TOKEN`    | `wrangler d1 execute --remote` を打つために必要                | Cloudflare dashboard → API Tokens                                 |
+| `CLOUDFLARE_ACCOUNT_ID`   | wrangler の account 自動選択                                   | Cloudflare dashboard                                              |
+| `SLACK_BOT_TOKEN`         | report workflow の Slack スレッド投稿 (`chat.postMessage` API) | Slack App 管理画面 → OAuth & Permissions → Bot Token (`xoxb-...`) |
+| `SLACK_CHANNEL_ID`        | report workflow の投稿先 channel ID                            | Slack channel の URL または右クリック → Copy link から取得        |
 
 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` は既に deploy workflow で使っている
 ものを流用できる。
@@ -248,9 +247,6 @@ Slack Bot Token + `chat.postMessage` API を使い、**スレッド化した 2 �
 - `continue-on-error: true` を付けているため、Slack 投稿が失敗しても workflow 全体が fail しない
 - bot token リテラルをコードに埋め込まない。`${{ secrets.SLACK_BOT_TOKEN }}` 経由でのみ参照する
 - **bot を channel に invite する必要がある**: Slack ワークスペースで `/invite @<bot名>` を投稿先 channel で実行しないと `not_in_channel` エラーになる
-
-> **注**: `apps/web/worker/notify/slack-daily.ts` (collector の日次ダイジェスト) は引き続き
-> `SLACK_WEBHOOK_URL` (incoming webhook) を使用する。この webhook は削除しないこと。
 
 ### 設定方法
 

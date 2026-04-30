@@ -21,8 +21,6 @@ export interface Env {
   COLLECTOR_ALERT_WEBHOOK?: string;
   // 閾値: feeds_failed がこの値以上になったら通知する (default: "5")
   COLLECTOR_ALERT_THRESHOLD?: string;
-  // 日次ダイジェスト投稿先 (wrangler secret put SLACK_WEBHOOK_URL)
-  SLACK_WEBHOOK_URL?: string;
 }
 
 export type FeedCategory = "bigtech" | "ai" | "jp" | "zenn";

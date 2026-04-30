@@ -8,7 +8,6 @@ import opml from "./api/opml";
 import { rewriteShell } from "./api/spa-shell";
 import { collectAll } from "./collector";
 import { pruneOldArticles } from "./db/retention";
-import { sendDailyDigest } from "./notify/slack-daily";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -72,14 +71,6 @@ const handler: ExportedHandler<Env> = {
     );
 
     const utcHour = new Date().getUTCHours();
-    // UTC 00:00 (JST 09:00): Slack 日次ダイジェスト投稿
-    if (utcHour === 0) {
-      ctx.waitUntil(
-        sendDailyDigest(env.DB, env.SLACK_WEBHOOK_URL).catch((err) => {
-          console.error("[scheduled] sendDailyDigest failed", err);
-        }),
-      );
-    }
     // Run retention once per day at UTC 18:00 (JST 03:00) — 低トラフィック帯。
     // cron `0 */6 * * *` は UTC 00,06,12,18 のみ起動するため 17 ではなく 18 に揃える。
     if (utcHour === 18) {

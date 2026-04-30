@@ -18,10 +18,9 @@ database_id = "a6cd7dbc-9f26-46d9-83c8-4a7b89405b7b"
 migrations_dir = "../../migrations"
 
 [triggers]
-# 0 */6 * * * : 6 時間ごと (UTC 00,06,12,18) — RSS 収集 + Slack 日次 (00:00 のみ)
+# 0 */6 * * * : 6 時間ごと (UTC 00,06,12,18) — RSS 収集
 # Medium 等の外部レート制限と Worker 1 invocation あたりの subrequest 上限を緩和するため
 # 3h → 6h に頻度を下げている。新着の取り込みは最大 6 時間遅れる。
-# Slack 投稿には SLACK_WEBHOOK_URL を `wrangler secret put SLACK_WEBHOOK_URL` で登録する
 crons = ["0 */6 * * *"]
 
 [vars]
