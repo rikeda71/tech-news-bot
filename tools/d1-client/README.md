@@ -49,6 +49,171 @@ node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=
 }
 ```
 
+## reports.mjs — レポートの一覧・詳細・削除・重複検出
+
+D1 の `reports` テーブルに保存された自動生成レポートを操作する。`tech-news-reports` skill が使用する。
+
+```sh
+node tools/d1-client/reports.mjs <list|show|delete|find-overlaps> [options]
+```
+
+### list — レポート一覧
+
+```sh
+node tools/d1-client/reports.mjs list [options]
+```
+
+| オプション | デフォルト | 説明                                                 |
+| ---------- | ---------- | ---------------------------------------------------- |
+| `--kind`   | なし       | `daily` / `weekly` / `monthly` で絞り込み            |
+| `--from`   | なし       | ISO 8601 datetime。`generated_at >= from` でフィルタ |
+| `--to`     | なし       | ISO 8601 datetime。`generated_at <= to` でフィルタ   |
+| `--limit`  | `50`       | 最大取得件数 (上限 1000)                             |
+| `--target` | `local`    | `local` または `remote`                              |
+
+例:
+
+```sh
+node tools/d1-client/reports.mjs list --target=remote
+node tools/d1-client/reports.mjs list --kind=weekly --target=remote
+node tools/d1-client/reports.mjs list --kind=daily --from=2026-04-01T00:00:00Z --to=2026-04-30T23:59:59Z --target=remote
+```
+
+出力 JSON:
+
+```json
+{
+  "target": "remote",
+  "filters": { "kind": "weekly", "from": null, "to": null },
+  "total": 3,
+  "reports": [
+    {
+      "id": 5,
+      "kind": "weekly",
+      "period_start": "2026-04-21T00:00:00Z",
+      "period_end": "2026-04-28T00:00:00Z",
+      "category": null,
+      "lang": "ja",
+      "source_skill": "tech-news-weekly",
+      "generated_at": "2026-04-28T06:00:00Z",
+      "content_len": 4200
+    }
+  ]
+}
+```
+
+### show — レポート詳細
+
+```sh
+node tools/d1-client/reports.mjs show <id> [--target=local|remote]
+```
+
+例:
+
+```sh
+node tools/d1-client/reports.mjs show 5 --target=remote
+```
+
+出力 JSON:
+
+```json
+{
+  "target": "remote",
+  "report": {
+    "id": 5,
+    "kind": "weekly",
+    "period_start": "2026-04-21T00:00:00Z",
+    "period_end": "2026-04-28T00:00:00Z",
+    "category": null,
+    "lang": "ja",
+    "content": "...",
+    "meta_json": null,
+    "source_skill": "tech-news-weekly",
+    "generated_at": "2026-04-28T06:00:00Z"
+  }
+}
+```
+
+### delete — レポート削除
+
+デフォルトは dry-run。`--apply` を付けたときのみ実際に削除する。
+
+```sh
+node tools/d1-client/reports.mjs delete <id|id1,id2,...> [--target=local|remote] [--apply]
+```
+
+例:
+
+```sh
+# dry-run (対象確認)
+node tools/d1-client/reports.mjs delete 5 --target=remote
+# 複数 id
+node tools/d1-client/reports.mjs delete 3,4,5 --target=remote
+# 実際に削除
+node tools/d1-client/reports.mjs delete 5 --target=remote --apply
+```
+
+出力 JSON:
+
+```json
+{
+  "target": "remote",
+  "dry_run": true,
+  "requested_ids": [5],
+  "found_ids": [5],
+  "deleted_count": 0,
+  "found_reports": [...]
+}
+```
+
+### find-overlaps — 重複期間レポートの検出
+
+同じ (kind, category, lang) 内で期間が重複するレポートのペアを検出する。
+
+```sh
+node tools/d1-client/reports.mjs find-overlaps [--kind=daily|weekly|monthly] [--target=local|remote]
+```
+
+例:
+
+```sh
+node tools/d1-client/reports.mjs find-overlaps --target=remote
+node tools/d1-client/reports.mjs find-overlaps --kind=weekly --target=remote
+```
+
+出力 JSON:
+
+```json
+{
+  "target": "remote",
+  "total_pairs": 1,
+  "overlaps": [
+    {
+      "a": {
+        "id": 3,
+        "kind": "weekly",
+        "period_start": "2026-04-14T00:00:00Z",
+        "period_end": "2026-04-21T00:00:00Z",
+        "category": null,
+        "lang": "ja",
+        "source_skill": "tech-news-weekly",
+        "generated_at": "2026-04-21T06:00:00Z"
+      },
+      "b": {
+        "id": 4,
+        "kind": "weekly",
+        "period_start": "2026-04-17T00:00:00Z",
+        "period_end": "2026-04-24T00:00:00Z",
+        "category": null,
+        "lang": "ja",
+        "source_skill": "tech-news-weekly",
+        "generated_at": "2026-04-24T06:00:00Z"
+      }
+    }
+  ]
+}
+```
+
 ## search.mjs — キーワード全文検索で記事を取得
 
 FTS5 (trigram tokenizer, `migrations/0003_fts5_trigram.sql` で設定) を使ってキーワード検索した記事を返す。`tech-news-search` skill が使用する。
