@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
 
+permissions: {}
+
 jobs:
   deploy-preview:
     if: github.event.action != 'closed'
