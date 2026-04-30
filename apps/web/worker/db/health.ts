@@ -1,3 +1,5 @@
+import type { HealthArticleStatsDbRow, HealthFeedStatsDbRow } from "./types";
+
 export interface HealthSummary {
   articles_total: number;
   feeds_total: number;
@@ -8,6 +10,7 @@ export interface HealthSummary {
 
 /** D1 batch で 1 round trip に集約して health 統計を返す。 */
 export async function getHealthSummary(db: D1Database): Promise<HealthSummary> {
+  // db.batch() は型パラメータを受け取れないため、取り出し後に Row 型へ変換する
   const [articleStats, feedStats] = await db.batch([
     db.prepare(
       `SELECT COUNT(*) AS articles_total,
@@ -22,21 +25,14 @@ export async function getHealthSummary(db: D1Database): Promise<HealthSummary> {
     ),
   ]);
 
-  const aRow = (articleStats.results[0] ?? {}) as {
-    articles_total: number;
-    latest_published_at: string | null;
-    latest_fetched_at: string | null;
-  };
-  const fRow = (feedStats.results[0] ?? {}) as {
-    feeds_total: number;
-    feeds_enabled: number | null;
-  };
+  const aRow = articleStats.results[0] as HealthArticleStatsDbRow | undefined;
+  const fRow = feedStats.results[0] as HealthFeedStatsDbRow | undefined;
 
   return {
-    articles_total: aRow.articles_total ?? 0,
-    feeds_total: fRow.feeds_total ?? 0,
-    feeds_enabled: fRow.feeds_enabled ?? 0,
-    latest_published_at: aRow.latest_published_at ?? null,
-    latest_fetched_at: aRow.latest_fetched_at ?? null,
+    articles_total: aRow?.articles_total ?? 0,
+    feeds_total: fRow?.feeds_total ?? 0,
+    feeds_enabled: fRow?.feeds_enabled ?? 0,
+    latest_published_at: aRow?.latest_published_at ?? null,
+    latest_fetched_at: aRow?.latest_fetched_at ?? null,
   };
 }
