@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { loadAllFeeds } from "../feed-config";
+import { getFeedsVersion, loadAllFeeds } from "../feed-config";
 import {
   countArticlesByDay,
   countArticlesByMonth,
@@ -18,8 +18,6 @@ import {
   searchArticles,
 } from "../db/articles";
 import { computeArticlesEtag } from "../utils/etag";
-import feedsYaml from "../feeds.yaml";
-import type { FeedsFile } from "../types";
 import type {
   ArticleArchiveResponse,
   ArticleByAuthorResponse,
@@ -36,7 +34,7 @@ import type {
 import { isCategory, isLang } from "./_guards";
 import { decodeCursor, encodeCursor, isValidDateRange, parseListQuery } from "./articles-parse";
 
-const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
+const FEEDS_VERSION = getFeedsVersion();
 
 const app = new Hono<{ Bindings: Env }>();
 
