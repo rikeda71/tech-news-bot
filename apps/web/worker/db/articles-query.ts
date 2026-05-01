@@ -364,4 +364,3 @@ export async function getArticlesByDay(
     .all<Article>();
   return extractWithCursor(result.results ?? [], limit);
 }
-
