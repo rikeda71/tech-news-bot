@@ -6,6 +6,7 @@ import type {
   TopPublisherRow,
   ByLang30d,
 } from "../db/articles";
+import { rowsAs } from "../db/_helpers";
 import type { Env } from "../types";
 import type { StatsResponse } from "./types";
 
@@ -100,7 +101,7 @@ app.get("/", async (c) => {
       ),
     ]);
 
-    const summaryRow = (summaryResult.results?.[0] ?? null) as {
+    type SummaryRow = {
       total: number;
       last_published: string | null;
       last_fetched: string | null;
@@ -111,7 +112,8 @@ app.get("/", async (c) => {
       cat_personal: number;
       lang_ja: number;
       lang_en: number;
-    } | null;
+    };
+    const summaryRow = rowsAs<SummaryRow>(summaryResult)[0] ?? null;
 
     // getCategoryTrend30d と同等の 0 埋め処理
     const today = new Date();
@@ -124,11 +126,7 @@ app.get("/", async (c) => {
     }
     const trendMap = new Map<string, CategoryTrendPoint>();
     for (const p of points) trendMap.set(p.date, p);
-    for (const row of (categoryTrendRaw.results ?? []) as {
-      date: string;
-      category: string;
-      n: number;
-    }[]) {
+    for (const row of rowsAs<{ date: string; category: string; n: number }>(categoryTrendRaw)) {
       const point = trendMap.get(row.date);
       if (!point) continue;
       const cat = row.category as keyof Omit<CategoryTrendPoint, "date">;
@@ -137,11 +135,11 @@ app.get("/", async (c) => {
 
     // getByLang30d と同等の集計
     const byLang30d: ByLang30d = { ja: 0, en: 0 };
-    for (const row of (byLang30dRaw.results ?? []) as { lang: string; count: number }[]) {
+    for (const row of rowsAs<{ lang: string; count: number }>(byLang30dRaw)) {
       if (row.lang === "ja") byLang30d.ja = row.count;
       else if (row.lang === "en") byLang30d.en = row.count;
     }
-    const feedActivity = (feedActivityRaw.results ?? []) as FeedActivityRow[];
+    const feedActivity = rowsAs<FeedActivityRow>(feedActivityRaw);
     // feedActivity は articles_30d DESC 済みなので先頭 10 件が top_publishers と等価
     const topPublishers: TopPublisherRow[] = feedActivity.slice(0, 10).map((r) => ({
       feed_id: r.feed_id,
@@ -164,10 +162,10 @@ app.get("/", async (c) => {
         ja: summaryRow?.lang_ja ?? 0,
         en: summaryRow?.lang_en ?? 0,
       },
-      stale_feeds: (staleResult.results ?? []) as StatsResponse["stale_feeds"],
+      stale_feeds: rowsAs<StatsResponse["stale_feeds"][number]>(staleResult),
       category_trend_30d: points,
       feed_activity: feedActivity,
-      top_authors_30d: (topAuthorsRaw.results ?? []) as TopAuthorRow[],
+      top_authors_30d: rowsAs<TopAuthorRow>(topAuthorsRaw),
       top_publishers_30d: topPublishers,
       by_lang_30d: byLang30d,
     });
