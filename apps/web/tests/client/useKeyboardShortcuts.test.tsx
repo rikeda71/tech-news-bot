@@ -134,11 +134,11 @@ describe("useKeyboardShortcuts", () => {
     fire("?");
     fire("G");
 
-    expect(handlers.onNext).not.toHaveBeenCalled();
-    expect(handlers.onPrev).not.toHaveBeenCalled();
-    expect(handlers.onBookmark).not.toHaveBeenCalled();
-    expect(handlers.onShowHelp).not.toHaveBeenCalled();
-    expect(handlers.onBottom).not.toHaveBeenCalled();
+    expect.soft(handlers.onNext).not.toHaveBeenCalled();
+    expect.soft(handlers.onPrev).not.toHaveBeenCalled();
+    expect.soft(handlers.onBookmark).not.toHaveBeenCalled();
+    expect.soft(handlers.onShowHelp).not.toHaveBeenCalled();
+    expect.soft(handlers.onBottom).not.toHaveBeenCalled();
 
     document.body.removeChild(input);
   });
@@ -165,7 +165,7 @@ describe("useKeyboardShortcuts", () => {
     fire("Enter");
     fire("Escape");
     for (const fn of Object.values(handlers)) {
-      expect(fn).not.toHaveBeenCalled();
+      expect.soft(fn).not.toHaveBeenCalled();
     }
   });
 

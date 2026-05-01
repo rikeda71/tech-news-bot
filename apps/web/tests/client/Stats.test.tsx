@@ -50,8 +50,8 @@ describe("StatsPanel", () => {
   it("renders feed activity rows with feed name and count", () => {
     const stats: Stats = { ...baseStats, feed_activity: [feedActivity] };
     render(<StatsPanel stats={stats} />);
-    expect(screen.getByText("Tech Blog")).toBeTruthy();
-    expect(screen.getByText("42")).toBeTruthy();
+    expect.soft(screen.getByText("Tech Blog")).toBeTruthy();
+    expect.soft(screen.getByText("42")).toBeTruthy();
   });
 
   it("renders the category trend chart when trend data has non-zero values", () => {

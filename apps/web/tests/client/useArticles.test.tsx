@@ -51,8 +51,8 @@ describe("useArticles 基本動作", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.articles).toHaveLength(5);
-    expect(result.current.error).toBeNull();
+    expect.soft(result.current.articles).toHaveLength(5);
+    expect.soft(result.current.error).toBeNull();
   });
 
   it("nextCursor が null のとき nextCursor が null になる", async () => {
@@ -76,8 +76,8 @@ describe("useArticles 基本動作", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toBeTruthy();
-    expect(result.current.articles).toEqual([]);
+    expect.soft(result.current.error).toBeTruthy();
+    expect.soft(result.current.articles).toEqual([]);
   });
 
   it("loadMore で次ページが追加される", async () => {
@@ -234,9 +234,9 @@ describe("useArticles 自動 loadMore", () => {
     );
 
     // 上限到達後に autoLoadStopped が true になる
-    expect(result.current.autoLoadStopped).toBe(true);
+    expect.soft(result.current.autoLoadStopped).toBe(true);
     // これ以上 fetch が呼ばれないことを確認 (=6 回で打ち止め)
-    expect(mockFetch.mock.calls.length).toBe(6);
+    expect.soft(mockFetch.mock.calls.length).toBe(6);
   });
 
   it("autoLoadStopped は isFilterActive=false のとき false のまま", async () => {
