@@ -49,18 +49,19 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { feeds: unknown[]; count: number };
+    // Array.isArray は後続 toHaveLength の guard として fail-fast させる
     expect(Array.isArray(body.feeds)).toBe(true);
-    expect(body.feeds).toHaveLength(0);
-    expect(body.count).toBe(0);
+    expect.soft(body.feeds).toHaveLength(0);
+    expect.soft(body.count).toBe(0);
   });
 
   it("200: Cache-Control が private, max-age=30", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const cc = res.headers.get("cache-control") ?? "";
     expect.soft(cc).toContain("private");
     expect.soft(cc).toContain("max-age=30");
@@ -72,12 +73,12 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: { id: string; enabled: boolean }[];
       count: number;
     };
-    expect(body.count).toBe(2);
+    expect.soft(body.count).toBe(2);
     const ids = body.feeds.map((f) => f.id);
     expect.soft(ids).toContain("feed-alpha");
     expect.soft(ids).toContain("feed-beta");
@@ -98,7 +99,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: {
         id: string;
@@ -119,6 +120,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
       }[];
       count: number;
     };
+    // count は feeds[0] アクセスのガードなので plain expect を使う
     expect(body.count).toBe(1);
     const f = body.feeds[0];
     expect.soft(f.id).toBe("feed-alpha");
@@ -147,7 +149,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: {
         id: string;
@@ -201,7 +203,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: {
         id: string;
