@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { useReport } from "../hooks/useReports";
+import { formatDatetime } from "../lib/format-date";
 import { safeHref } from "../utils/safe-href";
 
 const KIND_LABELS: Record<string, string> = {
@@ -23,18 +24,6 @@ function parseMeta(metaJson: string | null): MetaJson | null {
   } catch {
     return null;
   }
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 // markdown 内のリンクを新タブで開くカスタムレンダラ。
@@ -113,7 +102,7 @@ export function ReportDetail({ id, onBack }: Props) {
           {new Date(report.period_end).toLocaleDateString("ja-JP")}
         </p>
         <p className="text-[var(--fg-muted)] text-[var(--font-size-xs)] m-0">
-          生成: {formatDate(report.generated_at)} · {report.source_skill}
+          生成: {formatDatetime(report.generated_at)} · {report.source_skill}
         </p>
       </div>
 

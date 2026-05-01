@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useReadState } from "../hooks/useReadState";
 import { useStarredState } from "../hooks/useStarredState";
+import { formatDatetime } from "../lib/format-date";
 import type { Article, FeedCategory } from "../types/api";
 import { safeHref } from "../utils/safe-href";
 import { BookmarkButton } from "./BookmarkButton";
@@ -52,18 +53,6 @@ const CATEGORY_BADGE_CLASS: Record<string, string> = {
   jp: "bg-[var(--cat-jp-bg)] text-[var(--cat-jp)]",
   personal: "bg-[var(--cat-personal-bg)] text-[var(--cat-personal)]",
 };
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export function ArticleCard({
   article,
@@ -157,7 +146,7 @@ export function ArticleCard({
           {article.feed_name ?? article.feed_id}
         </button>
         <span>·</span>
-        <time dateTime={article.published_at}>{formatDate(article.published_at)}</time>
+        <time dateTime={article.published_at}>{formatDatetime(article.published_at)}</time>
         {article.author && (
           <>
             <span>·</span>
