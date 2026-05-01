@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { getReport, isReportKind, listReports } from "../db/reports";
 import type { ReportKind } from "../db/reports";
 import type { AdminReportDetailResponse, AdminReportListResponse } from "./types";
+import { parseLimit, parsePositiveInt } from "./_helpers";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -16,8 +17,7 @@ app.get("/", async (c) => {
     kind = kindParam;
   }
 
-  const limitParam = Number(c.req.query("limit") ?? "20");
-  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
+  const limit = parseLimit(c.req.query("limit"), { default: 20, max: 100 });
 
   const reports = await listReports(c.env.DB, { kind, limit });
   return c.json<AdminReportListResponse>({ reports }, 200, {
@@ -26,8 +26,8 @@ app.get("/", async (c) => {
 });
 
 app.get("/:id", async (c) => {
-  const idParam = Number(c.req.param("id"));
-  if (!Number.isFinite(idParam) || idParam <= 0) {
+  const idParam = parsePositiveInt(c.req.param("id"));
+  if (idParam === null) {
     return c.json({ error: "invalid id" }, 400);
   }
   const detail = await getReport(c.env.DB, idParam);

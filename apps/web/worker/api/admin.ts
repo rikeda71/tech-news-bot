@@ -3,6 +3,7 @@ import type { MiddlewareHandler } from "hono";
 import type { Env } from "../types";
 import { adminAuthMiddleware } from "../utils/auth";
 import { withTimeout } from "../utils/with-timeout";
+import { parseLimit, parsePositiveInt } from "./_helpers";
 import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { setFeedEnabled } from "../db/feeds";
@@ -207,15 +208,14 @@ app.post("/feeds/:id/enabled", async (c) => {
 });
 
 app.get("/runs", async (c) => {
-  const limitParam = Number(c.req.query("limit") ?? "20");
-  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
+  const limit = parseLimit(c.req.query("limit"), { default: 20, max: 100 });
   const runs = await listRuns(c.env.DB, limit);
   return c.json<AdminRunListResponse>({ runs });
 });
 
 app.get("/runs/:id", async (c) => {
-  const idParam = Number(c.req.param("id"));
-  if (!Number.isFinite(idParam) || idParam <= 0) {
+  const idParam = parsePositiveInt(c.req.param("id"));
+  if (idParam === null) {
     return c.json({ error: "invalid id" }, 400);
   }
   const detail = await getRun(c.env.DB, idParam);

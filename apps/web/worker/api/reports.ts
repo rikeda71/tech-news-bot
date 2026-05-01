@@ -10,6 +10,7 @@ import type {
   AdminReportSaveResponse,
 } from "./types";
 import { isCategory, isLang } from "./_guards";
+import { parseLimit, parsePositiveInt } from "./_helpers";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -169,16 +170,15 @@ app.get("/", async (c) => {
     kind = kindParam;
   }
 
-  const limitParam = Number(c.req.query("limit") ?? "20");
-  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
+  const limit = parseLimit(c.req.query("limit"), { default: 20, max: 100 });
 
   const reports = await listReports(c.env.DB, { kind, limit });
   return c.json<AdminReportListResponse>({ reports });
 });
 
 app.get("/:id", async (c) => {
-  const idParam = Number(c.req.param("id"));
-  if (!Number.isFinite(idParam) || idParam <= 0) {
+  const idParam = parsePositiveInt(c.req.param("id"));
+  if (idParam === null) {
     return c.json({ error: "invalid id" }, 400);
   }
   const detail = await getReport(c.env.DB, idParam);
