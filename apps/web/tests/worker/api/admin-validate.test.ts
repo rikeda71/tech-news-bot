@@ -74,9 +74,9 @@ describe("POST /api/admin/feeds/validate (integration)", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ url: "not-a-url" }),
     });
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/invalid url/i);
+    expect.soft(body.error).toMatch(/invalid url/i);
   });
 
   it("400: http/https 以外のスキーマ → 400", async () => {
@@ -85,9 +85,9 @@ describe("POST /api/admin/feeds/validate (integration)", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ url: "ftp://example.com/feed.xml" }),
     });
-    expect(res.status).toBe(400);
+    expect.soft(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/invalid url/i);
+    expect.soft(body.error).toMatch(/invalid url/i);
   });
 
   it("200 + ok:false: 外部 fetch は CI 環境では失敗 → ok:false と Cache-Control: no-store", async () => {
@@ -98,12 +98,12 @@ describe("POST /api/admin/feeds/validate (integration)", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ url: "https://example.com/feed.xml" }),
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const cacheControl = res.headers.get("cache-control") ?? "";
     expect.soft(cacheControl).toContain("no-store");
     const body = (await res.json()) as { ok: boolean };
     // CI では外部 fetch が失敗するため ok:false。テスト環境の制約上、ok:true は下記ユニットテストで検証する。
-    expect(typeof body.ok).toBe("boolean");
+    expect.soft(typeof body.ok).toBe("boolean");
   });
 });
 
@@ -119,6 +119,7 @@ describe("validateFeedUrl (unit)", () => {
     );
 
     const result = await validateFeedUrl("https://example.com/feed.xml");
+    // result.ok は後続の narrowing guard なので plain expect を使う
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok:true");
     expect.soft(result.title).toBe("Example Tech Blog");
@@ -135,6 +136,7 @@ describe("validateFeedUrl (unit)", () => {
     );
 
     const result = await validateFeedUrl("https://example.com/feed.atom");
+    // result.ok は後続の narrowing guard なので plain expect を使う
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok:true");
     expect.soft(result.title).toBe("日本語テックブログ");
@@ -146,10 +148,11 @@ describe("validateFeedUrl (unit)", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
     const result = await validateFeedUrl("https://example.com/feed.xml");
+    // result.ok は後続の narrowing guard なので plain expect を使う
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected ok:false");
-    expect(typeof result.error).toBe("string");
-    expect(result.error.length).toBeGreaterThan(0);
+    expect.soft(typeof result.error).toBe("string");
+    expect.soft(result.error.length).toBeGreaterThan(0);
   });
 
   it("ok:false: XML でないレスポンス (HTML) → ok:false", async () => {
@@ -180,8 +183,9 @@ describe("validateFeedUrl (unit)", () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
     const result = await validateFeedUrl("https://unreachable.example.com/feed.xml");
+    // result.ok は後続の narrowing guard なので plain expect を使う
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected ok:false");
-    expect(typeof result.error).toBe("string");
+    expect.soft(typeof result.error).toBe("string");
   });
 });
