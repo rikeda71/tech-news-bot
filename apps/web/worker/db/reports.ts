@@ -5,6 +5,13 @@ import type { D1BindParameter } from "./types";
 
 export type ReportKind = "daily" | "weekly" | "monthly";
 
+// ReportKind の全値リスト。ここを更新すれば isReportKind も自動的に追従する。
+export const REPORT_KINDS = ["daily", "weekly", "monthly"] as const satisfies readonly ReportKind[];
+
+export function isReportKind(v: unknown): v is ReportKind {
+  return REPORT_KINDS.includes(v as ReportKind);
+}
+
 export interface ReportInput {
   kind: ReportKind;
   period_start: string;

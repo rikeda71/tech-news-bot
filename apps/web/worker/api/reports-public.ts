@@ -1,21 +1,19 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { getReport, listReports } from "../db/reports";
+import { getReport, isReportKind, listReports } from "../db/reports";
 import type { ReportKind } from "../db/reports";
 import type { AdminReportDetailResponse, AdminReportListResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
 
-const VALID_KINDS = new Set<ReportKind>(["daily", "weekly", "monthly"]);
-
 app.get("/", async (c) => {
   const kindParam = c.req.query("kind");
   let kind: ReportKind | undefined;
   if (kindParam !== undefined) {
-    if (!VALID_KINDS.has(kindParam as ReportKind)) {
+    if (!isReportKind(kindParam)) {
       return c.json({ error: "kind must be one of: daily | weekly | monthly" }, 400);
     }
-    kind = kindParam as ReportKind;
+    kind = kindParam;
   }
 
   const limitParam = Number(c.req.query("limit") ?? "20");

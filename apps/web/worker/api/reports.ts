@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { adminAuthMiddleware } from "../utils/auth";
-import { OverlapError, getReport, listReports, upsertReport } from "../db/reports";
+import { OverlapError, getReport, isReportKind, listReports, upsertReport } from "../db/reports";
 import type { ReportInput, ReportKind } from "../db/reports";
 import type {
   AdminReportDetailResponse,
@@ -17,7 +17,6 @@ const app = new Hono<{ Bindings: Env }>();
 // 個別ハンドラでの authGuard 呼び出しを廃し、ハンドラ追加時の認証漏れを防ぐ。
 app.use("*", adminAuthMiddleware);
 
-const VALID_KINDS = new Set<ReportKind>(["daily", "weekly", "monthly"]);
 // content が極端に長くなるのを防ぐ (D1 の row size と Worker の CPU 時間を意識)。
 // 1MB は markdown レポートとしては十分すぎる量。
 const MAX_CONTENT_BYTES = 1_000_000;
@@ -49,7 +48,7 @@ interface PostBody {
 function parseInput(
   body: PostBody,
 ): { ok: true; input: ReportInput } | { ok: false; error: string } {
-  if (typeof body.kind !== "string" || !VALID_KINDS.has(body.kind as ReportKind)) {
+  if (!isReportKind(body.kind)) {
     return { ok: false, error: "kind must be one of: daily | weekly | monthly" };
   }
   if (!isISO8601(body.period_start)) {
@@ -105,7 +104,7 @@ function parseInput(
   return {
     ok: true,
     input: {
-      kind: body.kind as ReportKind,
+      kind: body.kind,
       period_start: body.period_start,
       period_end: body.period_end,
       category,
@@ -164,10 +163,10 @@ app.get("/", async (c) => {
   const kindParam = c.req.query("kind");
   let kind: ReportKind | undefined;
   if (kindParam !== undefined) {
-    if (!VALID_KINDS.has(kindParam as ReportKind)) {
+    if (!isReportKind(kindParam)) {
       return c.json({ error: "kind must be one of: daily | weekly | monthly" }, 400);
     }
-    kind = kindParam as ReportKind;
+    kind = kindParam;
   }
 
   const limitParam = Number(c.req.query("limit") ?? "20");
