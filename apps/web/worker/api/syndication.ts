@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import type { Article, Env, FeedCategory, FeedLang, FeedsFile } from "../types";
+import type { Env, FeedCategory, FeedLang } from "../types";
 import { listArticles } from "../db/articles";
+import { getArticlesByAuthor } from "../db/articles-query";
 import { computeSyndicationEtag } from "../utils/etag";
-import { loadAllFeeds } from "../feed-config";
-import feedsYaml from "../feeds.yaml";
+import { getFeedsVersion, loadAllFeeds } from "../feed-config";
 import { buildUrlParts } from "./syndication/shared";
 import type { FeedMeta } from "./syndication/shared";
 import { renderJsonFeed } from "./syndication/json";
@@ -12,7 +12,7 @@ import { renderAtomFeed } from "./syndication/atom";
 import { renderRssFeed } from "./syndication/rss";
 import { isCategory, isLang } from "./_guards";
 
-const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
+const FEEDS_VERSION = getFeedsVersion();
 const FEED_LIMIT = 50;
 const SITE_TITLE = "Tech News Bot";
 const SITE_DESCRIPTION = "Big tech / AI / 日本企業の technical blog を集約した RSS / JSON Feed";
@@ -75,23 +75,6 @@ function render(format: Format, meta: FeedMeta): { contentType: string; body: st
   if (format === "json") return renderJsonFeed(meta);
   if (format === "atom") return renderAtomFeed(meta);
   return renderRssFeed(meta);
-}
-
-// --- 著者別記事取得: db/articles.ts を変更せず syndication 層で直接クエリする ---
-async function fetchArticlesByAuthor(db: D1Database, author: string): Promise<Article[]> {
-  const result = await db
-    .prepare(
-      `SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-              a.author, a.published_at, a.fetched_at, a.category, a.lang
-       FROM articles a
-       LEFT JOIN feeds f ON f.id = a.feed_id
-       WHERE a.author = ?1
-       ORDER BY a.published_at DESC, a.id DESC
-       LIMIT ?2`,
-    )
-    .bind(author, FEED_LIMIT)
-    .all<Article>();
-  return result.results ?? [];
 }
 
 // ----------------------------- Routes --------------------------------
@@ -231,7 +214,7 @@ app.get("/feeds/author/*", async (c) => {
   const notModified = await checkEtag(c, etag, 600);
   if (notModified) return notModified;
 
-  const articles = await fetchArticlesByAuthor(c.env.DB, author);
+  const { articles } = await getArticlesByAuthor(c.env.DB, author, FEED_LIMIT, null);
   const urlParts = buildUrlParts(c.req.url);
   const meta: FeedMeta = {
     title,
