@@ -5,8 +5,9 @@ import { finishRun, getRun, listRuns, recordRunFeed, startRun } from "../../../w
 describe("runs db", () => {
   it("startRun returns a run_id", async () => {
     const { run_id } = await startRun(env.DB, "2024-04-01T00:00:00.000Z", 5);
-    expect(typeof run_id).toBe("number");
-    expect(run_id).toBeGreaterThan(0);
+    // 型と値の正当性は独立した観点
+    expect.soft(typeof run_id).toBe("number");
+    expect.soft(run_id).toBeGreaterThan(0);
   });
 
   it("listRuns returns empty array when no runs exist", async () => {

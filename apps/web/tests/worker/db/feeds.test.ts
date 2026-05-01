@@ -114,7 +114,8 @@ describe("loadFeedHeadersAll", () => {
 
   it("omits unknown feed ids from the returned Map", async () => {
     const map = await loadFeedHeadersAll(env.DB, ["feed-a", "non-existent"]);
-    expect(map.has("feed-a")).toBe(true);
-    expect(map.has("non-existent")).toBe(false);
+    // 存在する feed と存在しない feed の has() は独立した観点
+    expect.soft(map.has("feed-a")).toBe(true);
+    expect.soft(map.has("non-existent")).toBe(false);
   });
 });

@@ -50,8 +50,9 @@ describe("findOverlappingReports", () => {
         period_end: "2026-04-29T00:00:00.000Z",
       }),
     );
+    // length は guard (overlaps[0] アクセスの前提)。id は独立した属性
     expect(overlaps).toHaveLength(1);
-    expect(overlaps[0]?.id).toBe(id);
+    expect.soft(overlaps[0]?.id).toBe(id);
   });
 
   it("returns empty array for adjacent period (new start == existing end)", async () => {
@@ -118,7 +119,8 @@ describe("upsertReport overlap guard", () => {
     } catch (err) {
       if (err instanceof OverlapError) caught = err;
     }
+    // caught が null でないことは guard (conflictingIds アクセスの前提)。id の含有は独立
     expect(caught).not.toBeNull();
-    expect(caught!.conflictingIds).toContain(id);
+    expect.soft(caught!.conflictingIds).toContain(id);
   });
 });
