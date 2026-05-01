@@ -7,6 +7,7 @@ import type {
   FeedLang,
 } from "../types";
 import type { CategorySummaryDbRow, FeedDiagnosticDbRow, FeedHealthFeedsDbRow } from "./types";
+import { daysAgoIso } from "./_helpers";
 
 export interface CategorySummary {
   id: FeedCategory;
@@ -33,7 +34,7 @@ const CATEGORY_LABELS: Record<FeedCategory, string> = {
  * client 側の CategorySummary 型に合わせて id / label を返す。
  */
 export async function getCategoriesSummary(db: D1Database): Promise<CategorySummary[]> {
-  const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const threshold = daysAgoIso(30);
 
   const rows = await db
     .prepare(
@@ -83,7 +84,7 @@ export async function getCategoriesSummary(db: D1Database): Promise<CategorySumm
  * enabled の有無に関わらず全フィードを返す (運用ダッシュボード用)。
  */
 export async function getFeedsDiagnostics(db: D1Database): Promise<FeedDiagnostic[]> {
-  const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const threshold = daysAgoIso(30);
 
   const rows = await db
     .prepare(
