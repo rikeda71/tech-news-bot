@@ -130,7 +130,7 @@ describe("GET /api/articles/:guid/neighbors", () => {
   it("returns Cache-Control: public, max-age=300", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/o-ai-1/neighbors");
     expect.soft(res.status).toBe(200);
-    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
   });
 
   it("returns Content-Type: application/json", async () => {

@@ -179,8 +179,9 @@ describe("GET /api/feeds/:id/health", () => {
     expect.soft(body.window_days).toBe(7);
   });
 
-  it("sets Cache-Control: public, max-age=300", async () => {
+  it("sets Cache-Control with max-age=300 and stale-while-revalidate", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog/health");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("stale-while-revalidate");
   });
 });

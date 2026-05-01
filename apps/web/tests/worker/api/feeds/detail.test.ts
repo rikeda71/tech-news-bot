@@ -212,9 +212,10 @@ describe("GET /api/feeds/:id", () => {
     expect.soft(body.recent_articles).toEqual([]);
   });
 
-  it("sets Cache-Control: public, max-age=300", async () => {
+  it("sets Cache-Control with max-age=300 and stale-while-revalidate", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds/openai-blog");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("stale-while-revalidate");
   });
 
   it("returns Content-Type application/json", async () => {

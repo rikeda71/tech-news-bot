@@ -88,7 +88,7 @@ app.get("/", async (c) => {
 
   if (req.header("If-None-Match") === etag) {
     c.header("ETag", etag);
-    c.header("Cache-Control", "public, max-age=60");
+    c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     return c.body(null, 304);
   }
 
@@ -104,7 +104,7 @@ app.get("/", async (c) => {
   });
 
   c.header("ETag", etag);
-  c.header("Cache-Control", "public, max-age=60");
+  c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   return c.json<ArticleListResponse>({
     articles: result.articles,
     nextCursor: encodeCursor(result.nextCursor),
@@ -142,7 +142,7 @@ app.get("/by-author/:author", async (c) => {
   return c.json<ArticleByAuthorResponse>(
     { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
     200,
-    { "Cache-Control": "public, max-age=300" },
+    { "Cache-Control": "public, max-age=300, stale-while-revalidate=1500" },
   );
 });
 
@@ -161,7 +161,7 @@ app.get("/by-feed/:feedId", async (c) => {
   return c.json<ArticleByFeedResponse>(
     { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
     200,
-    { "Cache-Control": "public, max-age=300" },
+    { "Cache-Control": "public, max-age=300, stale-while-revalidate=1500" },
   );
 });
 
@@ -181,7 +181,7 @@ app.get("/by-category/:cat", async (c) => {
   return c.json<ArticleByCategoryResponse>(
     { articles: result.articles, next_cursor: encodeCursor(result.nextCursor) },
     200,
-    { "Cache-Control": "public, max-age=300" },
+    { "Cache-Control": "public, max-age=300, stale-while-revalidate=1500" },
   );
 });
 
@@ -207,7 +207,7 @@ app.get("/calendar", async (c) => {
   const items = await getArticlesCalendar(c.env.DB, days, lang, category);
 
   return c.json<ArticleCalendarResponse>({ days, items }, 200, {
-    "Cache-Control": "public, max-age=600",
+    "Cache-Control": "public, max-age=600, stale-while-revalidate=3000",
   });
 });
 
@@ -244,7 +244,7 @@ app.get("/search", async (c) => {
       next_cursor: encodeCursor(result.nextCursor),
     },
     200,
-    { "Cache-Control": "public, max-age=120" },
+    { "Cache-Control": "public, max-age=120, stale-while-revalidate=600" },
   );
 });
 
@@ -256,7 +256,9 @@ app.get("/:guid/related", async (c) => {
 
   const items = await getRelatedArticles(c.env.DB, guid, n);
   if (items === null) return c.json({ error: "not found" }, 404);
-  return c.json<ArticleRelatedResponse>({ items }, 200, { "Cache-Control": "public, max-age=300" });
+  return c.json<ArticleRelatedResponse>({ items }, 200, {
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=1500",
+  });
 });
 
 app.get("/:guid/neighbors", async (c) => {
@@ -264,7 +266,7 @@ app.get("/:guid/neighbors", async (c) => {
   const neighbors = await getNeighbors(c.env.DB, guid);
   if (neighbors === null) return c.json({ error: "not found" }, 404);
   return c.json<ArticleNeighborsResponse>(neighbors, 200, {
-    "Cache-Control": "public, max-age=300",
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=1500",
   });
 });
 
@@ -306,7 +308,7 @@ app.get("/archive", async (c) => {
   ]);
 
   return c.json<ArticleArchiveResponse>({ year, month, items, total }, 200, {
-    "Cache-Control": "public, max-age=600",
+    "Cache-Control": "public, max-age=600, stale-while-revalidate=3000",
   });
 });
 
@@ -350,7 +352,7 @@ app.get("/by-day/:date", async (c) => {
       total,
     },
     200,
-    { "Cache-Control": "public, max-age=600" },
+    { "Cache-Control": "public, max-age=600, stale-while-revalidate=3000" },
   );
 });
 
@@ -362,7 +364,7 @@ app.get("/:id", async (c) => {
   if (!article) return c.json({ error: "not found" }, 404);
   const etag = `W/"${article.id}-${article.fetched_at}"`;
   if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
-  return c.json(article, 200, { ETag: etag, "Cache-Control": "public, max-age=60" });
+  return c.json(article, 200, { ETag: etag, "Cache-Control": "public, max-age=60, stale-while-revalidate=300" });
 });
 
 export default app;
