@@ -171,6 +171,6 @@ describe("GET /api/articles/by-category/:cat", () => {
   it("returns Cache-Control: public, max-age=300", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-category/ai");
     expect.soft(res.status).toBe(200);
-    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
   });
 });

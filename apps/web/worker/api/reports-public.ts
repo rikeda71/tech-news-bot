@@ -20,7 +20,9 @@ app.get("/", async (c) => {
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
 
   const reports = await listReports(c.env.DB, { kind, limit });
-  return c.json<AdminReportListResponse>({ reports });
+  return c.json<AdminReportListResponse>({ reports }, 200, {
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=900",
+  });
 });
 
 app.get("/:id", async (c) => {
@@ -32,7 +34,9 @@ app.get("/:id", async (c) => {
   if (!detail) {
     return c.json({ error: "report not found" }, 404);
   }
-  return c.json<AdminReportDetailResponse>({ report: detail });
+  return c.json<AdminReportDetailResponse>({ report: detail }, 200, {
+    "Cache-Control": "public, max-age=600, stale-while-revalidate=1800",
+  });
 });
 
 export default app;

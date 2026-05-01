@@ -160,6 +160,13 @@ describe("GET /api/feeds - basic", () => {
     const ids = body.feeds.map((f) => f.id);
     expect(ids).toEqual(ids.toSorted());
   });
+
+  it("sets Cache-Control with max-age and stale-while-revalidate", async () => {
+    const res = await SELF.fetch("https://example.com/api/feeds");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("stale-while-revalidate=900");
+  });
 });
 
 describe("GET /api/feeds - filter by category", () => {

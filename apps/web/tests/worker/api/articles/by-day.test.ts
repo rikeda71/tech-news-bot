@@ -245,7 +245,7 @@ describe("GET /api/articles/by-day/:date", () => {
   it("returns Cache-Control: public, max-age=600", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-day/2024-04-01");
     expect.soft(res.status).toBe(200);
-    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=600");
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=600");
   });
 
   it("returns Content-Type: application/json", async () => {

@@ -32,7 +32,9 @@ app.get("/", async (c) => {
   if (enabledRaw !== undefined) opts.enabled = enabledRaw === "true";
 
   const feeds = await listFeedsWithStats(c.env.DB, opts);
-  return c.json<FeedsListResponse>({ feeds });
+  return c.json<FeedsListResponse>({ feeds }, 200, {
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=900",
+  });
 });
 
 const RECENT_DEFAULT = 10;
@@ -61,7 +63,7 @@ app.get("/:id", async (c) => {
     return c.json({ error: "feed not found" }, 404);
   }
 
-  c.header("Cache-Control", "public, max-age=300");
+  c.header("Cache-Control", "public, max-age=300, stale-while-revalidate=900");
   return c.json<FeedDetailResponse>({ feed, recent_articles: recentArticles });
 });
 
@@ -110,7 +112,7 @@ app.get("/:id/health", async (c) => {
           ? "skipped"
           : null;
 
-  c.header("Cache-Control", "public, max-age=300");
+  c.header("Cache-Control", "public, max-age=300, stale-while-revalidate=900");
   return c.json<FeedRunHealthResponse>({
     feed_id: id,
     window_days: days,

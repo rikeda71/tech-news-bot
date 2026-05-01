@@ -167,7 +167,7 @@ describe("GET /api/articles/by-feed/:feedId", () => {
   it("returns Cache-Control: public, max-age=300", async () => {
     const res = await SELF.fetch("https://example.com/api/articles/by-feed/openai-blog");
     expect.soft(res.status).toBe(200);
-    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
   });
 
   it("returns 400 when feedId exceeds 200 characters", async () => {

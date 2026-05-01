@@ -92,6 +92,13 @@ describe("GET /api/reports (公開一覧)", () => {
     expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("access-control-allow-origin")).toBe(allowedOrigin);
   });
+
+  it("Cache-Control ヘッダが付く", async () => {
+    const res = await SELF.fetch("https://example.com/api/reports");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
+    expect.soft(res.headers.get("Cache-Control")).toContain("stale-while-revalidate=900");
+  });
 });
 
 describe("GET /api/reports/:id (公開詳細)", () => {
@@ -123,5 +130,13 @@ describe("GET /api/reports/:id (公開詳細)", () => {
     });
     expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("access-control-allow-origin")).toBe(allowedOrigin);
+  });
+
+  it("Cache-Control ヘッダが付く", async () => {
+    const id = await insertReport();
+    const res = await SELF.fetch(`https://example.com/api/reports/${id}`);
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toContain("max-age=600");
+    expect.soft(res.headers.get("Cache-Control")).toContain("stale-while-revalidate=1800");
   });
 });
