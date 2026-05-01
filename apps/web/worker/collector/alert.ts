@@ -1,4 +1,5 @@
 import type { Env } from "../types";
+import { withTimeout } from "../utils/with-timeout";
 import type { CollectResult } from "./index";
 
 export interface AlertSummary {
@@ -40,16 +41,18 @@ export async function notifyCollectorFailure(
   }
 
   const text = lines.join("\n");
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const res = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-      signal: controller.signal,
-    });
+    const res = await withTimeout(
+      (signal) =>
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+          signal,
+        }),
+      5000,
+    );
     if (!res.ok) {
       console.error(`[alert] webhook returned non-2xx: ${res.status} ${res.statusText}`);
     }
@@ -57,8 +60,6 @@ export async function notifyCollectorFailure(
     console.error(
       `[alert] failed to send webhook: ${err instanceof Error ? err.message : String(err)}`,
     );
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -98,23 +99,22 @@ export async function sendAlert(env: Env, result: AlertRunResult): Promise<void>
     ],
   };
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
-
   try {
-    const res = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
+    const res = await withTimeout(
+      (signal) =>
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal,
+        }),
+      5000,
+    );
     if (!res.ok) {
       console.error(`[alert] sendAlert webhook returned non-2xx: ${res.status} ${res.statusText}`);
     }
   } catch (err) {
     console.error(`[alert] sendAlert failed: ${err instanceof Error ? err.message : String(err)}`);
-  } finally {
-    clearTimeout(timer);
   }
 }
 
