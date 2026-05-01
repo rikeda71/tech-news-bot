@@ -34,7 +34,7 @@ jobs:
       # cf-typegen は build に依存するため明示的に走らせない (skill は recent.mjs しか使わない)。
 
       - name: Run tech-news-digest skill
-        uses: anthropics/claude-code-base-action@e8132bc5e637a42c27763fc757faa37e1ee43b34 # beta (pinned 2026-04-30)
+        uses: anthropics/claude-code-base-action@main # anthropics 公式 first-party action。@beta / release tag が長期間更新停止しているため main を追従
         env:
           # claude-code-base-action 内部の Setup Node.js が default 18 を入れるため、
           # wrangler d1 (Node v20+ 必須) が落ちる。skill が呼ぶ recent.mjs のために 24 を強制。
