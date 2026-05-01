@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDatetime } from "../lib/format-date";
 import type { ReportKind } from "../types/api";
 import { useReportsList } from "../hooks/useReports";
 
@@ -12,18 +13,6 @@ type KindFilter = ReportKind | undefined;
 
 interface Props {
   onSelectReport: (id: number) => void;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export function ReportsList({ onSelectReport }: Props) {
@@ -112,7 +101,7 @@ export function ReportsList({ onSelectReport }: Props) {
                   {new Date(report.period_end).toLocaleDateString("ja-JP")}
                 </p>
                 <p className="text-[var(--fg-muted)] text-[var(--font-size-xs)] m-0">
-                  生成: {formatDate(report.generated_at)} · {report.source_skill}
+                  生成: {formatDatetime(report.generated_at)} · {report.source_skill}
                 </p>
               </button>
             </li>

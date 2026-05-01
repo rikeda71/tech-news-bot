@@ -1,20 +1,10 @@
 import { FEED_CATEGORIES } from "../lib/feed-categories";
+import { formatDateShort } from "../lib/format-date";
 import type { FeedActivity, Stats } from "../hooks/useStats";
 import { StatsChart } from "./StatsChart";
 
 interface StatsProps {
   stats: Stats;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("ja-JP", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function FeedActivityTable({ rows }: { rows: FeedActivity[] }) {
@@ -47,7 +37,7 @@ function FeedActivityTable({ rows }: { rows: FeedActivity[] }) {
               {row.articles_30d}
             </td>
             <td className="py-[var(--space-2)] px-[var(--space-2)] text-left border-b border-[var(--border-subtle)] text-[var(--fg-muted)] whitespace-nowrap w-[160px]">
-              {row.last_published_at ? formatDate(row.last_published_at) : "—"}
+              {row.last_published_at ? formatDateShort(row.last_published_at) : "—"}
             </td>
           </tr>
         ))}
