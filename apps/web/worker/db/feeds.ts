@@ -1,5 +1,6 @@
 import type { FeedCategory, FeedConfig, FeedLang } from "../types";
 import type { D1BindParameter, FeedWithStatsDbRow } from "./types";
+import { parseCategory, parseLang } from "./_guards";
 import { daysAgoIso } from "./_helpers";
 
 export interface FeedHeaders {
@@ -329,8 +330,8 @@ export async function listFeedsWithStats(
     id: r.id,
     name: r.name,
     url: r.url,
-    category: r.category as FeedCategory,
-    lang: r.lang as FeedLang,
+    category: parseCategory(r.category, `feed=${r.id}`),
+    lang: parseLang(r.lang, `feed=${r.id}`),
     enabled: r.enabled === 1,
     articles_30d: r.articles_30d,
     last_published_at: r.last_published_at,
@@ -363,8 +364,8 @@ export async function findFeedWithStats(db: D1Database, id: string): Promise<Fee
     id: row.id,
     name: row.name,
     url: row.url,
-    category: row.category as FeedCategory,
-    lang: row.lang as FeedLang,
+    category: parseCategory(row.category, `feed=${row.id}`),
+    lang: parseLang(row.lang, `feed=${row.id}`),
     enabled: row.enabled === 1,
     articles_30d: row.articles_30d,
     last_published_at: row.last_published_at,

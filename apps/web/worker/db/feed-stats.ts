@@ -1,12 +1,6 @@
-import type {
-  Article,
-  FeedCategory,
-  FeedConfig,
-  FeedDiagnostic,
-  FeedHealth,
-  FeedLang,
-} from "../types";
+import type { Article, FeedCategory, FeedConfig, FeedDiagnostic, FeedHealth } from "../types";
 import type { CategorySummaryDbRow, FeedDiagnosticDbRow, FeedHealthFeedsDbRow } from "./types";
+import { parseCategory, parseLang } from "./_guards";
 import { daysAgoIso } from "./_helpers";
 
 export interface CategorySummary {
@@ -51,7 +45,7 @@ export async function getCategoriesSummary(db: D1Database): Promise<CategorySumm
 
   const dbMap = new Map(
     (rows.results ?? []).map((r) => {
-      const id = r.category as CategorySummary["id"];
+      const id = parseCategory(r.category);
       return [
         id,
         {
@@ -117,8 +111,8 @@ export async function getFeedsDiagnostics(db: D1Database): Promise<FeedDiagnosti
     id: r.id,
     name: r.name,
     url: r.url,
-    category: r.category as FeedCategory,
-    lang: r.lang as FeedLang,
+    category: parseCategory(r.category, `feed=${r.id}`),
+    lang: parseLang(r.lang, `feed=${r.id}`),
     enabled: r.enabled === 1,
     last_fetched_at: r.last_fetched_at,
     last_status: r.last_status,
