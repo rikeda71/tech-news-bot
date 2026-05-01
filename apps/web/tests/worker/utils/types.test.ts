@@ -37,8 +37,8 @@ describe("makeOneOf", () => {
     });
 
     it("returns false for case-mismatched value", () => {
-      expect(isCategory("BigTech")).toBe(false);
-      expect(isCategory("AI")).toBe(false);
+      expect.soft(isCategory("BigTech")).toBe(false);
+      expect.soft(isCategory("AI")).toBe(false);
     });
   });
 
