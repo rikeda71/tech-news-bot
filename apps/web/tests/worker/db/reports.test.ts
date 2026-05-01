@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 import { env } from "cloudflare:test";
-import { OverlapError, findOverlappingReports, upsertReport } from "../../../worker/db/reports";
+import {
+  OverlapError,
+  findOverlappingReports,
+  isReportKind,
+  upsertReport,
+} from "../../../worker/db/reports";
 import type { ReportInput } from "../../../worker/db/reports";
 
 function baseInput(overrides: Partial<ReportInput> = {}): ReportInput {
@@ -17,6 +22,24 @@ function baseInput(overrides: Partial<ReportInput> = {}): ReportInput {
     ...overrides,
   };
 }
+
+describe("isReportKind", () => {
+  it("returns true for valid kinds", () => {
+    expect(isReportKind("daily")).toBe(true);
+    expect(isReportKind("weekly")).toBe(true);
+    expect(isReportKind("monthly")).toBe(true);
+  });
+
+  it("returns false for an unknown string", () => {
+    expect(isReportKind("yearly")).toBe(false);
+  });
+
+  it("returns false for non-string values (null / undefined / number)", () => {
+    expect(isReportKind(null)).toBe(false);
+    expect(isReportKind(undefined)).toBe(false);
+    expect(isReportKind(42)).toBe(false);
+  });
+});
 
 describe("findOverlappingReports", () => {
   it("returns empty array when no rows exist", async () => {
