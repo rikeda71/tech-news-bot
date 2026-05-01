@@ -364,7 +364,10 @@ app.get("/:id", async (c) => {
   if (!article) return c.json({ error: "not found" }, 404);
   const etag = `W/"${article.id}-${article.fetched_at}"`;
   if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
-  return c.json(article, 200, { ETag: etag, "Cache-Control": "public, max-age=60, stale-while-revalidate=300" });
+  return c.json(article, 200, {
+    ETag: etag,
+    "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+  });
 });
 
 export default app;
