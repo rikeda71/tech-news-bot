@@ -73,7 +73,7 @@ describe("SPA shell rewrite: GET /articles/:id", () => {
     const id = row?.id;
 
     const res = await SELF.fetch(`https://example.com/articles/${id}`);
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
   });
 
@@ -144,16 +144,16 @@ describe("SPA shell rewrite: GET /by-category/:cat", () => {
 describe("SPA shell rewrite: static routes (no rewriting)", () => {
   it("returns default title for top page /", async () => {
     const res = await SELF.fetch("https://example.com/");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
 
     // トップページは書き換えなし → Cache-Control は no-cache
-    expect(res.headers.get("Cache-Control")).toContain("no-cache");
+    expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
   });
 
   it("returns no-cache for /stats", async () => {
     const res = await SELF.fetch("https://example.com/stats");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toContain("no-cache");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
   });
 
   it("does not rewrite /api/* routes", async () => {
@@ -194,7 +194,7 @@ describe("SPA shell rewrite: article with null summary", () => {
     const html = await res.text();
     // description は DEFAULT_DESCRIPTION にフォールバック
     const desc = extractMeta(html, '[name="description"]');
-    expect(desc).toBe("海外 big tech / AI / 国内企業の tech blog 記事を集約");
+    expect.soft(desc).toBe("海外 big tech / AI / 国内企業の tech blog 記事を集約");
   });
 });
 
