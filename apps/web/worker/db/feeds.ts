@@ -1,5 +1,6 @@
 import type { FeedCategory, FeedConfig, FeedLang } from "../types";
 import type { D1BindParameter, FeedWithStatsDbRow } from "./types";
+import { daysAgoIso } from "./_helpers";
 
 export interface FeedHeaders {
   last_etag: string | null;
@@ -297,7 +298,7 @@ export async function listFeedsWithStats(
   }
 
   // 30d 境界を SQLite の datetime 関数で計算し bind する
-  const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const threshold = daysAgoIso(30);
   binds.push(threshold);
   const thresholdIdx = binds.length;
 
@@ -341,7 +342,7 @@ export async function listFeedsWithStats(
  * id が存在しない場合は null。
  */
 export async function findFeedWithStats(db: D1Database, id: string): Promise<FeedWithStats | null> {
-  const threshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const threshold = daysAgoIso(30);
 
   const row = await db
     .prepare(
