@@ -51,7 +51,8 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     });
     expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { feeds: unknown[]; count: number };
-    expect.soft(Array.isArray(body.feeds)).toBe(true);
+    // Array.isArray は後続 toHaveLength の guard として fail-fast させる
+    expect(Array.isArray(body.feeds)).toBe(true);
     expect.soft(body.feeds).toHaveLength(0);
     expect.soft(body.count).toBe(0);
   });

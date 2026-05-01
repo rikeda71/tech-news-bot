@@ -74,7 +74,7 @@ describe("POST /api/admin/feeds/validate (integration)", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ url: "not-a-url" }),
     });
-    expect.soft(res.status).toBe(400);
+    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect.soft(body.error).toMatch(/invalid url/i);
   });
@@ -85,7 +85,7 @@ describe("POST /api/admin/feeds/validate (integration)", () => {
       headers: { ...AUTH_HEADER, "content-type": "application/json" },
       body: JSON.stringify({ url: "ftp://example.com/feed.xml" }),
     });
-    expect.soft(res.status).toBe(400);
+    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect.soft(body.error).toMatch(/invalid url/i);
   });

@@ -52,7 +52,7 @@ describe("GET /api/admin/cron-health", () => {
     const res = await SELF.fetch("https://example.com/api/admin/cron-health?days=99", {
       headers: AUTH_HEADER,
     });
-    expect.soft(res.status).toBe(400);
+    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect.soft(body.error).toMatch(/days must be 7 or 30/);
   });
