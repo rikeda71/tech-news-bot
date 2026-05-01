@@ -73,9 +73,9 @@ beforeEach(async () => {
 describe("/api/articles", () => {
   it("returns all articles in published_at desc order", async () => {
     const res = await SELF.fetch("https://example.com/api/articles?limit=10");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { articles: { guid: string }[] };
-    expect(body.articles.map((a) => a.guid)).toEqual(["g-jp", "g-ai", "g-bt"]);
+    expect.soft(body.articles.map((a) => a.guid)).toEqual(["g-jp", "g-ai", "g-bt"]);
   });
 
   it("filters by category", async () => {
@@ -126,9 +126,9 @@ describe("/api/articles", () => {
 
   it("ignores malformed cursor", async () => {
     const res = await SELF.fetch("https://example.com/api/articles?cursor=not-base64");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { articles: unknown[] };
-    expect(body.articles.length).toBe(3);
+    expect.soft(body.articles.length).toBe(3);
   });
 
   it("filters by category AND feed_id together", async () => {
@@ -243,10 +243,10 @@ describe("/api/articles", () => {
 describe("/api/feeds", () => {
   it("returns synced feeds as array", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { feeds: { id: string }[] };
     // beforeEach で syncFeeds した 3 件が返る
-    expect(body.feeds.length).toBeGreaterThanOrEqual(3);
+    expect.soft(body.feeds.length).toBeGreaterThanOrEqual(3);
   });
 
   it("returns 400 for invalid category", async () => {
@@ -258,18 +258,18 @@ describe("/api/feeds", () => {
 describe("/api/stats", () => {
   it("returns aggregated counts", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       total: number;
       by_category: Record<string, number>;
       by_lang: Record<string, number>;
       stale_feeds: { id: string }[];
     };
-    expect(body.total).toBe(3);
-    expect(body.by_category).toEqual({ bigtech: 1, ai: 1, jp: 1, personal: 0 });
-    expect(body.by_lang).toEqual({ en: 2, ja: 1 });
+    expect.soft(body.total).toBe(3);
+    expect.soft(body.by_category).toEqual({ bigtech: 1, ai: 1, jp: 1, personal: 0 });
+    expect.soft(body.by_lang).toEqual({ en: 2, ja: 1 });
     // 全フィードは未収集 (last_fetched_at NULL) なので stale 扱い
-    expect(body.stale_feeds.length).toBe(3);
+    expect.soft(body.stale_feeds.length).toBe(3);
   });
 
   it("flags only feeds with errors or no recent fetch", async () => {
@@ -302,19 +302,19 @@ describe("/api/stats", () => {
 describe("/api/health", () => {
   it("returns enriched health response with db summary", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       ok: boolean;
       now: string;
       feeds: { total: number; enabled: number };
       articles: { total: number; last_24h: number };
     };
-    expect(body.ok).toBe(true);
-    expect(typeof body.now).toBe("string");
-    expect(body.articles.total).toBe(3);
+    expect.soft(body.ok).toBe(true);
+    expect.soft(typeof body.now).toBe("string");
+    expect.soft(body.articles.total).toBe(3);
     // feeds are synced via syncFeeds in beforeEach (FEEDS has 3 entries, all enabled)
-    expect(body.feeds.total).toBeGreaterThanOrEqual(3);
-    expect(body.feeds.enabled).toBeGreaterThanOrEqual(3);
+    expect.soft(body.feeds.total).toBeGreaterThanOrEqual(3);
+    expect.soft(body.feeds.enabled).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -370,9 +370,9 @@ describe("CORS headers on public /api/* endpoints", () => {
         "Access-Control-Request-Headers": "content-type",
       },
     });
-    expect(res.status).toBe(204);
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
-    expect(res.headers.get("Access-Control-Allow-Methods")).toMatch(/GET/);
+    expect.soft(res.status).toBe(204);
+    expect.soft(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
+    expect.soft(res.headers.get("Access-Control-Allow-Methods")).toMatch(/GET/);
   });
 
   it("returns Access-Control-Allow-Origin for /api/health GET", async () => {
@@ -427,9 +427,9 @@ describe("CORS headers on public /api/* endpoints", () => {
 describe("security headers", () => {
   it("sets X-Frame-Options and CSP on responses", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
-    expect(res.headers.get("X-Frame-Options")).toBe("DENY");
-    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
-    expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
+    expect.soft(res.headers.get("X-Frame-Options")).toBe("DENY");
+    expect.soft(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect.soft(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
   });
 
   it("sets Strict-Transport-Security on /api/health", async () => {

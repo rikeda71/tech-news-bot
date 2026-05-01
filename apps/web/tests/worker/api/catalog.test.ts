@@ -7,8 +7,8 @@ const CATALOG_URL = "https://example.com/api";
 describe("GET /api (catalog endpoint)", () => {
   it("returns 200 with JSON body", async () => {
     const res = await SELF.fetch(CATALOG_URL);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toContain("application/json");
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("Content-Type")).toContain("application/json");
   });
 
   it("sets Cache-Control: public, max-age=3600", async () => {
@@ -19,12 +19,12 @@ describe("GET /api (catalog endpoint)", () => {
   it("response has name, version, description, endpoints, syndication, docs_url fields", async () => {
     const res = await SELF.fetch(CATALOG_URL);
     const body = await res.json<Record<string, unknown>>();
-    expect(typeof body["name"]).toBe("string");
-    expect(typeof body["version"]).toBe("string");
-    expect(typeof body["description"]).toBe("string");
-    expect(Array.isArray(body["endpoints"])).toBe(true);
-    expect(Array.isArray(body["syndication"])).toBe(true);
-    expect(typeof body["docs_url"]).toBe("string");
+    expect.soft(typeof body["name"]).toBe("number"); // DELIBERATELY BROKEN FOR SOFT ASSERTION TEST
+    expect.soft(typeof body["version"]).toBe("string");
+    expect.soft(typeof body["description"]).toBe("number"); // DELIBERATELY BROKEN FOR SOFT ASSERTION TEST
+    expect.soft(Array.isArray(body["endpoints"])).toBe(true);
+    expect.soft(Array.isArray(body["syndication"])).toBe(true);
+    expect.soft(typeof body["docs_url"]).toBe("string");
   });
 
   it("endpoints array contains entries with method, path, description, auth fields", async () => {
@@ -34,10 +34,10 @@ describe("GET /api (catalog endpoint)", () => {
     }>();
     expect(body.endpoints.length).toBeGreaterThan(0);
     for (const ep of body.endpoints) {
-      expect(typeof ep.method).toBe("string");
-      expect(typeof ep.path).toBe("string");
-      expect(typeof ep.description).toBe("string");
-      expect(["none", "admin"]).toContain(ep.auth);
+      expect.soft(typeof ep.method).toBe("string");
+      expect.soft(typeof ep.path).toBe("string");
+      expect.soft(typeof ep.description).toBe("string");
+      expect.soft(["none", "admin"]).toContain(ep.auth);
     }
   });
 
@@ -46,8 +46,8 @@ describe("GET /api (catalog endpoint)", () => {
     const body = await res.json<{ syndication: { path: string; format: string }[] }>();
     expect(body.syndication.length).toBeGreaterThan(0);
     for (const s of body.syndication) {
-      expect(typeof s.path).toBe("string");
-      expect(typeof s.format).toBe("string");
+      expect.soft(typeof s.path).toBe("string");
+      expect.soft(typeof s.format).toBe("string");
     }
   });
 
@@ -64,7 +64,7 @@ describe("GET /api (catalog endpoint)", () => {
     const adminEndpoints = body.endpoints.filter((ep) => ep.path.startsWith("/api/admin"));
     expect(adminEndpoints.length).toBeGreaterThan(0);
     for (const ep of adminEndpoints) {
-      expect(ep.auth).toBe("admin");
+      expect.soft(ep.auth).toBe("admin");
     }
   });
 
@@ -74,7 +74,7 @@ describe("GET /api (catalog endpoint)", () => {
     const publicEndpoints = body.endpoints.filter((ep) => !ep.path.startsWith("/api/admin"));
     expect(publicEndpoints.length).toBeGreaterThan(0);
     for (const ep of publicEndpoints) {
-      expect(ep.auth).toBe("none");
+      expect.soft(ep.auth).toBe("none");
     }
   });
 
@@ -87,10 +87,10 @@ describe("GET /api (catalog endpoint)", () => {
     const hasRss = formats.some((f) => f.includes("RSS"));
     const hasAtom = formats.some((f) => f.includes("Atom"));
     const hasOpml = formats.some((f) => f.includes("OPML"));
-    expect(hasJsonFeed).toBe(true);
-    expect(hasRss).toBe(true);
-    expect(hasAtom).toBe(true);
-    expect(hasOpml).toBe(true);
+    expect.soft(hasJsonFeed).toBe(true);
+    expect.soft(hasRss).toBe(true);
+    expect.soft(hasAtom).toBe(true);
+    expect.soft(hasOpml).toBe(true);
   });
 
   it("docs_url points to the GitHub repository", async () => {
