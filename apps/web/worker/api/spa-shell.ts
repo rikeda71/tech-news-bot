@@ -1,6 +1,7 @@
 import type { Env, FeedCategory } from "../types";
 import { getArticleById } from "../db/articles";
 import { findFeedWithStats } from "../db/feeds";
+import { isCategory } from "./_guards";
 
 // ---------------------------------------------------------------------------
 // 定数
@@ -53,8 +54,8 @@ function matchRoute(pathname: string): RouteMatch {
   // /by-category/:cat — issue の設計方針に合わせて /by-category/:cat を採用
   const catM = pathname.match(/^\/by-category\/(.+)$/);
   if (catM) {
-    const cat = catM[1] as FeedCategory;
-    if (cat in CATEGORY_LABELS) return { type: "category", category: cat };
+    const cat = catM[1];
+    if (isCategory(cat)) return { type: "category", category: cat };
   }
 
   return { type: "static" };
