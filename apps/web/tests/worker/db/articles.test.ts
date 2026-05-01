@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { env } from "cloudflare:test";
-import { insertArticles, listArticles } from "../../../worker/db/articles";
+import { getRelatedArticles, insertArticles, listArticles } from "../../../worker/db/articles";
 import { syncFeeds } from "../../../worker/db/feeds";
 import type { FeedConfig } from "../../../worker/types";
 
@@ -255,6 +255,163 @@ describe("articles db", () => {
     it("returns empty when no article matches the query", async () => {
       const result = await listArticles(env.DB, { limit: 10, q: "該当なしのキーワード" });
       expect(result.articles).toHaveLength(0);
+    });
+  });
+
+  describe("getRelatedArticles", () => {
+    beforeEach(async () => {
+      // feed-a (bigtech), feed-b (ai) は FEEDS で登録済み
+      // feed-c (bigtech) を追加して category 補完のテストに使う
+      await syncFeeds(env.DB, [
+        ...FEEDS,
+        {
+          id: "feed-c",
+          name: "Feed C",
+          url: "https://c.test/rss",
+          category: "bigtech",
+          lang: "en",
+          enabled: true,
+        },
+      ]);
+      await insertArticles(env.DB, [
+        // feed-a: bigtech 3 件
+        {
+          guid: "a-bt-1",
+          feed_id: "feed-a",
+          title: "A BigTech 1",
+          url: "https://a.test/1",
+          summary: null,
+          author: null,
+          published_at: "2024-05-01T00:00:00.000Z",
+          category: "bigtech",
+          lang: "en",
+        },
+        {
+          guid: "a-bt-2",
+          feed_id: "feed-a",
+          title: "A BigTech 2",
+          url: "https://a.test/2",
+          summary: null,
+          author: null,
+          published_at: "2024-05-02T00:00:00.000Z",
+          category: "bigtech",
+          lang: "en",
+        },
+        {
+          guid: "a-bt-target",
+          feed_id: "feed-a",
+          title: "A BigTech Target",
+          url: "https://a.test/target",
+          summary: null,
+          author: null,
+          published_at: "2024-05-03T00:00:00.000Z",
+          category: "bigtech",
+          lang: "en",
+        },
+        // feed-c: bigtech 3 件 (別 feed、同 category)
+        {
+          guid: "c-bt-1",
+          feed_id: "feed-c",
+          title: "C BigTech 1",
+          url: "https://c.test/1",
+          summary: null,
+          author: null,
+          published_at: "2024-05-01T12:00:00.000Z",
+          category: "bigtech",
+          lang: "en",
+        },
+        {
+          guid: "c-bt-2",
+          feed_id: "feed-c",
+          title: "C BigTech 2",
+          url: "https://c.test/2",
+          summary: null,
+          author: null,
+          published_at: "2024-05-02T12:00:00.000Z",
+          category: "bigtech",
+          lang: "en",
+        },
+        {
+          guid: "c-bt-3",
+          feed_id: "feed-c",
+          title: "C BigTech 3",
+          url: "https://c.test/3",
+          summary: null,
+          author: null,
+          published_at: "2024-05-03T12:00:00.000Z",
+          category: "bigtech",
+          lang: "en",
+        },
+        // feed-b: ai 2 件 (category が違うので補完されない)
+        {
+          guid: "b-ai-1",
+          feed_id: "feed-b",
+          title: "B AI 1",
+          url: "https://b.test/1",
+          summary: null,
+          author: null,
+          published_at: "2024-05-01T00:00:00.000Z",
+          category: "ai",
+          lang: "en",
+        },
+      ]);
+    });
+
+    it("returns null for unknown guid", async () => {
+      const result = await getRelatedArticles(env.DB, "does-not-exist", 5);
+      expect(result).toBeNull();
+    });
+
+    it("does not include the target article itself", async () => {
+      const result = await getRelatedArticles(env.DB, "a-bt-target", 5);
+      expect(result).not.toBeNull();
+      const guids = (result ?? []).map((a) => a.guid);
+      expect(guids).not.toContain("a-bt-target");
+    });
+
+    it("fills remaining slots with same category articles from other feeds", async () => {
+      // feed-a の bigtech は a-bt-1, a-bt-2 の 2 件のみ (target 除く)
+      // n=5 なので残り 3 件を feed-c (bigtech) で補完する
+      const result = await getRelatedArticles(env.DB, "a-bt-target", 5);
+      expect(result).not.toBeNull();
+      const items = result ?? [];
+      expect(items.length).toBe(5);
+      // 同 feed の記事が先頭に来る
+      const feedAItems = items.filter((a) => a.feed_id === "feed-a");
+      const feedCItems = items.filter((a) => a.feed_id === "feed-c");
+      expect(feedAItems.length).toBe(2);
+      expect(feedCItems.length).toBe(3);
+      // 先頭 2 件が feed-a
+      expect.soft(items[0].feed_id).toBe("feed-a");
+      expect.soft(items[1].feed_id).toBe("feed-a");
+    });
+
+    it("does not include duplicate guids (same feed articles not repeated in category section)", async () => {
+      // CTE 内の guid NOT IN (SELECT guid FROM same_feed) で重複除去していることを確認
+      const result = await getRelatedArticles(env.DB, "a-bt-target", 10);
+      expect(result).not.toBeNull();
+      const items = result ?? [];
+      const guids = items.map((a) => a.guid);
+      const uniqueGuids = new Set(guids);
+      expect(guids.length).toBe(uniqueGuids.size);
+    });
+
+    it("returns same feed articles sorted by published_at desc", async () => {
+      // feed-a: a-bt-2 (2024-05-02) > a-bt-1 (2024-05-01) の順
+      const result = await getRelatedArticles(env.DB, "a-bt-target", 5);
+      expect(result).not.toBeNull();
+      const feedAItems = (result ?? []).filter((a) => a.feed_id === "feed-a");
+      expect(feedAItems.length).toBeGreaterThanOrEqual(2);
+      expect.soft(feedAItems[0].guid).toBe("a-bt-2");
+      expect.soft(feedAItems[1].guid).toBe("a-bt-1");
+    });
+
+    it("does not leak articles from different category into results", async () => {
+      // feed-b の ai 記事は bigtech の target には含まれない
+      const result = await getRelatedArticles(env.DB, "a-bt-target", 10);
+      expect(result).not.toBeNull();
+      const feedBItems = (result ?? []).filter((a) => a.feed_id === "feed-b");
+      expect(feedBItems.length).toBe(0);
     });
   });
 });

@@ -165,13 +165,10 @@ export async function getRandomArticles(
  * 同 feed_id を優先し、不足分を同 category の記事で補う。
  * guid が存在しない場合は null を返す (呼び出し側で 404 ハンドル)。
  *
- * パフォーマンス (#398):
- * 旧実装: sequential 3 クエリ (target → sameFeed → sameCategory)
- * 新実装: target 取得後に sameFeed / sameCategory を Promise.all で並列発行し
- *         ラウンドトリップを 3 → 2 に削減。
- * sameCategory クエリは a.feed_id != target.feed_id かつ a.guid != target.guid で
- * 粗く除外し、アプリ側で sameFeed と重複する guid を Set で除去する。
- * これにより sameFeed の結果を待たずに sameCategory を発行できる。
+ * subrequest 削減のための CTE: target 取得後に同 feed / 同 category を
+ * UNION ALL で 1 クエリにまとめ 3 subrequest → 2 subrequest に削減 (#398)。
+ * same_feed CTE を参照して sameCategory 側で重複 guid を SQL で除外するため
+ * アプリ層でのフィルタリングも不要。
  */
 export async function getRelatedArticles(
   db: D1Database,
@@ -181,44 +178,41 @@ export async function getRelatedArticles(
   const target = await findArticleByGuid(db, guid);
   if (!target) return null;
 
-  // sameFeed と sameCategory を並列発行 (ラウンドトリップ削減)
-  // sameCategory は sameFeed の結果を待たずに発行するため LIMIT n を使う。
-  // 実際の採用上限は最終的な slice(0, n) で制御する。
-  const [sameFeedRows, sameCategoryRows] = await Promise.all([
-    db
-      .prepare(
-        `SELECT ${ARTICLES_SELECT_FIELDS}
-         ${ARTICLES_FROM_JOIN}
+  // CTE で「同 feed の最大 n 件」と「同 category かつ別 feed の最大 n 件」を
+  // UNION ALL で 1 クエリにまとめる。source_priority で同 feed 優先を保証し、
+  // 各グループ内は published_at DESC で整列する。
+  const rows = await db
+    .prepare(
+      `WITH same_feed AS (
+         SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+                a.author, a.published_at, a.fetched_at, a.category, a.lang,
+                0 AS source_priority
+         FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id
          WHERE a.feed_id = ?1 AND a.guid != ?2
          ORDER BY a.published_at DESC
-         LIMIT ?3`,
-      )
-      .bind(target.feed_id, guid, n)
-      .all<Article>(),
-    db
-      .prepare(
-        `SELECT ${ARTICLES_SELECT_FIELDS}
-         ${ARTICLES_FROM_JOIN}
-         WHERE a.category = ?1 AND a.feed_id != ?2 AND a.guid != ?3
+         LIMIT ?3
+       ),
+       same_category AS (
+         SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
+                a.author, a.published_at, a.fetched_at, a.category, a.lang,
+                1 AS source_priority
+         FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id
+         WHERE a.category = ?4 AND a.feed_id != ?1
+           AND a.guid NOT IN (SELECT guid FROM same_feed)
+           AND a.guid != ?2
          ORDER BY a.published_at DESC
-         LIMIT ?4`,
-      )
-      .bind(target.category, target.feed_id, guid, n)
-      .all<Article>(),
-  ]);
+         LIMIT ?3
+       )
+       SELECT id, guid, feed_id, feed_name, title, url, summary,
+              author, published_at, fetched_at, category, lang
+       FROM (SELECT * FROM same_feed UNION ALL SELECT * FROM same_category)
+       ORDER BY source_priority ASC, published_at DESC
+       LIMIT ?3`,
+    )
+    .bind(target.feed_id, guid, n, target.category)
+    .all<Article>();
 
-  const sameFeedArticles = sameFeedRows.results ?? [];
-  const remaining = n - sameFeedArticles.length;
-
-  if (remaining <= 0) return sameFeedArticles.slice(0, n);
-
-  // sameFeed の guid を Set にしてアプリ側で重複除去し、結合後に n 件で打ち切る
-  const sameFeedGuids = new Set(sameFeedArticles.map((a) => a.guid));
-  const sameCategoryFiltered = (sameCategoryRows.results ?? []).filter(
-    (a) => !sameFeedGuids.has(a.guid),
-  );
-
-  return [...sameFeedArticles, ...sameCategoryFiltered].slice(0, n);
+  return rows.results ?? [];
 }
 
 // ---------------------------------------------------------------------------
