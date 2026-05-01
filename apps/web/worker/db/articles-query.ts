@@ -8,6 +8,7 @@ import {
   buildPaginatedQuery,
   extractWithCursor,
 } from "./articles-cursor";
+import { escapeFtsQuery } from "./articles-query-extra";
 import type { D1BindParameter } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -365,19 +366,4 @@ export async function getArticlesByDay(
     .bind(...binds)
     .all<Article>();
   return extractWithCursor(result.results ?? [], limit);
-}
-
-// ---------------------------------------------------------------------------
-// FTS5 クエリエスケープ (listArticles の q パラメータで使用)
-// ---------------------------------------------------------------------------
-
-function escapeFtsQuery(input: string): string {
-  // FTS5 で安全に扱うため、特殊記号を除去して各単語をフレーズ扱いにする
-  const tokens = input
-    .replace(/["()*:^]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 8)
-    .map((t) => `"${t.replace(/"/g, "")}"`);
-  return tokens.length > 0 ? tokens.join(" ") : '""';
 }
