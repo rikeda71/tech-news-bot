@@ -8,6 +8,13 @@ import type { Article } from "../types";
 export const ARTICLES_SELECT_FIELDS = `a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
            a.author, a.published_at, a.fetched_at, a.category, a.lang`;
 
+/**
+ * ARTICLES_SELECT_FIELDS から `a.` プレフィックスと `f.name AS` を剥いた素のカラム列。
+ * CTE / サブクエリの外側 SELECT で使う (alias 後は a./f. 修飾できないため)。
+ */
+export const ARTICLES_BARE_FIELDS = `id, guid, feed_id, feed_name, title, url, summary,
+           author, published_at, fetched_at, category, lang`;
+
 /** articles + feeds の FROM / JOIN 句 */
 export const ARTICLES_FROM_JOIN = "FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id";
 

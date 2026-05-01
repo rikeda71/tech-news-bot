@@ -1,5 +1,6 @@
 import type { Article, FeedCategory, FeedLang } from "../types";
 import {
+  ARTICLES_BARE_FIELDS,
   ARTICLES_FROM_JOIN,
   ARTICLES_SELECT_FIELDS,
   type CursorPage,
@@ -184,27 +185,24 @@ export async function getRelatedArticles(
   const rows = await db
     .prepare(
       `WITH same_feed AS (
-         SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-                a.author, a.published_at, a.fetched_at, a.category, a.lang,
+         SELECT ${ARTICLES_SELECT_FIELDS},
                 0 AS source_priority
-         FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id
+         ${ARTICLES_FROM_JOIN}
          WHERE a.feed_id = ?1 AND a.guid != ?2
          ORDER BY a.published_at DESC
          LIMIT ?3
        ),
        same_category AS (
-         SELECT a.id, a.guid, a.feed_id, f.name AS feed_name, a.title, a.url, a.summary,
-                a.author, a.published_at, a.fetched_at, a.category, a.lang,
+         SELECT ${ARTICLES_SELECT_FIELDS},
                 1 AS source_priority
-         FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id
+         ${ARTICLES_FROM_JOIN}
          WHERE a.category = ?4 AND a.feed_id != ?1
            AND a.guid NOT IN (SELECT guid FROM same_feed)
            AND a.guid != ?2
          ORDER BY a.published_at DESC
          LIMIT ?3
        )
-       SELECT id, guid, feed_id, feed_name, title, url, summary,
-              author, published_at, fetched_at, category, lang
+       SELECT ${ARTICLES_BARE_FIELDS}
        FROM (SELECT * FROM same_feed UNION ALL SELECT * FROM same_category)
        ORDER BY source_priority ASC, published_at DESC
        LIMIT ?3`,

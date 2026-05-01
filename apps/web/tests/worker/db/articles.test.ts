@@ -413,5 +413,17 @@ describe("articles db", () => {
       const feedBItems = (result ?? []).filter((a) => a.feed_id === "feed-b");
       expect(feedBItems.length).toBe(0);
     });
+
+    it("returns only same-feed articles when n equals same-feed count", async () => {
+      // 同 feed (feed-a) に target 除く bigtech 記事は a-bt-1, a-bt-2 の 2 件。
+      // n=2 で要求した場合、同 feed だけで埋まり同 category 補完は走らない。
+      // CTE の source_priority と LIMIT が機能していることを確認。
+      const result = await getRelatedArticles(env.DB, "a-bt-target", 2);
+      expect(result).not.toBeNull();
+      const items = result ?? [];
+      expect.soft(items.length).toBe(2);
+      expect.soft(items.every((a) => a.feed_id === "feed-a")).toBe(true);
+      expect.soft(items.some((a) => a.feed_id === "feed-c")).toBe(false);
+    });
   });
 });
