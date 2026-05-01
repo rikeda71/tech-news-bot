@@ -34,10 +34,10 @@ describe("GET /api (catalog endpoint)", () => {
     }>();
     expect(body.endpoints.length).toBeGreaterThan(0);
     for (const ep of body.endpoints) {
-      expect(typeof ep.method).toBe("string");
-      expect(typeof ep.path).toBe("string");
-      expect(typeof ep.description).toBe("string");
-      expect(["none", "admin"]).toContain(ep.auth);
+      expect.soft(typeof ep.method).toBe("string");
+      expect.soft(typeof ep.path).toBe("string");
+      expect.soft(typeof ep.description).toBe("string");
+      expect.soft(["none", "admin"]).toContain(ep.auth);
     }
   });
 
@@ -46,8 +46,8 @@ describe("GET /api (catalog endpoint)", () => {
     const body = await res.json<{ syndication: { path: string; format: string }[] }>();
     expect(body.syndication.length).toBeGreaterThan(0);
     for (const s of body.syndication) {
-      expect(typeof s.path).toBe("string");
-      expect(typeof s.format).toBe("string");
+      expect.soft(typeof s.path).toBe("string");
+      expect.soft(typeof s.format).toBe("string");
     }
   });
 
@@ -64,7 +64,7 @@ describe("GET /api (catalog endpoint)", () => {
     const adminEndpoints = body.endpoints.filter((ep) => ep.path.startsWith("/api/admin"));
     expect(adminEndpoints.length).toBeGreaterThan(0);
     for (const ep of adminEndpoints) {
-      expect(ep.auth).toBe("admin");
+      expect.soft(ep.auth).toBe("admin");
     }
   });
 
@@ -74,7 +74,7 @@ describe("GET /api (catalog endpoint)", () => {
     const publicEndpoints = body.endpoints.filter((ep) => !ep.path.startsWith("/api/admin"));
     expect(publicEndpoints.length).toBeGreaterThan(0);
     for (const ep of publicEndpoints) {
-      expect(ep.auth).toBe("none");
+      expect.soft(ep.auth).toBe("none");
     }
   });
 

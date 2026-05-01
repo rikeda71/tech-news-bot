@@ -73,9 +73,9 @@ beforeEach(async () => {
 describe("/api/articles", () => {
   it("returns all articles in published_at desc order", async () => {
     const res = await SELF.fetch("https://example.com/api/articles?limit=10");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { articles: { guid: string }[] };
-    expect(body.articles.map((a) => a.guid)).toEqual(["g-jp", "g-ai", "g-bt"]);
+    expect.soft(body.articles.map((a) => a.guid)).toEqual(["g-jp", "g-ai", "g-bt"]);
   });
 
   it("filters by category", async () => {
@@ -126,9 +126,9 @@ describe("/api/articles", () => {
 
   it("ignores malformed cursor", async () => {
     const res = await SELF.fetch("https://example.com/api/articles?cursor=not-base64");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { articles: unknown[] };
-    expect(body.articles.length).toBe(3);
+    expect.soft(body.articles.length).toBe(3);
   });
 
   it("filters by category AND feed_id together", async () => {
@@ -243,10 +243,10 @@ describe("/api/articles", () => {
 describe("/api/feeds", () => {
   it("returns synced feeds as array", async () => {
     const res = await SELF.fetch("https://example.com/api/feeds");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { feeds: { id: string }[] };
     // beforeEach で syncFeeds した 3 件が返る
-    expect(body.feeds.length).toBeGreaterThanOrEqual(3);
+    expect.soft(body.feeds.length).toBeGreaterThanOrEqual(3);
   });
 
   it("returns 400 for invalid category", async () => {
@@ -258,7 +258,7 @@ describe("/api/feeds", () => {
 describe("/api/stats", () => {
   it("returns aggregated counts", async () => {
     const res = await SELF.fetch("https://example.com/api/stats");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       total: number;
       by_category: Record<string, number>;
@@ -302,7 +302,7 @@ describe("/api/stats", () => {
 describe("/api/health", () => {
   it("returns enriched health response with db summary", async () => {
     const res = await SELF.fetch("https://example.com/api/health");
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       ok: boolean;
       now: string;
@@ -370,7 +370,7 @@ describe("CORS headers on public /api/* endpoints", () => {
         "Access-Control-Request-Headers": "content-type",
       },
     });
-    expect(res.status).toBe(204);
+    expect.soft(res.status).toBe(204);
     expect.soft(res.headers.get("Access-Control-Allow-Origin")).toBe(allowedOrigin);
     expect.soft(res.headers.get("Access-Control-Allow-Methods")).toMatch(/GET/);
   });

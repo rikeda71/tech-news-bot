@@ -61,15 +61,17 @@ describe("GET /feeds.opml", () => {
     const text = await res.text();
     // 少なくとも 1 つ以上の type="rss" outline が含まれること
     const matches = text.match(/type="rss"/g);
-    expect.soft(matches).not.toBeNull();
+    expect(matches).not.toBeNull();
     expect.soft((matches ?? []).length).toBeGreaterThan(0);
   });
 
   it("ETag round-trip returns 304 on If-None-Match", async () => {
     const first = await SELF.fetch("https://example.com/feeds.opml");
-    expect(first.status).toBe(200);
+    expect.soft(first.status).toBe(200);
     const etag = first.headers.get("ETag");
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    // etag の null チェックは後続の etag! アクセスの guard なので plain
+    expect(etag).not.toBeNull();
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
 
     const second = await SELF.fetch("https://example.com/feeds.opml", {
       headers: { "If-None-Match": etag! },
