@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 import { env } from "cloudflare:test";
-import { OverlapError, findOverlappingReports, upsertReport } from "../../../worker/db/reports";
+import {
+  OverlapError,
+  findOverlappingReports,
+  isReportKind,
+  upsertReport,
+} from "../../../worker/db/reports";
 import type { ReportInput } from "../../../worker/db/reports";
 
 function baseInput(overrides: Partial<ReportInput> = {}): ReportInput {
@@ -17,6 +22,24 @@ function baseInput(overrides: Partial<ReportInput> = {}): ReportInput {
     ...overrides,
   };
 }
+
+describe("isReportKind", () => {
+  it("returns true for valid kinds", () => {
+    expect(isReportKind("daily")).toBe(true);
+    expect(isReportKind("weekly")).toBe(true);
+    expect(isReportKind("monthly")).toBe(true);
+  });
+
+  it("returns false for an unknown string", () => {
+    expect(isReportKind("yearly")).toBe(false);
+  });
+
+  it("returns false for non-string values (null / undefined / number)", () => {
+    expect(isReportKind(null)).toBe(false);
+    expect(isReportKind(undefined)).toBe(false);
+    expect(isReportKind(42)).toBe(false);
+  });
+});
 
 describe("findOverlappingReports", () => {
   it("returns empty array when no rows exist", async () => {
@@ -50,8 +73,9 @@ describe("findOverlappingReports", () => {
         period_end: "2026-04-29T00:00:00.000Z",
       }),
     );
+    // length は guard (overlaps[0] アクセスの前提)。id は独立した属性
     expect(overlaps).toHaveLength(1);
-    expect(overlaps[0]?.id).toBe(id);
+    expect.soft(overlaps[0]?.id).toBe(id);
   });
 
   it("returns empty array for adjacent period (new start == existing end)", async () => {
@@ -118,7 +142,8 @@ describe("upsertReport overlap guard", () => {
     } catch (err) {
       if (err instanceof OverlapError) caught = err;
     }
+    // caught が null でないことは guard (conflictingIds アクセスの前提)。id の含有は独立
     expect(caught).not.toBeNull();
-    expect(caught!.conflictingIds).toContain(id);
+    expect.soft(caught!.conflictingIds).toContain(id);
   });
 });

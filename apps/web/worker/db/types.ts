@@ -4,6 +4,17 @@
  * DB スキーマを変更した場合はこのファイルも合わせて更新すること。
  */
 
+/**
+ * D1PreparedStatement.bind() が受け付けるパラメータ型。
+ * SQLite の型システムに対応: null / 文字列 / 整数・浮動小数点 / 真偽値 / バイナリ。
+ * workers-types の bind シグネチャは `unknown[]` だが、実際に安全に渡せる値を明示するため
+ * プロジェクト内で定義する。
+ * - boolean: D1 ランタイムが 0/1 に SQLite で変換 (SQLite に bool 型なし)
+ * - ArrayBuffer: BLOB 列として保存 (用途あればスキーマ側で BLOB 列を定義)
+ * worker 全体で使う必要が出た場合は `worker/types.ts` への昇格を検討。
+ */
+export type D1BindParameter = null | string | number | boolean | ArrayBuffer;
+
 /** articles テーブルの全カラム (JOIN なし) */
 export interface ArticleDbRow {
   id: number;

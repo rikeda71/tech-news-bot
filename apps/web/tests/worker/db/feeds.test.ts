@@ -104,17 +104,18 @@ describe("loadFeedHeadersAll", () => {
 
     const map = await loadFeedHeadersAll(env.DB, ["feed-a", "feed-b", "feed-c"]);
     expect(map.size).toBe(3);
-    expect(map.get("feed-a")).toEqual({
+    expect.soft(map.get("feed-a")).toEqual({
       last_etag: '"a-etag"',
       last_modified: "Mon, 01 Jan 2024 00:00:00 GMT",
     });
-    expect(map.get("feed-b")).toEqual({ last_etag: '"b-etag"', last_modified: null });
-    expect(map.get("feed-c")).toEqual({ last_etag: null, last_modified: null });
+    expect.soft(map.get("feed-b")).toEqual({ last_etag: '"b-etag"', last_modified: null });
+    expect.soft(map.get("feed-c")).toEqual({ last_etag: null, last_modified: null });
   });
 
   it("omits unknown feed ids from the returned Map", async () => {
     const map = await loadFeedHeadersAll(env.DB, ["feed-a", "non-existent"]);
-    expect(map.has("feed-a")).toBe(true);
-    expect(map.has("non-existent")).toBe(false);
+    // 存在する feed と存在しない feed の has() は独立した観点
+    expect.soft(map.has("feed-a")).toBe(true);
+    expect.soft(map.has("non-existent")).toBe(false);
   });
 });

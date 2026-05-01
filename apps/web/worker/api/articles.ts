@@ -1,6 +1,5 @@
 import { Hono } from "hono";
-import type { Context } from "hono";
-import type { Env, FeedCategory, FeedLang } from "../types";
+import type { Env } from "../types";
 import { loadAllFeeds } from "../feed-config";
 import {
   countArticlesByDay,
@@ -18,7 +17,6 @@ import {
   listArticles,
   searchArticles,
 } from "../db/articles";
-import type { Cursor } from "../db/articles";
 import { computeArticlesEtag } from "../utils/etag";
 import feedsYaml from "../feeds.yaml";
 import type { FeedsFile } from "../types";
@@ -35,112 +33,17 @@ import type {
   ArticleRelatedResponse,
   ArticleSearchResponse,
 } from "./types";
-import { makeOneOf } from "../utils/types";
+import { isCategory, isLang } from "./_guards";
+import { decodeCursor, encodeCursor, isValidDateRange, parseListQuery } from "./articles-parse";
 
 const FEEDS_VERSION = (feedsYaml as FeedsFile).version;
 
 const app = new Hono<{ Bindings: Env }>();
 
-const VALID_CATEGORIES = [
-  "bigtech",
-  "ai",
-  "jp",
-  "personal",
-] as const satisfies readonly FeedCategory[];
-const VALID_LANGS = ["ja", "en"] as const satisfies readonly FeedLang[];
 const VALID_FEED_IDS = new Set(loadAllFeeds().map((f) => f.id));
 const VALID_CALENDAR_DAYS = [7, 30, 90, 365] as const;
 // URL パラメータの長さ上限。意図せず長い文字列が D1 クエリに流れ込むのを防ぐ
 const MAX_PARAM_LENGTH = 200;
-
-const isCategory = makeOneOf<FeedCategory>(VALID_CATEGORIES);
-const isLang = makeOneOf<FeedLang>(VALID_LANGS);
-
-// ISO 8601 の日時部分 (時刻まで)。decodeCursor の publishedAt 検証と
-// since/until の ISO 形式チェック (時刻部分以降は内部で 10 文字に切り詰めて検証) に共用する。
-const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-// YYYY-MM-DD 形式のみ受け付ける (末尾 anchor で `9999-99-99foo` のような余剰文字を排除)
-const DATE_RANGE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-// 実日付として妥当か検証する。Date が内部で繰り上げる (9999-99-99 → 3000-03-09 等) ことを
-// 再フォーマットして入力文字列と比較することで検出する。
-function isValidDate(s: string): boolean {
-  const t = Date.parse(`${s}T00:00:00Z`);
-  if (Number.isNaN(t)) return false;
-  const d = new Date(t);
-  const y = d.getUTCFullYear().toString().padStart(4, "0");
-  const m = (d.getUTCMonth() + 1).toString().padStart(2, "0");
-  const day = d.getUTCDate().toString().padStart(2, "0");
-  return `${y}-${m}-${day}` === s;
-}
-
-function isValidDateRange(s: string | undefined): boolean {
-  if (!s) return true; // 未指定は OK
-  // YYYY-MM-DD 形式: 実日付として妥当かチェック
-  if (DATE_RANGE_RE.test(s)) return isValidDate(s);
-  // YYYY-MM-DDTHH:MM:SS... 形式: 先頭の日付部分のみ抽出して検証
-  if (ISO_DATETIME_RE.test(s)) return isValidDate(s.slice(0, 10));
-  return false;
-}
-
-function decodeCursor(input: string | undefined): Cursor | null {
-  if (!input) return null;
-  try {
-    const decoded = atob(input);
-    const parsed = JSON.parse(decoded);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof parsed.publishedAt === "string" &&
-      ISO_DATETIME_RE.test(parsed.publishedAt) &&
-      typeof parsed.id === "number" &&
-      Number.isInteger(parsed.id) &&
-      parsed.id >= 0
-    ) {
-      return { publishedAt: parsed.publishedAt, id: parsed.id };
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function encodeCursor(cursor: { publishedAt: string; id: number } | null): string | null {
-  if (!cursor) return null;
-  return btoa(JSON.stringify(cursor));
-}
-
-type ParsedListQuery =
-  | { ok: true; limit: number; cursor: Cursor | null }
-  | { ok: false; response: Response };
-
-// limit / cursor の parse + 400 チェックを共通化。
-// エラーメッセージ・ステータスコードは各 endpoint の仕様に揃える。
-function parseListQuery(
-  c: Context<{ Bindings: Env }>,
-  opts: { defaultLimit?: number; maxLimit?: number } = {},
-): ParsedListQuery {
-  const defaultLimit = opts.defaultLimit ?? 20;
-  const maxLimit = opts.maxLimit ?? 50;
-
-  const limitRaw = c.req.query("limit") ?? String(defaultLimit);
-  const limitNum = Number(limitRaw);
-  if (!Number.isInteger(limitNum) || limitNum < 1 || limitNum > maxLimit) {
-    return {
-      ok: false,
-      response: c.json({ error: `limit must be an integer between 1 and ${maxLimit}` }, 400),
-    };
-  }
-
-  const cursorRaw = c.req.query("cursor");
-  const cursor = decodeCursor(cursorRaw);
-  // cursor が指定されているのに decode に失敗した場合は 400
-  if (cursorRaw && !cursor) {
-    return { ok: false, response: c.json({ error: "invalid cursor" }, 400) };
-  }
-
-  return { ok: true, limit: limitNum, cursor };
-}
 
 app.get("/", async (c) => {
   const { req } = c;
@@ -315,8 +218,8 @@ app.get("/search", async (c) => {
   const qRaw = c.req.query("q");
   if (!qRaw || !qRaw.trim()) return c.json({ error: "missing q" }, 400);
 
-  // lower-case + trim してトークン分割
-  const tokens = qRaw.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  // FTS5 trigram は case-insensitive のため toLowerCase() は不要。trim のみ行う。
+  const tokens = qRaw.trim().split(/\s+/).filter(Boolean);
 
   if (tokens.length === 0 || tokens.length > MAX_SEARCH_TOKENS) {
     return c.json({ error: `q must have 1 to ${MAX_SEARCH_TOKENS} tokens` }, 400);
@@ -331,7 +234,7 @@ app.get("/search", async (c) => {
   if (!parsed.ok) return parsed.response;
   const { limit: limitNum, cursor } = parsed;
 
-  const result = await searchArticles(c.env.DB, tokens, limitNum, cursor);
+  const result = await searchArticles(c.env.DB, tokens.join(" "), limitNum, cursor);
 
   return c.json<ArticleSearchResponse>(
     {

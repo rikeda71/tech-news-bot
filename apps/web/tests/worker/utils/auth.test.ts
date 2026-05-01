@@ -27,8 +27,8 @@ describe("timingSafeEqual", () => {
   });
 
   it("長さが異なる場合は false を返す", () => {
-    expect(timingSafeEqual("abc", "abcd")).toBe(false);
-    expect(timingSafeEqual("abcd", "abc")).toBe(false);
+    expect.soft(timingSafeEqual("abc", "abcd")).toBe(false);
+    expect.soft(timingSafeEqual("abcd", "abc")).toBe(false);
   });
 
   it("空文字同士は true を返す", () => {
@@ -36,8 +36,8 @@ describe("timingSafeEqual", () => {
   });
 
   it("片方が空文字の場合は false を返す", () => {
-    expect(timingSafeEqual("abc", "")).toBe(false);
-    expect(timingSafeEqual("", "abc")).toBe(false);
+    expect.soft(timingSafeEqual("abc", "")).toBe(false);
+    expect.soft(timingSafeEqual("", "abc")).toBe(false);
   });
 });
 

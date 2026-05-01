@@ -5,8 +5,9 @@ import { finishRun, getRun, listRuns, recordRunFeed, startRun } from "../../../w
 describe("runs db", () => {
   it("startRun returns a run_id", async () => {
     const { run_id } = await startRun(env.DB, "2024-04-01T00:00:00.000Z", 5);
-    expect(typeof run_id).toBe("number");
-    expect(run_id).toBeGreaterThan(0);
+    // 型と値の正当性は独立した観点
+    expect.soft(typeof run_id).toBe("number");
+    expect.soft(run_id).toBeGreaterThan(0);
   });
 
   it("listRuns returns empty array when no runs exist", async () => {
@@ -23,14 +24,14 @@ describe("runs db", () => {
 
     const runs = await listRuns(env.DB);
     expect(runs).toHaveLength(1);
-    expect(runs[0].id).toBe(run_id);
-    expect(runs[0].started_at).toBe(startedAt);
-    expect(runs[0].completed_at).toBe(completedAt);
-    expect(runs[0].feeds_total).toBe(10);
-    expect(runs[0].feeds_ok).toBe(8);
-    expect(runs[0].feeds_failed).toBe(2);
-    expect(runs[0].articles_inserted).toBe(42);
-    expect(runs[0].error).toBeNull();
+    expect.soft(runs[0].id).toBe(run_id);
+    expect.soft(runs[0].started_at).toBe(startedAt);
+    expect.soft(runs[0].completed_at).toBe(completedAt);
+    expect.soft(runs[0].feeds_total).toBe(10);
+    expect.soft(runs[0].feeds_ok).toBe(8);
+    expect.soft(runs[0].feeds_failed).toBe(2);
+    expect.soft(runs[0].articles_inserted).toBe(42);
+    expect.soft(runs[0].error).toBeNull();
   });
 
   it("startRun → recordRunFeed → getRun round-trip", async () => {
@@ -45,20 +46,20 @@ describe("runs db", () => {
 
     const detail = await getRun(env.DB, run_id);
     expect(detail).not.toBeNull();
-    expect(detail!.run.id).toBe(run_id);
+    expect.soft(detail!.run.id).toBe(run_id);
     expect(detail!.feeds).toHaveLength(3);
 
     const feedA = detail!.feeds.find((f) => f.feed_id === "feed-a");
     expect(feedA).not.toBeUndefined();
-    expect(feedA!.status).toBe("ok");
-    expect(feedA!.articles_inserted).toBe(5);
-    expect(feedA!.duration_ms).toBe(1200);
-    expect(feedA!.error).toBeNull();
+    expect.soft(feedA!.status).toBe("ok");
+    expect.soft(feedA!.articles_inserted).toBe(5);
+    expect.soft(feedA!.duration_ms).toBe(1200);
+    expect.soft(feedA!.error).toBeNull();
 
     const feedB = detail!.feeds.find((f) => f.feed_id === "feed-b");
     expect(feedB).not.toBeUndefined();
-    expect(feedB!.status).toBe("failed");
-    expect(feedB!.error).toBe("HTTP 503 error");
+    expect.soft(feedB!.status).toBe("failed");
+    expect.soft(feedB!.error).toBe("HTTP 503 error");
   });
 
   it("getRun returns null for unknown id", async () => {
@@ -80,9 +81,9 @@ describe("runs db", () => {
     await startRun(env.DB, "2024-04-02T00:00:00.000Z", 1);
 
     const runs = await listRuns(env.DB);
-    expect(runs[0].started_at).toBe("2024-04-03T00:00:00.000Z");
-    expect(runs[1].started_at).toBe("2024-04-02T00:00:00.000Z");
-    expect(runs[2].started_at).toBe("2024-04-01T00:00:00.000Z");
+    expect.soft(runs[0].started_at).toBe("2024-04-03T00:00:00.000Z");
+    expect.soft(runs[1].started_at).toBe("2024-04-02T00:00:00.000Z");
+    expect.soft(runs[2].started_at).toBe("2024-04-01T00:00:00.000Z");
   });
 
   it("error field is truncated to 200 characters", async () => {

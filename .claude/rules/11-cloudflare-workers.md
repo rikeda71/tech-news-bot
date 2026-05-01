@@ -48,7 +48,7 @@ paths:
 - 必ず `AbortController` で timeout を設定。デフォルト 5 秒、テストでは `COLLECTOR_TIMEOUT_MS=500`
 - `User-Agent` を `tech-news-bot/<version> (+https://...)` 形式で必ず設定 (`worker/collector/index.ts` の `fetchFeed` 参照)
 - HTTP 4xx は記録だけして retry しない、5xx は backoff retry (最大 2 回)
-- `If-None-Match` / `If-Modified-Since` を送って 304 を活用 (`migrations/0005_feed_conditional_headers.sql` で feed 別に保持)
+- `If-None-Match` / `If-Modified-Since` を送って 304 を活用 (`feeds.last_etag` / `feeds.last_modified` カラムに feed 別に保持)
 
 ## Static Assets
 

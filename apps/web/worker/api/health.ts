@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getFeedHealth } from "../db/feeds";
 import { countFeeds } from "../db/feeds";
+import { getFeedHealth } from "../db/feed-stats";
 import { countAllArticles, countArticlesSince } from "../db/articles";
 import { getLatestCompletedRun } from "../db/runs";
 import { loadAllFeeds } from "../feed-config";

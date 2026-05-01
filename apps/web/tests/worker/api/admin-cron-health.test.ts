@@ -54,7 +54,7 @@ describe("GET /api/admin/cron-health", () => {
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/days must be 7 or 30/);
+    expect.soft(body.error).toMatch(/days must be 7 or 30/);
   });
 
   it("400: days=0 → 400", async () => {
@@ -68,7 +68,7 @@ describe("GET /api/admin/cron-health", () => {
     const res = await SELF.fetch("https://example.com/api/admin/cron-health", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       window_days: number;
       runs_total: number;
@@ -77,13 +77,13 @@ describe("GET /api/admin/cron-health", () => {
       articles_collected: number;
       top_failing_feeds: unknown[];
     };
-    expect(body.window_days).toBe(7);
-    expect(body.runs_total).toBe(0);
-    expect(body.runs_succeeded).toBe(0);
-    expect(body.runs_failed).toBe(0);
-    expect(body.articles_collected).toBe(0);
-    expect(Array.isArray(body.top_failing_feeds)).toBe(true);
-    expect(body.top_failing_feeds).toHaveLength(0);
+    expect.soft(body.window_days).toBe(7);
+    expect.soft(body.runs_total).toBe(0);
+    expect.soft(body.runs_succeeded).toBe(0);
+    expect.soft(body.runs_failed).toBe(0);
+    expect.soft(body.articles_collected).toBe(0);
+    expect.soft(Array.isArray(body.top_failing_feeds)).toBe(true);
+    expect.soft(body.top_failing_feeds).toHaveLength(0);
   });
 
   it("200: runs_total / runs_succeeded / runs_failed のカウントが正しい", async () => {
@@ -96,17 +96,17 @@ describe("GET /api/admin/cron-health", () => {
     const res = await SELF.fetch("https://example.com/api/admin/cron-health?days=7", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       runs_total: number;
       runs_succeeded: number;
       runs_failed: number;
       articles_collected: number;
     };
-    expect(body.runs_total).toBe(3);
-    expect(body.runs_succeeded).toBe(2);
-    expect(body.runs_failed).toBe(1);
-    expect(body.articles_collected).toBe(8);
+    expect.soft(body.runs_total).toBe(3);
+    expect.soft(body.runs_succeeded).toBe(2);
+    expect.soft(body.runs_failed).toBe(1);
+    expect.soft(body.articles_collected).toBe(8);
   });
 
   it("200: top_failing_feeds が failures 降順", async () => {
@@ -120,16 +120,17 @@ describe("GET /api/admin/cron-health", () => {
     const res = await SELF.fetch("https://example.com/api/admin/cron-health?days=7", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       top_failing_feeds: { feed_id: string; failures: number }[];
     };
     // feed-a (failures=2) が feed-b (failures=1) より先
+    // length は [0]/[1] アクセスのガードなので plain expect を使う
     expect(body.top_failing_feeds.length).toBeGreaterThanOrEqual(2);
-    expect(body.top_failing_feeds[0].feed_id).toBe("feed-a");
-    expect(body.top_failing_feeds[0].failures).toBe(2);
-    expect(body.top_failing_feeds[1].feed_id).toBe("feed-b");
-    expect(body.top_failing_feeds[1].failures).toBe(1);
+    expect.soft(body.top_failing_feeds[0].feed_id).toBe("feed-a");
+    expect.soft(body.top_failing_feeds[0].failures).toBe(2);
+    expect.soft(body.top_failing_feeds[1].feed_id).toBe("feed-b");
+    expect.soft(body.top_failing_feeds[1].failures).toBe(1);
   });
 
   it("200: days=7 で古いデータは含まれない", async () => {
@@ -139,9 +140,9 @@ describe("GET /api/admin/cron-health", () => {
     const res = await SELF.fetch("https://example.com/api/admin/cron-health?days=7", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { runs_total: number };
-    expect(body.runs_total).toBe(0);
+    expect.soft(body.runs_total).toBe(0);
   });
 
   it("200: days=30 で 8 日前のデータが含まれる", async () => {
@@ -151,19 +152,19 @@ describe("GET /api/admin/cron-health", () => {
     const res = await SELF.fetch("https://example.com/api/admin/cron-health?days=30", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { runs_total: number; window_days: number };
-    expect(body.window_days).toBe(30);
-    expect(body.runs_total).toBe(1);
+    expect.soft(body.window_days).toBe(30);
+    expect.soft(body.runs_total).toBe(1);
   });
 
   it("200: Cache-Control ヘッダが private, max-age=60 を含む", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/cron-health", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const cacheControl = res.headers.get("cache-control") ?? "";
-    expect(cacheControl).toContain("private");
-    expect(cacheControl).toContain("max-age=60");
+    expect.soft(cacheControl).toContain("private");
+    expect.soft(cacheControl).toContain("max-age=60");
   });
 });

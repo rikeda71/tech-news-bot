@@ -60,9 +60,9 @@ describe("POST /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportSaveResponse;
-    expect(body.ok).toBe(true);
-    expect(typeof body.id).toBe("number");
-    expect(body.id).toBeGreaterThan(0);
+    expect.soft(body.ok).toBe(true);
+    expect.soft(typeof body.id).toBe("number");
+    expect.soft(body.id).toBeGreaterThan(0);
   });
 
   it("200: accepts ADMIN_TOKEN_NEXT (rotation)", async () => {
@@ -200,7 +200,7 @@ describe("POST /api/admin/reports", () => {
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("period_end must be after period_start");
+    expect.soft(body.error).toBe("period_end must be after period_start");
   });
 
   it("400: rejects period_start > period_end", async () => {
@@ -216,7 +216,7 @@ describe("POST /api/admin/reports", () => {
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("period_end must be after period_start");
+    expect.soft(body.error).toBe("period_end must be after period_start");
   });
 
   // ---- overlap validation ----
@@ -253,7 +253,7 @@ describe("POST /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportSaveResponse;
-    expect(body.ok).toBe(true);
+    expect.soft(body.ok).toBe(true);
   });
 
   it("409: partial overlap (start shifted by 1 day)", async () => {
@@ -561,8 +561,9 @@ describe("GET /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportListResponse;
+    // length は後続の reports[1] アクセスの guard なので fail-fast
     expect(body.reports.length).toBeGreaterThanOrEqual(2);
-    expect(body.reports[0].generated_at >= body.reports[1].generated_at).toBe(true);
+    expect.soft(body.reports[0].generated_at >= body.reports[1].generated_at).toBe(true);
   });
 
   it("200: filters by kind", async () => {
@@ -583,7 +584,7 @@ describe("GET /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportListResponse;
-    expect(body.reports.every((r) => r.kind === "weekly")).toBe(true);
+    expect.soft(body.reports.every((r) => r.kind === "weekly")).toBe(true);
   });
 
   it("400: rejects invalid kind", async () => {
@@ -621,7 +622,7 @@ describe("GET /api/admin/reports/:id", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportDetailResponse;
-    expect(body.report.content).toBe("with meta");
-    expect(body.report.meta_json).toContain("dedup_total");
+    expect.soft(body.report.content).toBe("with meta");
+    expect.soft(body.report.meta_json).toContain("dedup_total");
   });
 });

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { getCategoriesSummary } from "../db/feeds";
+import { getCategoriesSummary } from "../db/feed-stats";
 import type { CategoriesResponse } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();

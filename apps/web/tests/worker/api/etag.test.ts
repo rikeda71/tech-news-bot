@@ -46,8 +46,8 @@ describe("ETag - /api/articles", () => {
     expect(res.status).toBe(200);
     const etag = res.headers.get("ETag");
     expect(etag).not.toBeNull();
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=60");
   });
 
   it("returns 304 when If-None-Match matches ETag", async () => {
@@ -58,8 +58,8 @@ describe("ETag - /api/articles", () => {
       headers: { "If-None-Match": etag },
     });
     expect(res2.status).toBe(304);
-    expect(res2.headers.get("ETag")).toBe(etag);
-    expect(res2.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect.soft(res2.headers.get("ETag")).toBe(etag);
+    expect.soft(res2.headers.get("Cache-Control")).toBe("public, max-age=60");
   });
 
   it("returns different ETag for different query params", async () => {
@@ -104,8 +104,8 @@ describe("ETag - /feed.json", () => {
     const res = await SELF.fetch("https://example.com/feed.json");
     expect(res.status).toBe(200);
     const etag = res.headers.get("ETag");
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=60");
   });
 
   it("returns 304 when If-None-Match matches ETag", async () => {
@@ -116,7 +116,7 @@ describe("ETag - /feed.json", () => {
       headers: { "If-None-Match": etag },
     });
     expect(res2.status).toBe(304);
-    expect(res2.headers.get("ETag")).toBe(etag);
+    expect.soft(res2.headers.get("ETag")).toBe(etag);
   });
 });
 
@@ -125,8 +125,8 @@ describe("ETag - /feed.xml", () => {
     const res = await SELF.fetch("https://example.com/feed.xml");
     expect(res.status).toBe(200);
     const etag = res.headers.get("ETag");
-    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect.soft(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+    expect.soft(res.headers.get("Cache-Control")).toBe("public, max-age=60");
   });
 
   it("returns 304 when If-None-Match matches ETag", async () => {
@@ -137,6 +137,6 @@ describe("ETag - /feed.xml", () => {
       headers: { "If-None-Match": etag },
     });
     expect(res2.status).toBe(304);
-    expect(res2.headers.get("ETag")).toBe(etag);
+    expect.soft(res2.headers.get("ETag")).toBe(etag);
   });
 });

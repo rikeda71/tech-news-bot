@@ -243,16 +243,16 @@ GitHub Actions (`.github/workflows/report-daily.yml`) から本 skill を起動�
 - `since=today` (固定)
 - `mode=deep` (固定)
 - `target=remote` (固定)
-- 対象カテゴリ: `bigtech,ai,jp` (zenn は除外)
+- 対象カテゴリ: `bigtech,ai` (jp / personal は除外)
 - `lang`: 指定なし
 
 ### Stage 1 の呼び方
 
 ```sh
-node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=remote --limit=600
+node tools/d1-client/recent.mjs --since=today --category=bigtech,ai --target=remote --limit=600
 ```
 
-`recent.mjs` の `--category` カンマ区切り対応版を使用する (1 回呼び出しで bigtech/ai/jp を取得)。返り値の `articles[]` は `recent.mjs` 側で URL de-dup 済み (古い `published_at` 優先)。
+`recent.mjs` の `--category` カンマ区切り対応版を使用する (1 回呼び出しで bigtech/ai を取得)。返り値の `articles[]` は `recent.mjs` 側で URL de-dup 済み (古い `published_at` 優先)。
 
 ### 出力ファイル (Stage 4 完了時に書き出す)
 
@@ -261,18 +261,18 @@ node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=
 **記事が 1 件以上ある場合**: 出力フォーマット節の構造に従う。次の節は省略禁止:
 
 - `## Pick 記事リンク一覧`: 各記事に `[<title>](url)` _(<feed_name>, <category>, <YYYY-MM-DD>)_ — 1〜2 文要約。`url` は `articles[].url` の copy-paste のみ
-- `## カテゴリ別動向`: bigtech / ai / jp の `###` サブセクションでカテゴリごとの技術動向 2〜3 点
+- `## カテゴリ別動向`: bigtech / ai の `###` サブセクションでカテゴリごとの技術動向 2〜3 点
 
 **記事が 0 件の場合 (`articles.length === 0`)**: 以下の最小レポートを書き出す。creative writing は禁止 — 「ない」事実を「ない」と書く。
 
 ```md
 # Tech News Digest — <YYYY-MM-DD> (daily)
 
-期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): 0 / カテゴリ: bigtech=0, ai=0, jp=0
+期間: <ISO start> 〜 <ISO end> / 総件数 (de-dup 後): 0 / カテゴリ: bigtech=0, ai=0
 
 ## 概要
 
-本日 (<YYYY-MM-DD>) は対象期間 (UTC 過去 24 時間) 内に bigtech / ai / jp カテゴリの新規収集記事はありませんでした。
+本日 (<YYYY-MM-DD>) は対象期間 (UTC 過去 24 時間) 内に bigtech / ai カテゴリの新規収集記事はありませんでした。
 
 ## カテゴリ別件数
 
@@ -280,7 +280,6 @@ node tools/d1-client/recent.mjs --since=today --category=bigtech,ai,jp --target=
 | -------- | ---- |
 | bigtech  | 0    |
 | ai       | 0    |
-| jp       | 0    |
 ```
 
 Stage 2〜4 は articles 0 件のためスキップする (`/tmp/report.md` のみ書き出して終了)。
@@ -296,11 +295,11 @@ Stage 2〜4 は articles 0 件のためスキップする (`/tmp/report.md` の�
   "period_end": "<任意の仮値。workflow が JST 暦日に上書きする>",
   "category": null,
   "lang": null,
-  "included_categories": ["bigtech", "ai", "jp"],
+  "included_categories": ["bigtech", "ai"],
   "source_skill": "tech-news-digest",
   "generated_at": "<実行時刻の ISO 8601>",
   "dedup_total": <number — 0 でもよい>,
-  "by_category": <object — 0 件のときは {"bigtech": 0, "ai": 0, "jp": 0}>,
+  "by_category": <object — 0 件のときは {"bigtech": 0, "ai": 0}>,
   "by_feed": <object — 0 件のときは {}>
 }
 ```
@@ -314,12 +313,12 @@ Slack mrkdwn 記法 (`*bold*`, `_italic_`, `<URL|label>`)。30000 文字以内 (
 **記事が 1 件以上ある場合**:
 
 - 冒頭にレポート概要 1〜2 文
-- 「カテゴリ別ハイライト (bigtech / ai / jp)」「注目記事 (各記事は 1 行、リンク付き)」を Slack で読みやすく整形
+- 「カテゴリ別ハイライト (bigtech / ai)」「注目記事 (各記事は 1 行、リンク付き)」を Slack で読みやすく整形
 
 **記事が 0 件の場合**:
 
 ```
-本日 (<YYYY-MM-DD>) は対象カテゴリ (bigtech / ai / jp) の新規収集記事はありませんでした。
+本日 (<YYYY-MM-DD>) は対象カテゴリ (bigtech / ai) の新規収集記事はありませんでした。
 ```
 
 の 1 行のみで終える。リンクや注目記事節は出さない。

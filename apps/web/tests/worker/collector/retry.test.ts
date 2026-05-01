@@ -129,8 +129,8 @@ describe("fetchFeed retry behavior", () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(result.xml).toBe(VALID_XML);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect.soft(result.xml).toBe(VALID_XML);
+    expect.soft(spy).toHaveBeenCalledTimes(2);
   });
 
   it("retries on AbortError and succeeds on 2nd attempt", async () => {
@@ -144,8 +144,8 @@ describe("fetchFeed retry behavior", () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(result.xml).toBe(VALID_XML);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect.soft(result.xml).toBe(VALID_XML);
+    expect.soft(spy).toHaveBeenCalledTimes(2);
   });
 
   it("exhausts all retries on consecutive 503 and throws final error", async () => {
@@ -159,7 +159,7 @@ describe("fetchFeed retry behavior", () => {
     await rejectPromise;
 
     // 初回 + 2 回リトライ = 計 3 回
-    expect(spy).toHaveBeenCalledTimes(3);
+    expect.soft(spy).toHaveBeenCalledTimes(3);
   });
 
   it("does not retry on 404 (permanent error)", async () => {
@@ -169,7 +169,7 @@ describe("fetchFeed retry behavior", () => {
 
     await expect(fetchFeed(DUMMY_URL, 10000, 2)).rejects.toThrow("HTTP 404");
     // 4xx はリトライしないので 1 回のみ
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect.soft(spy).toHaveBeenCalledTimes(1);
   });
 
   it("does not retry on 400 (permanent error)", async () => {
@@ -178,7 +178,7 @@ describe("fetchFeed retry behavior", () => {
       .mockResolvedValue(new Response("Bad Request", { status: 400, statusText: "Bad Request" }));
 
     await expect(fetchFeed(DUMMY_URL, 10000, 2)).rejects.toThrow("HTTP 400");
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect.soft(spy).toHaveBeenCalledTimes(1);
   });
 
   it("retries on TypeError (network failure)", async () => {
@@ -191,8 +191,8 @@ describe("fetchFeed retry behavior", () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(result.xml).toBe(VALID_XML);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect.soft(result.xml).toBe(VALID_XML);
+    expect.soft(spy).toHaveBeenCalledTimes(2);
   });
 
   it("respects maxRetries=0 and does not retry", async () => {
@@ -201,6 +201,6 @@ describe("fetchFeed retry behavior", () => {
       .mockResolvedValue(new Response("Service Unavailable", { status: 503 }));
 
     await expect(fetchFeed(DUMMY_URL, 10000, 0)).rejects.toThrow("HTTP 503");
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect.soft(spy).toHaveBeenCalledTimes(1);
   });
 });

@@ -18,8 +18,8 @@ describe("accessJwtMiddleware", () => {
   it("SKIP_ACCESS_JWT=1 のときは next() を呼ぶ", async () => {
     const fetch = makeApp({ SKIP_ACCESS_JWT: "1" });
     const res = await fetch(new Request("https://x.test/"));
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe("ok");
+    expect.soft(res.status).toBe(200);
+    expect.soft(await res.text()).toBe("ok");
   });
 
   it("SKIP_ACCESS_JWT=1 でも accessUser が context に set される (Variables 契約維持)", async () => {
@@ -32,17 +32,19 @@ describe("accessJwtMiddleware", () => {
     app.use("*", accessJwtMiddleware as any);
     app.get("/", (c) => c.json({ user: c.get("accessUser") }));
     const res = await app.fetch(new Request("https://x.test/"), { SKIP_ACCESS_JWT: "1" });
+    // ガードなので fail-fast: status 200 でなければ body.user を取得できない
     expect(res.status).toBe(200);
     const body = await res.json<{ user: { email: string | undefined; sub: string | undefined } }>();
-    expect(body.user).toEqual({ email: undefined, sub: undefined });
+    expect.soft(body.user).toEqual({ email: undefined, sub: undefined });
   });
 
   it("CF_ACCESS_AUD / TEAM_DOMAIN 未設定で 503", async () => {
     const fetch = makeApp({});
     const res = await fetch(new Request("https://x.test/"));
+    // ガードなので fail-fast: status 503 でなければ body.error を取得できない
     expect(res.status).toBe(503);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("service unavailable");
+    expect.soft(body.error).toBe("service unavailable");
   });
 
   it("CF_ACCESS_AUD のみ設定で TEAM_DOMAIN 未設定のとき 503", async () => {
@@ -57,9 +59,10 @@ describe("accessJwtMiddleware", () => {
       CF_ACCESS_TEAM_DOMAIN: "test.cloudflareaccess.com",
     });
     const res = await fetch(new Request("https://x.test/"));
+    // ガードなので fail-fast: status 401 でなければ body.error を取得できない
     expect(res.status).toBe(401);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("unauthorized");
+    expect.soft(body.error).toBe("unauthorized");
   });
 
   it("不正な JWT で 401", async () => {
@@ -82,8 +85,9 @@ describe("accessJwtMiddleware", () => {
         headers: { "cf-access-jwt-assertion": "invalid.jwt.token" },
       }),
     );
+    // ガードなので fail-fast: status 401 でなければ body.error を取得できない
     expect(res.status).toBe(401);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("unauthorized");
+    expect.soft(body.error).toBe("unauthorized");
   });
 });

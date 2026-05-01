@@ -120,5 +120,5 @@ node tools/d1-client/reports.mjs delete <id|id1,id2,...> --target=<local|remote>
 ## 関連ファイル
 
 - 実装: `tools/d1-client/reports.mjs`
-- スキーマ: `migrations/0010_reports.sql`
+- スキーマ: `migrations/0001_initial.sql` (`reports` テーブル)
 - 関連 skill: `.claude/skills/tech-news-digest/SKILL.md`, `.claude/skills/tech-news-weekly/SKILL.md`

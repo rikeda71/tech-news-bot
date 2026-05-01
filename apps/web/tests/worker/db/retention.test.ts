@@ -53,11 +53,11 @@ describe("pruneOldArticles", () => {
 
     const result = await pruneOldArticles(env.DB, 90);
 
-    expect(result.deleted).toBe(1);
+    expect.soft(result.deleted).toBe(1);
     const remaining = await env.DB.prepare("SELECT guid FROM articles ORDER BY guid").all<{
       guid: string;
     }>();
-    expect(remaining.results?.map((r) => r.guid)).toEqual(["g-recent"]);
+    expect.soft(remaining.results?.map((r) => r.guid)).toEqual(["g-recent"]);
   });
 
   it("is a no-op when days is 0", async () => {
@@ -77,9 +77,10 @@ describe("pruneOldArticles", () => {
 
     const result = await pruneOldArticles(env.DB, 0);
 
-    expect(result.deleted).toBe(0);
+    // deleted カウントと DB の残存件数は独立した観点
+    expect.soft(result.deleted).toBe(0);
     const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM articles").first<{ n: number }>();
-    expect(r?.n).toBe(1);
+    expect.soft(r?.n).toBe(1);
   });
 
   it("is a no-op when days is negative", async () => {
@@ -99,8 +100,9 @@ describe("pruneOldArticles", () => {
 
     const result = await pruneOldArticles(env.DB, -1);
 
-    expect(result.deleted).toBe(0);
+    // deleted カウントと DB の残存件数は独立した観点
+    expect.soft(result.deleted).toBe(0);
     const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM articles").first<{ n: number }>();
-    expect(r?.n).toBe(1);
+    expect.soft(r?.n).toBe(1);
   });
 });

@@ -109,8 +109,8 @@ describe("ArticleCard", () => {
           onFilterByFeedId={noop}
         />,
       );
-      expect(document.querySelector("mark")).toBeNull();
-      expect(screen.getByText("Hello World")).toBeTruthy();
+      expect.soft(document.querySelector("mark")).toBeNull();
+      expect.soft(screen.getByText("Hello World")).toBeTruthy();
     });
 
     it("escapes regex special characters in the query (e.g. C++)", () => {

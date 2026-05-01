@@ -73,13 +73,13 @@ describe("AuthorDetail", () => {
       />,
     );
     // h1 に著者名
-    expect(screen.getByRole("heading", { level: 1, name: "Author A" })).toBeTruthy();
+    expect.soft(screen.getByRole("heading", { level: 1, name: "Author A" })).toBeTruthy();
     // 記事タイトルが全て表示される
     for (let i = 1; i <= 5; i++) {
-      expect(await screen.findByText(`記事 ${i}`)).toBeTruthy();
+      expect.soft(await screen.findByText(`記事 ${i}`)).toBeTruthy();
     }
     // 件数表示
-    expect(screen.getByText(/5 件/)).toBeTruthy();
+    expect.soft(screen.getByText(/5 件/)).toBeTruthy();
   });
 
   it("0 件で「記事がありません」が表示される", async () => {

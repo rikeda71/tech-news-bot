@@ -1,7 +1,16 @@
 // reports テーブルへのアクセス層。GitHub Actions から定期投入される
 // 自動生成レポート (markdown) の upsert / list / get を提供する。
 
+import type { D1BindParameter } from "./types";
+
 export type ReportKind = "daily" | "weekly" | "monthly";
+
+// ReportKind の全値リスト。ここを更新すれば isReportKind も自動的に追従する。
+export const REPORT_KINDS = ["daily", "weekly", "monthly"] as const satisfies readonly ReportKind[];
+
+export function isReportKind(v: unknown): v is ReportKind {
+  return REPORT_KINDS.includes(v as ReportKind);
+}
 
 export interface ReportInput {
   kind: ReportKind;
@@ -128,7 +137,7 @@ export async function listReports(
   let query = `SELECT id, kind, period_start, period_end, category, lang,
                       source_skill, generated_at
                FROM reports`;
-  const binds: unknown[] = [];
+  const binds: D1BindParameter[] = [];
   if (filter.kind) {
     query += ` WHERE kind = ?1`;
     binds.push(filter.kind);

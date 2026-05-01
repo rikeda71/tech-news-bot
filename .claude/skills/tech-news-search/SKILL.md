@@ -177,8 +177,7 @@ Stage 2 で選定した記事の `url` を WebFetch で取得し、キーワー�
 
 - 実装: `tools/d1-client/search.mjs`
 - 参考: `tools/d1-client/recent.mjs` (period-based retrieval)
-- スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds` テーブル)
-- FTS5 設定: `migrations/0003_fts5_trigram.sql` (trigram tokenizer)
+- スキーマ: `migrations/0001_initial.sql` (`articles`, `feeds`, `articles_fts`)
 - 型: `apps/web/worker/types.ts` (`Article`, `FeedConfig` interface)
 - 関連 skill: `.claude/skills/tech-news-digest/SKILL.md` (期間ベースのダイジェスト)
 - 関連 skill: `.claude/skills/tech-news-weekly/SKILL.md` (週次・月次レポート)

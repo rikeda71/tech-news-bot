@@ -15,7 +15,8 @@ import type {
   TopPublisherRow,
   ByLang30d,
 } from "../db/articles";
-import type { FeedWithStats, CategorySummary } from "../db/feeds";
+import type { FeedWithStats } from "../db/feeds";
+import type { CategorySummary } from "../db/feed-stats";
 import type { ReportDetailRow, ReportRow } from "../db/reports";
 import type { RunRow, RunFeedRow } from "../db/runs";
 

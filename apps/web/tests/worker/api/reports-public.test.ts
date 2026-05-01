@@ -52,8 +52,8 @@ describe("GET /api/reports (公開一覧)", () => {
     const res = await SELF.fetch("https://example.com/api/reports");
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportListResponse;
-    expect(Array.isArray(body.reports)).toBe(true);
-    expect(body.reports.length).toBeGreaterThanOrEqual(1);
+    expect.soft(Array.isArray(body.reports)).toBe(true);
+    expect.soft(body.reports.length).toBeGreaterThanOrEqual(1);
   });
 
   it("200: kind フィルタが効く", async () => {
@@ -89,8 +89,8 @@ describe("GET /api/reports (公開一覧)", () => {
     const res = await SELF.fetch("https://example.com/api/reports", {
       headers: { origin: allowedOrigin },
     });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("access-control-allow-origin")).toBe(allowedOrigin);
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("access-control-allow-origin")).toBe(allowedOrigin);
   });
 });
 
@@ -101,7 +101,7 @@ describe("GET /api/reports/:id (公開詳細)", () => {
     const res = await SELF.fetch(`https://example.com/api/reports/${id}`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportDetailResponse;
-    expect(body.report.content).toBe("detail content");
+    expect.soft(body.report.content).toBe("detail content");
   });
 
   it("404: 存在しない id", async () => {
@@ -121,7 +121,7 @@ describe("GET /api/reports/:id (公開詳細)", () => {
     const res = await SELF.fetch(`https://example.com/api/reports/${id}`, {
       headers: { origin: allowedOrigin },
     });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("access-control-allow-origin")).toBe(allowedOrigin);
+    expect.soft(res.status).toBe(200);
+    expect.soft(res.headers.get("access-control-allow-origin")).toBe(allowedOrigin);
   });
 });

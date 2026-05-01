@@ -49,21 +49,22 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as { feeds: unknown[]; count: number };
+    // Array.isArray は後続 toHaveLength の guard として fail-fast させる
     expect(Array.isArray(body.feeds)).toBe(true);
-    expect(body.feeds).toHaveLength(0);
-    expect(body.count).toBe(0);
+    expect.soft(body.feeds).toHaveLength(0);
+    expect.soft(body.count).toBe(0);
   });
 
   it("200: Cache-Control が private, max-age=30", async () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const cc = res.headers.get("cache-control") ?? "";
-    expect(cc).toContain("private");
-    expect(cc).toContain("max-age=30");
+    expect.soft(cc).toContain("private");
+    expect.soft(cc).toContain("max-age=30");
   });
 
   it("200: enabled / disabled 両方のフィードが含まれる", async () => {
@@ -72,19 +73,19 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: { id: string; enabled: boolean }[];
       count: number;
     };
-    expect(body.count).toBe(2);
+    expect.soft(body.count).toBe(2);
     const ids = body.feeds.map((f) => f.id);
-    expect(ids).toContain("feed-alpha");
-    expect(ids).toContain("feed-beta");
+    expect.soft(ids).toContain("feed-alpha");
+    expect.soft(ids).toContain("feed-beta");
     const alpha = body.feeds.find((f) => f.id === "feed-alpha");
     const beta = body.feeds.find((f) => f.id === "feed-beta");
-    expect(alpha!.enabled).toBe(true);
-    expect(beta!.enabled).toBe(false);
+    expect.soft(alpha!.enabled).toBe(true);
+    expect.soft(beta!.enabled).toBe(false);
   });
 
   it("200: 各フィールドが正しく返る (last_fetched_at, last_etag, last_status, last_error)", async () => {
@@ -98,7 +99,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: {
         id: string;
@@ -119,23 +120,24 @@ describe("GET /api/admin/feeds/diagnostics", () => {
       }[];
       count: number;
     };
+    // count は feeds[0] アクセスのガードなので plain expect を使う
     expect(body.count).toBe(1);
     const f = body.feeds[0];
-    expect(f.id).toBe("feed-alpha");
-    expect(f.name).toBe("Feed Alpha");
-    expect(f.url).toBe("https://example.com/alpha.xml");
-    expect(f.category).toBe("bigtech");
-    expect(f.lang).toBe("en");
-    expect(f.enabled).toBe(true);
-    expect(f.last_fetched_at).toBe(fetchedAt);
-    expect(f.last_status).toBe("ok:5");
-    expect(f.last_error).toBeNull();
-    expect(f.last_etag).toBe("etag-abc");
-    expect(f.last_modified).toBe("Mon, 01 Apr 2026 00:00:00 GMT");
-    expect(f.fetch_error_count).toBe(0);
-    expect(f.articles_total).toBe(0); // articles は未挿入
-    expect(f.articles_30d).toBe(0);
-    expect(f.last_published_at).toBeNull();
+    expect.soft(f.id).toBe("feed-alpha");
+    expect.soft(f.name).toBe("Feed Alpha");
+    expect.soft(f.url).toBe("https://example.com/alpha.xml");
+    expect.soft(f.category).toBe("bigtech");
+    expect.soft(f.lang).toBe("en");
+    expect.soft(f.enabled).toBe(true);
+    expect.soft(f.last_fetched_at).toBe(fetchedAt);
+    expect.soft(f.last_status).toBe("ok:5");
+    expect.soft(f.last_error).toBeNull();
+    expect.soft(f.last_etag).toBe("etag-abc");
+    expect.soft(f.last_modified).toBe("Mon, 01 Apr 2026 00:00:00 GMT");
+    expect.soft(f.fetch_error_count).toBe(0);
+    expect.soft(f.articles_total).toBe(0); // articles は未挿入
+    expect.soft(f.articles_30d).toBe(0);
+    expect.soft(f.last_published_at).toBeNull();
   });
 
   it("200: エラー後は last_error / fetch_error_count が反映される", async () => {
@@ -147,7 +149,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: {
         id: string;
@@ -156,10 +158,11 @@ describe("GET /api/admin/feeds/diagnostics", () => {
         fetch_error_count: number;
       }[];
     };
+    expect(body.feeds.length).toBeGreaterThan(0);
     const f = body.feeds[0];
-    expect(f.last_status).toBe("error");
-    expect(f.last_error).toBe("connection refused");
-    expect(f.fetch_error_count).toBe(1);
+    expect.soft(f.last_status).toBe("error");
+    expect.soft(f.last_error).toBe("connection refused");
+    expect.soft(f.fetch_error_count).toBe(1);
   });
 
   it("200: articles 投入後に articles_total / articles_30d / last_published_at が反映される", async () => {
@@ -200,7 +203,7 @@ describe("GET /api/admin/feeds/diagnostics", () => {
     const res = await SELF.fetch("https://example.com/api/admin/feeds/diagnostics", {
       headers: AUTH_HEADER,
     });
-    expect(res.status).toBe(200);
+    expect.soft(res.status).toBe(200);
     const body = (await res.json()) as {
       feeds: {
         id: string;
@@ -210,8 +213,8 @@ describe("GET /api/admin/feeds/diagnostics", () => {
       }[];
     };
     const f = body.feeds[0];
-    expect(f.articles_total).toBe(2);
-    expect(f.articles_30d).toBe(1); // recentAt のみが 30d 以内
-    expect(f.last_published_at).toBe(recentAt);
+    expect.soft(f.articles_total).toBe(2);
+    expect.soft(f.articles_30d).toBe(1); // recentAt のみが 30d 以内
+    expect.soft(f.last_published_at).toBe(recentAt);
   });
 });
