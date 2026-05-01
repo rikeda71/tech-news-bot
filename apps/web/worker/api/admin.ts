@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { MiddlewareHandler } from "hono";
 import type { Env } from "../types";
 import { adminAuthMiddleware } from "../utils/auth";
 import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
@@ -16,20 +17,47 @@ import type {
   AdminRunListResponse,
 } from "./types";
 
+// READONLY ガード: preview 環境では書き込み系 POST を一律 403 にする
+const readonlyGuard: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+  if (c.env.READONLY === "1") {
+    return c.json({ error: "read-only mode" }, 403);
+  }
+  return next();
+};
+
+// JSON body を Record として安全にパースするローカルヘルパー。
+// 空テキスト / 非オブジェクト / 不正 JSON は null を返す。
+// エラーレスポンスの組み立ては呼び出し側で行う。
+function parseJsonBody(text: string): Record<string, unknown> | null {
+  if (!text.trim()) return null;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return null;
+  } catch {
+    // JSON.parse が例外を投げた場合は caller が 400 を返す
+    return null;
+  }
+}
+
 const app = new Hono<{ Bindings: Env }>();
 
 app.use("*", adminAuthMiddleware);
 
+// /feeds/validate は READONLY でも読み取り専用なのでガード不要
+app.use("/collect", readonlyGuard);
+app.use("/collector/run", readonlyGuard);
+app.use("/feeds/:id/enabled", readonlyGuard);
+
 app.post("/feeds/validate", async (c) => {
   const rawBody = await c.req.text().catch(() => "");
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(rawBody);
-  } catch {
+  const body = parseJsonBody(rawBody);
+  if (!body) {
     return c.json({ error: "invalid JSON body" }, 400);
   }
-  const body = parsed as Record<string, unknown>;
-  if (!body || typeof body.url !== "string" || !body.url) {
+  if (typeof body.url !== "string" || !body.url) {
     return c.json({ error: "url is required" }, 400);
   }
 
@@ -70,22 +98,14 @@ app.post("/feeds/validate", async (c) => {
 });
 
 app.post("/collect", async (c) => {
-  // READONLY=1 の preview 環境では書き込みを行わない
-  if (c.env.READONLY === "1") {
-    return c.json({ error: "read-only mode" }, 403);
-  }
-
   // body は任意。不正 JSON は 400 を返す。
   const rawBody = await c.req.text().catch(() => "");
   let feedIds: readonly string[] | undefined;
   if (rawBody.trim() !== "") {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(rawBody);
-    } catch {
+    const body = parseJsonBody(rawBody);
+    if (!body) {
       return c.json({ error: "invalid JSON body" }, 400);
     }
-    const body = parsed as Record<string, unknown>;
     if ("feed_id" in body) {
       if (typeof body.feed_id !== "string") {
         return c.json({ error: "feed_id must be a string" }, 400);
@@ -124,21 +144,14 @@ app.post("/collect", async (c) => {
 });
 
 app.post("/collector/run", async (c) => {
-  if (c.env.READONLY === "1") {
-    return c.json({ error: "read-only mode" }, 403);
-  }
-
   // body が空 or 省略された場合は全 enabled feed を対象にする
   const rawBody = await c.req.text().catch(() => "");
   let feedIds: string[] | undefined;
   if (rawBody.trim() !== "") {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(rawBody);
-    } catch {
+    const body = parseJsonBody(rawBody);
+    if (!body) {
       return c.json({ error: "invalid JSON body" }, 400);
     }
-    const body = parsed as Record<string, unknown>;
     if ("feed_ids" in body) {
       const rawFeedIds = body.feed_ids;
       if (!Array.isArray(rawFeedIds) || !rawFeedIds.every((v) => typeof v === "string")) {
@@ -196,10 +209,6 @@ app.post("/collector/run", async (c) => {
 });
 
 app.post("/feeds/:id/enabled", async (c) => {
-  if (c.env.READONLY === "1") {
-    return c.json({ error: "read-only mode" }, 403);
-  }
-
   const body = await c.req.json().catch(() => null);
   if (!body || typeof (body as Record<string, unknown>).enabled !== "boolean") {
     return c.json({ error: "invalid body: enabled must be a boolean" }, 400);
