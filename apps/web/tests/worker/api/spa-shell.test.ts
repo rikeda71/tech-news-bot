@@ -73,13 +73,14 @@ describe("SPA shell rewrite: GET /articles/:id", () => {
     const id = row?.id;
 
     const res = await SELF.fetch(`https://example.com/articles/${id}`);
-    expect.soft(res.status).toBe(200);
+    // status は Cache-Control 検証の前提なので fail-fast
+    expect(res.status).toBe(200);
     expect.soft(res.headers.get("Cache-Control")).toContain("max-age=300");
   });
 
   it("falls back to static index.html for unknown article id", async () => {
     const res = await SELF.fetch("https://example.com/articles/99999999");
-    expect.soft(res.status).toBe(200);
+    expect(res.status).toBe(200);
     // fallback の場合は no-cache
     expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
   });
@@ -99,7 +100,7 @@ describe("SPA shell rewrite: GET /feed/:feedId", () => {
 
   it("falls back to static index.html for unknown feedId", async () => {
     const res = await SELF.fetch("https://example.com/feed/nonexistent-feed-xyz");
-    expect.soft(res.status).toBe(200);
+    expect(res.status).toBe(200);
     expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
   });
 });
@@ -144,7 +145,7 @@ describe("SPA shell rewrite: GET /by-category/:cat", () => {
 describe("SPA shell rewrite: static routes (no rewriting)", () => {
   it("returns default title for top page /", async () => {
     const res = await SELF.fetch("https://example.com/");
-    expect.soft(res.status).toBe(200);
+    expect(res.status).toBe(200);
 
     // トップページは書き換えなし → Cache-Control は no-cache
     expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
@@ -152,14 +153,14 @@ describe("SPA shell rewrite: static routes (no rewriting)", () => {
 
   it("returns no-cache for /stats", async () => {
     const res = await SELF.fetch("https://example.com/stats");
-    expect.soft(res.status).toBe(200);
+    expect(res.status).toBe(200);
     expect.soft(res.headers.get("Cache-Control")).toContain("no-cache");
   });
 
   it("does not rewrite /api/* routes", async () => {
     // /api/* は JSON を返すため HTML ではない
     const res = await SELF.fetch("https://example.com/api/articles?limit=1");
-    expect.soft(res.status).toBe(200);
+    expect(res.status).toBe(200);
     const ct = res.headers.get("Content-Type") ?? "";
     expect.soft(ct).toContain("application/json");
   });

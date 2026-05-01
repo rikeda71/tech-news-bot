@@ -198,7 +198,7 @@ describe("POST /api/admin/reports", () => {
         }),
       ),
     });
-    expect.soft(res.status).toBe(400);
+    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect.soft(body.error).toBe("period_end must be after period_start");
   });
@@ -214,7 +214,7 @@ describe("POST /api/admin/reports", () => {
         }),
       ),
     });
-    expect.soft(res.status).toBe(400);
+    expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect.soft(body.error).toBe("period_end must be after period_start");
   });
@@ -561,7 +561,8 @@ describe("GET /api/admin/reports", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as AdminReportListResponse;
-    expect.soft(body.reports.length).toBeGreaterThanOrEqual(2);
+    // length は後続の reports[1] アクセスの guard なので fail-fast
+    expect(body.reports.length).toBeGreaterThanOrEqual(2);
     expect.soft(body.reports[0].generated_at >= body.reports[1].generated_at).toBe(true);
   });
 
