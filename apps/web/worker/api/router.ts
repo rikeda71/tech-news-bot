@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import type { Context, Next } from "hono";
 import type { Env } from "../types";
 import { type AccessUser, accessJwtMiddleware } from "../middleware/access-jwt";
+import { aiCrawlerBlock } from "../middleware/ai-crawler-block";
 import articles from "./articles";
 import categories from "./categories";
 import feeds from "./feeds";
@@ -20,6 +21,8 @@ api.use("*", async (c, next) => {
   c.header("Cache-Control", "no-store");
   await next();
 });
+
+api.use("*", aiCrawlerBlock);
 
 // /api/admin/* は server-to-server 専用のため CORS を付けない。
 // それ以外の公開エンドポイントは wrangler.toml の CORS_ALLOWED_ORIGINS で制御する。

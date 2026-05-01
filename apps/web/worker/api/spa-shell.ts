@@ -100,6 +100,7 @@ function applyMetaRewriter(response: Response, meta: PageMeta): Response {
   let twitterCardDone = false;
   let twitterTitleDone = false;
   let twitterDescDone = false;
+  let robotsNoaiDone = false;
 
   return new HTMLRewriter()
     .on("title", {
@@ -114,6 +115,8 @@ function applyMetaRewriter(response: Response, meta: PageMeta): Response {
 
         if (name === "description") {
           el.setAttribute("content", escapeHtml(meta.description));
+        } else if (name === "robots" && el.getAttribute("content")?.includes("noai")) {
+          robotsNoaiDone = true;
         } else if (name === "twitter:card") {
           el.setAttribute("content", "summary");
           twitterCardDone = true;
@@ -188,6 +191,9 @@ function applyMetaRewriter(response: Response, meta: PageMeta): Response {
             missing.push(
               `<meta name="twitter:description" content="${escapeHtml(meta.description)}" />`,
             );
+          }
+          if (!robotsNoaiDone) {
+            missing.push(`<meta name="robots" content="noai, noimageai" />`);
           }
 
           if (missing.length > 0) {

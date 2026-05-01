@@ -27,6 +27,8 @@ export interface Env {
   CF_ACCESS_TEAM_DOMAIN?: string;
   // ローカル開発でアクセス JWT 検証をスキップする ("1" でスキップ)
   SKIP_ACCESS_JWT?: string;
+  // "1" のとき /api/* で AI 学習 bot を 403 ブロックする
+  AI_BOT_BLOCK_ENABLED?: string;
 }
 
 export type FeedCategory = "bigtech" | "ai" | "jp" | "personal";

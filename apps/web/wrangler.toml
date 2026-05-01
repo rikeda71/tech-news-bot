@@ -50,6 +50,8 @@ COLLECTOR_ALERT_THRESHOLD = "5"
 # TODO(#375): CF_ACCESS_AUD / CF_ACCESS_TEAM_DOMAIN を secret 登録した時点でこの行を削除する。
 # 削除を忘れると本番で /api/admin/* が adminAuthMiddleware (Bearer) のみで守られる状態が継続する。
 SKIP_ACCESS_JWT = "1"
+# AI_BOT_BLOCK_ENABLED は `wrangler secret put AI_BOT_BLOCK_ENABLED` で本番に投入する。
+# 未設定 = フラグ off (X-Robots-Tag のみ付与、403 ブロックなし)。段階的ロールアウト用。
 
 [[analytics_engine_datasets]]
 binding = "COLLECTOR_AE"

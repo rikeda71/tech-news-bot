@@ -229,3 +229,32 @@ describe("SPA shell rewrite: duplicate meta tag regression", () => {
     expect(matches).toHaveLength(1);
   });
 });
+
+describe("SPA shell rewrite: robots meta tag", () => {
+  it('記事ページの HTML に <meta name="robots" content="noai, noimageai"> が含まれる', async () => {
+    const row = await env.DB.prepare("SELECT id FROM articles WHERE guid = ?1")
+      .bind("g-bt-1")
+      .first<{ id: number }>();
+    const id = row?.id;
+
+    const res = await SELF.fetch(`https://example.com/articles/${id}`);
+    // fail-fast: status が 200 でなければ html の検証が無意味
+    expect(res.status).toBe(200);
+
+    const html = await res.text();
+    expect(extractMeta(html, '[name="robots"]')).toBe("noai, noimageai");
+  });
+
+  it("記事ページの HTML に noindex が含まれない", async () => {
+    const row = await env.DB.prepare("SELECT id FROM articles WHERE guid = ?1")
+      .bind("g-bt-1")
+      .first<{ id: number }>();
+    const id = row?.id;
+
+    const res = await SELF.fetch(`https://example.com/articles/${id}`);
+    expect(res.status).toBe(200);
+
+    const html = await res.text();
+    expect(/noindex/i.test(html)).toBe(false);
+  });
+});
