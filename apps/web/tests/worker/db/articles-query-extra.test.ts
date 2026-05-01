@@ -103,45 +103,50 @@ describe("searchArticles (FTS5 only)", () => {
   it("returns articles matching English keyword in title (TypeScript)", async () => {
     const result = await searchArticles(env.DB, "TypeScript", 10, null);
     const guids = result.articles.map((a) => a.guid);
-    expect(guids).toContain("en-1");
-    expect(guids).toContain("ja-1");
-    expect(guids).not.toContain("en-2");
-    expect(guids).not.toContain("ja-2");
+    // ヒット / 非ヒットは独立した観点
+    expect.soft(guids).toContain("en-1");
+    expect.soft(guids).toContain("ja-1");
+    expect.soft(guids).not.toContain("en-2");
+    expect.soft(guids).not.toContain("ja-2");
   });
 
   it("returns articles matching English keyword in summary (tokio)", async () => {
     const result = await searchArticles(env.DB, "tokio", 10, null);
     const guids = result.articles.map((a) => a.guid);
-    expect(guids).toContain("en-2");
-    expect(guids).not.toContain("en-1");
+    // ヒット / 非ヒットは独立した観点
+    expect.soft(guids).toContain("en-2");
+    expect.soft(guids).not.toContain("en-1");
   });
 
   it("returns articles matching Japanese keyword in title (機械学習)", async () => {
     // trigram は 3 文字以上の部分文字列に一致する
     const result = await searchArticles(env.DB, "機械学習", 10, null);
     const guids = result.articles.map((a) => a.guid);
-    expect(guids).toContain("ja-2");
-    expect(guids).not.toContain("ja-1");
+    // ヒット / 非ヒットは独立した観点
+    expect.soft(guids).toContain("ja-2");
+    expect.soft(guids).not.toContain("ja-1");
   });
 
   it("returns articles matching Japanese keyword in summary (PyTorch)", async () => {
     const result = await searchArticles(env.DB, "PyTorch", 10, null);
     const guids = result.articles.map((a) => a.guid);
-    expect(guids).toContain("ja-2");
+    expect.soft(guids).toContain("ja-2");
   });
 
   it("returns empty when no article matches the query", async () => {
     const result = await searchArticles(env.DB, "該当なしキーワードXYZ", 10, null);
-    expect(result.articles).toHaveLength(0);
-    expect(result.nextCursor).toBeNull();
+    // articles と nextCursor は独立した属性
+    expect.soft(result.articles).toHaveLength(0);
+    expect.soft(result.nextCursor).toBeNull();
   });
 
   it("handles multi-token query (Rust async)", async () => {
     // スペース区切りで複数トークン → FTS5 が AND で解釈
     const result = await searchArticles(env.DB, "Rust async", 10, null);
     const guids = result.articles.map((a) => a.guid);
-    expect(guids).toContain("en-2");
-    expect(guids).not.toContain("en-1");
+    // ヒット / 非ヒットは独立した観点
+    expect.soft(guids).toContain("en-2");
+    expect.soft(guids).not.toContain("en-1");
   });
 
   it("handles FTS5 special characters gracefully (double-quote in query)", async () => {
@@ -211,23 +216,24 @@ describe("searchArticles (FTS5 only)", () => {
   it("respects limit and returns nextCursor for pagination", async () => {
     // TypeScript で 2 件ヒットするが limit=1 でページネーション
     const page1 = await searchArticles(env.DB, "TypeScript", 1, null);
+    // page1.articles.length が guard (page2 の前提)。nextCursor は独立
     expect(page1.articles).toHaveLength(1);
-    expect(page1.nextCursor).not.toBeNull();
+    expect.soft(page1.nextCursor).not.toBeNull();
 
     const page2 = await searchArticles(env.DB, "TypeScript", 1, page1.nextCursor);
-    expect(page2.articles).toHaveLength(1);
-    // page1 と page2 のガイドが異なること
-    expect(page2.articles[0]?.guid).not.toBe(page1.articles[0]?.guid);
+    // length と guid の非一致は独立した属性
+    expect.soft(page2.articles).toHaveLength(1);
+    expect.soft(page2.articles[0]?.guid).not.toBe(page1.articles[0]?.guid);
   });
 
   it("is case-insensitive — TypeScript and typescript both hit FTS5 index", async () => {
     // FTS5 trigram tokenizer は case-insensitive
     const lower = await searchArticles(env.DB, "typescript", 10, null);
     const upper = await searchArticles(env.DB, "TypeScript", 10, null);
-    expect(lower.articles.map((a) => a.guid)).toContain("en-1");
-    expect(upper.articles.map((a) => a.guid)).toContain("en-1");
-    // 同じ件数がヒットする
-    expect(lower.articles.length).toBe(upper.articles.length);
+    // lower/upper それぞれのヒットと件数一致は独立した観点
+    expect.soft(lower.articles.map((a) => a.guid)).toContain("en-1");
+    expect.soft(upper.articles.map((a) => a.guid)).toContain("en-1");
+    expect.soft(lower.articles.length).toBe(upper.articles.length);
   });
 
   it("does NOT fall back to LIKE — 2-char query returns no results for trigram", async () => {
