@@ -6,8 +6,10 @@ export function parseLimit(
   raw: string | undefined,
   opts: { default: number; max: number; min?: number },
 ): number {
+  // 空文字列も "未指定" として扱う (Number("") は 0 になり意図せず min に丸まるため)
+  if (raw === undefined || raw === "") return opts.default;
   const min = opts.min ?? 1;
-  const n = Number(raw ?? String(opts.default));
+  const n = Number(raw);
   if (!Number.isFinite(n)) return opts.default;
   return Math.min(Math.max(n, min), opts.max);
 }
