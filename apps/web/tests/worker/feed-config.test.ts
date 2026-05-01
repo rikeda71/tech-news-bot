@@ -15,15 +15,15 @@ describe("loadAllFeeds", () => {
   it("each feed has required fields: id, name, url, category, lang, enabled", () => {
     const feeds = loadAllFeeds();
     for (const feed of feeds) {
-      expect(typeof feed.id).toBe("string");
-      expect(feed.id.length).toBeGreaterThan(0);
-      expect(typeof feed.name).toBe("string");
-      expect(feed.name.length).toBeGreaterThan(0);
-      expect(typeof feed.url).toBe("string");
-      expect(feed.url).toMatch(/^https?:\/\//);
-      expect(["bigtech", "ai", "jp", "personal"]).toContain(feed.category);
-      expect(["ja", "en"]).toContain(feed.lang);
-      expect(typeof feed.enabled).toBe("boolean");
+      expect.soft(typeof feed.id).toBe("string");
+      expect.soft(feed.id.length).toBeGreaterThan(0);
+      expect.soft(typeof feed.name).toBe("string");
+      expect.soft(feed.name.length).toBeGreaterThan(0);
+      expect.soft(typeof feed.url).toBe("string");
+      expect.soft(feed.url).toMatch(/^https?:\/\//);
+      expect.soft(["bigtech", "ai", "jp", "personal"]).toContain(feed.category);
+      expect.soft(["ja", "en"]).toContain(feed.lang);
+      expect.soft(typeof feed.enabled).toBe("boolean");
     }
   });
 
@@ -46,9 +46,9 @@ describe("loadAllFeeds", () => {
   it("includes well-known feeds (google-developers, openai-blog, zenn-mizchi)", () => {
     const feeds = loadAllFeeds();
     const ids = feeds.map((f) => f.id);
-    expect(ids).toContain("google-developers");
-    expect(ids).toContain("openai-blog");
-    expect(ids).toContain("zenn-mizchi");
+    expect.soft(ids).toContain("google-developers");
+    expect.soft(ids).toContain("openai-blog");
+    expect.soft(ids).toContain("zenn-mizchi");
   });
 });
 
@@ -96,16 +96,16 @@ describe("loadEnabledFeeds", () => {
   it("covers all 4 categories (bigtech, ai, jp, personal)", () => {
     const feeds = loadEnabledFeeds();
     const categories = new Set(feeds.map((f) => f.category));
-    expect(categories.has("bigtech")).toBe(true);
-    expect(categories.has("ai")).toBe(true);
-    expect(categories.has("jp")).toBe(true);
-    expect(categories.has("personal")).toBe(true);
+    expect.soft(categories.has("bigtech")).toBe(true);
+    expect.soft(categories.has("ai")).toBe(true);
+    expect.soft(categories.has("jp")).toBe(true);
+    expect.soft(categories.has("personal")).toBe(true);
   });
 
   it("covers both langs (ja and en)", () => {
     const feeds = loadEnabledFeeds();
     const langs = new Set(feeds.map((f) => f.lang));
-    expect(langs.has("ja")).toBe(true);
-    expect(langs.has("en")).toBe(true);
+    expect.soft(langs.has("ja")).toBe(true);
+    expect.soft(langs.has("en")).toBe(true);
   });
 });
