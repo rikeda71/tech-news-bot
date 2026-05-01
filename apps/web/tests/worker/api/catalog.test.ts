@@ -19,9 +19,9 @@ describe("GET /api (catalog endpoint)", () => {
   it("response has name, version, description, endpoints, syndication, docs_url fields", async () => {
     const res = await SELF.fetch(CATALOG_URL);
     const body = await res.json<Record<string, unknown>>();
-    expect.soft(typeof body["name"]).toBe("number"); // DELIBERATELY BROKEN FOR SOFT ASSERTION TEST
+    expect.soft(typeof body["name"]).toBe("string");
     expect.soft(typeof body["version"]).toBe("string");
-    expect.soft(typeof body["description"]).toBe("number"); // DELIBERATELY BROKEN FOR SOFT ASSERTION TEST
+    expect.soft(typeof body["description"]).toBe("string");
     expect.soft(Array.isArray(body["endpoints"])).toBe(true);
     expect.soft(Array.isArray(body["syndication"])).toBe(true);
     expect.soft(typeof body["docs_url"]).toBe("string");
