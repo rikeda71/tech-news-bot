@@ -55,12 +55,12 @@ describe("collectFeeds: retention は実行しない", () => {
     const result = await collectFeeds(env, ["ret-feed"]);
 
     // collectFeeds は retention を実行しないため pruned は 0
-    expect(result.pruned).toBe(0);
+    expect.soft(result.pruned).toBe(0);
 
     // 古い記事はまだ残っている (retention は scheduled() で実行されるため)
     const row = await env.DB.prepare(
       "SELECT COUNT(*) AS n FROM articles WHERE guid = 'ret-old'",
     ).first<{ n: number }>();
-    expect(row?.n).toBe(1);
+    expect.soft(row?.n).toBe(1);
   });
 });

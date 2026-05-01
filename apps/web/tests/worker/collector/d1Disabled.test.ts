@@ -46,16 +46,16 @@ describe("getEnabledFeedIds + setFeedEnabled (D1 runtime toggle)", () => {
     await setFeedEnabled(env.DB, "feed-b", true);
 
     const ids = await getEnabledFeedIds(env.DB);
-    expect(ids.has("feed-b")).toBe(true);
+    expect.soft(ids.has("feed-b")).toBe(true);
   });
 
   it("setFeedEnabled returns found=false for unknown id", async () => {
     const result = await setFeedEnabled(env.DB, "no-such-feed", false);
-    expect(result.found).toBe(false);
+    expect.soft(result.found).toBe(false);
   });
 
   it("setFeedEnabled returns found=true for existing feed", async () => {
     const result = await setFeedEnabled(env.DB, "feed-a", false);
-    expect(result.found).toBe(true);
+    expect.soft(result.found).toBe(true);
   });
 });

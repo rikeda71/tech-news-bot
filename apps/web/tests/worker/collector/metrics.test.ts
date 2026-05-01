@@ -28,8 +28,8 @@ describe("writeCollectorEvent", () => {
 
     writeCollectorEvent(env, { feedId: "feed-a", status: "ok", ms: 123, statusCode: 200 });
 
-    expect(writeDataPoint).toHaveBeenCalledTimes(1);
-    expect(writeDataPoint).toHaveBeenCalledWith({
+    expect.soft(writeDataPoint).toHaveBeenCalledTimes(1);
+    expect.soft(writeDataPoint).toHaveBeenCalledWith({
       blobs: ["feed-a", "ok"],
       doubles: [123, 200],
       indexes: ["feed-a"],
@@ -42,8 +42,8 @@ describe("writeCollectorEvent", () => {
 
     writeCollectorEvent(env, { feedId: "feed-b", status: "error", ms: 456, statusCode: 503 });
 
-    expect(writeDataPoint).toHaveBeenCalledTimes(1);
-    expect(writeDataPoint).toHaveBeenCalledWith({
+    expect.soft(writeDataPoint).toHaveBeenCalledTimes(1);
+    expect.soft(writeDataPoint).toHaveBeenCalledWith({
       blobs: ["feed-b", "error"],
       doubles: [456, 503],
       indexes: ["feed-b"],
@@ -61,8 +61,8 @@ describe("writeCollectorEvent", () => {
       statusCode: 304,
     });
 
-    expect(writeDataPoint).toHaveBeenCalledTimes(1);
-    expect(writeDataPoint).toHaveBeenCalledWith({
+    expect.soft(writeDataPoint).toHaveBeenCalledTimes(1);
+    expect.soft(writeDataPoint).toHaveBeenCalledWith({
       blobs: ["feed-c", "not_modified"],
       doubles: [50, 304],
       indexes: ["feed-c"],
@@ -138,8 +138,8 @@ describe("writeD1CostEvent", () => {
       articlesInserted: 15,
     });
 
-    expect(writeDataPoint).toHaveBeenCalledTimes(1);
-    expect(writeDataPoint).toHaveBeenCalledWith({
+    expect.soft(writeDataPoint).toHaveBeenCalledTimes(1);
+    expect.soft(writeDataPoint).toHaveBeenCalledWith({
       blobs: ["collect_run_d1"],
       doubles: [100, 20, 500, 15],
       indexes: ["d1_cost"],

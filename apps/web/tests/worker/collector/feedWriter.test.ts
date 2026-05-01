@@ -124,7 +124,7 @@ describe("handleNotModified", () => {
     const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM collector_run_feeds").first<{
       n: number;
     }>();
-    expect(count?.n).toBe(0);
+    expect.soft(count?.n).toBe(0);
   });
 });
 
@@ -173,7 +173,7 @@ describe("handleSuccess", () => {
     const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM articles WHERE feed_id = ?1")
       .bind(FEED.id)
       .first<{ n: number }>();
-    expect(count?.n).toBe(2);
+    expect.soft(count?.n).toBe(2);
   });
 
   it("saves etag and last_modified in feeds table", async () => {
@@ -339,7 +339,7 @@ describe("handleError", () => {
       .bind(run_id, FEED.id)
       .first<{ status: string }>();
 
-    expect(row?.status).toBe("failed");
+    expect.soft(row?.status).toBe("failed");
   });
 
   it("skips run feed recording when runId is null", async () => {
@@ -350,6 +350,6 @@ describe("handleError", () => {
     const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM collector_run_feeds").first<{
       n: number;
     }>();
-    expect(count?.n).toBe(0);
+    expect.soft(count?.n).toBe(0);
   });
 });
