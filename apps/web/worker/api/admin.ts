@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 import type { Env } from "../types";
 import { adminAuthMiddleware } from "../utils/auth";
+import { withTimeout } from "../utils/with-timeout";
 import { collectAll, collectFeeds, validateFeedUrl } from "../collector";
 import { loadAllFeeds } from "../feed-config";
 import { setFeedEnabled } from "../db/feeds";
@@ -60,11 +61,12 @@ app.post("/feeds/validate", async (c) => {
   if (typeof body.url !== "string" || !body.url) {
     return c.json({ error: "url is required" }, 400);
   }
+  const url = body.url;
 
   // URL 形式チェック (http/https のみ許可)
   let parsedUrl: URL;
   try {
-    parsedUrl = new URL(body.url);
+    parsedUrl = new URL(url);
   } catch {
     return c.json({ error: "invalid url" }, 400);
   }
@@ -73,25 +75,18 @@ app.post("/feeds/validate", async (c) => {
   }
 
   // 12s でタイムアウト。fetch 自体は I/O なので CPU には乗らないが安全マージン。
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12_000);
-
   let validateResult: Awaited<ReturnType<typeof validateFeedUrl>>;
   try {
-    validateResult = await Promise.race([
-      validateFeedUrl(body.url),
-      new Promise<never>((_, reject) => {
-        controller.signal.addEventListener("abort", () =>
-          reject(new Error("validate timed out after 12s")),
-        );
-      }),
-    ]);
+    validateResult = await withTimeout((_signal) => validateFeedUrl(url), 12_000);
   } catch (err) {
-    clearTimeout(timer);
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg =
+      err instanceof Error && err.name === "AbortError"
+        ? "validate timed out after 12s"
+        : err instanceof Error
+          ? err.message
+          : String(err);
     validateResult = { ok: false, error: msg };
   }
-  clearTimeout(timer);
 
   c.header("Cache-Control", "no-store");
   return c.json(validateResult);
@@ -170,28 +165,16 @@ app.post("/collector/run", async (c) => {
   const startedAt = new Date().toISOString();
 
   // 25s タイムアウト (Workers の cron 制限 30s に対して余裕を持たせる)
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
-
   let collectResult: Awaited<ReturnType<typeof collectFeeds>>;
   try {
-    const collectPromise = collectFeeds(c.env, feedIds);
-    // AbortSignal が発火したら reject に落とす
-    const abortPromise = new Promise<never>((_, reject) => {
-      controller.signal.addEventListener("abort", () =>
-        reject(new Error("collector timed out after 25s")),
-      );
-    });
-    collectResult = await Promise.race([collectPromise, abortPromise]);
+    collectResult = await withTimeout((_signal) => collectFeeds(c.env, feedIds), 25_000);
   } catch (err) {
-    clearTimeout(timer);
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("timed out")) {
+    if (err instanceof Error && err.name === "AbortError") {
       return c.json({ error: "collector timed out (25s)" }, 504);
     }
+    const msg = err instanceof Error ? err.message : String(err);
     return c.json({ error: msg }, 500);
   }
-  clearTimeout(timer);
 
   const finishedAt = new Date().toISOString();
   const results = collectResult.results.map((r) => ({
