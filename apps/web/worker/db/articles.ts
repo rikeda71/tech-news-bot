@@ -61,20 +61,14 @@ export {
 } from "./articles-query-extra";
 
 export type {
+  ArticleHealthStats,
   CategoryTrendPoint,
   FeedActivityRow,
   TopAuthorRow,
   TopPublisherRow,
   ByLang30d,
 } from "./articles-stats";
-export {
-  countAllArticles,
-  countArticlesSince,
-  getCategoryTrend30d,
-  getFeedActivity30d,
-  getTopAuthors30d,
-  getByLang30d,
-} from "./articles-stats";
+export { countAllArticles, countArticlesSince, getHealthArticleStats } from "./articles-stats";
 
 export type { InsertableArticle } from "./articles-write";
 export {

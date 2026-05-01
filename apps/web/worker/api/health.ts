@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { countFeeds } from "../db/feeds";
 import { getFeedHealth } from "../db/feed-stats";
-import { countAllArticles, countArticlesSince } from "../db/articles";
+import { getHealthArticleStats } from "../db/articles";
 import { getLatestCompletedRun } from "../db/runs";
 import { loadAllFeeds } from "../feed-config";
 import type { Env, FeedHealth } from "../types";
@@ -13,11 +13,12 @@ app.get("/", async (c) => {
   try {
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const [feedsTotal, feedsEnabled, articlesTotal, articles24h, latestRun] = await Promise.all([
+    // countFeeds x2 + getHealthArticleStats + getLatestCompletedRun を並列で発行する。
+    // getHealthArticleStats は total と last_24h を 1 クエリで返し、従来の 2 クエリを削減する。
+    const [feedsTotal, feedsEnabled, articleStats, latestRun] = await Promise.all([
       countFeeds(c.env.DB),
       countFeeds(c.env.DB, { enabled: true }),
-      countAllArticles(c.env.DB),
-      countArticlesSince(c.env.DB, since24h),
+      getHealthArticleStats(c.env.DB, since24h),
       getLatestCompletedRun(c.env.DB),
     ]);
 
@@ -30,8 +31,8 @@ app.get("/", async (c) => {
         enabled: feedsEnabled,
       },
       articles: {
-        total: articlesTotal,
-        last_24h: articles24h,
+        total: articleStats.total,
+        last_24h: articleStats.since,
       },
       last_cron_run: latestRun
         ? {
