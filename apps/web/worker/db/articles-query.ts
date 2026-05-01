@@ -182,6 +182,9 @@ export async function getRelatedArticles(
   // CTE で「同 feed の最大 n 件」と「同 category かつ別 feed の最大 n 件」を
   // UNION ALL で 1 クエリにまとめる。source_priority で同 feed 優先を保証し、
   // 各グループ内は published_at DESC で整列する。
+  // same_category 側も LIMIT ?3 で最大 n 件読むが、同 feed が少ないと余分に読む可能性がある。
+  // 別 bind を増やすと statement キャッシュのヒット率が落ちるため n で固定し、
+  // 外側 SELECT の LIMIT ?3 で最終的に n 件に絞る。
   const rows = await db
     .prepare(
       `WITH same_feed AS (
@@ -198,6 +201,7 @@ export async function getRelatedArticles(
          ${ARTICLES_FROM_JOIN}
          WHERE a.category = ?4 AND a.feed_id != ?1
            AND a.guid NOT IN (SELECT guid FROM same_feed)
+           -- same_feed が空 (同 feed に他記事ゼロ) の場合に target 自身を弾くガード
            AND a.guid != ?2
          ORDER BY a.published_at DESC
          LIMIT ?3

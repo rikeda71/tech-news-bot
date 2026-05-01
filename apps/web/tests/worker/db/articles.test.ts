@@ -421,7 +421,9 @@ describe("articles db", () => {
       const result = await getRelatedArticles(env.DB, "a-bt-target", 2);
       expect(result).not.toBeNull();
       const items = result ?? [];
-      expect.soft(items.length).toBe(2);
+      // 後続の every/some は items が空でも true/false を返してしまうため
+      // length は guard として plain expect で fail-fast させる。
+      expect(items.length).toBe(2);
       expect.soft(items.every((a) => a.feed_id === "feed-a")).toBe(true);
       expect.soft(items.some((a) => a.feed_id === "feed-c")).toBe(false);
     });
