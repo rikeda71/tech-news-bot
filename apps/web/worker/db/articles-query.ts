@@ -231,6 +231,9 @@ export interface NeighborArticles {
  * guid の前後記事を同 feed_id 内で取得する。
  * tie-break は published_at が同一の場合 guid の辞書順で決定性を保証する。
  * guid が存在しない場合は null を返す (呼び出し側で 404 ハンドル)。
+ *
+ * subrequest 削減: prev / next の 2 クエリを db.batch で 1 subrequest に統合し
+ * findArticleByGuid と合わせて計 3 → 2 subrequest に削減 (#445)。
  */
 export async function getNeighbors(db: D1Database, guid: string): Promise<NeighborArticles | null> {
   const target = await findArticleByGuid(db, guid);
@@ -238,7 +241,9 @@ export async function getNeighbors(db: D1Database, guid: string): Promise<Neighb
 
   const { feed_id, published_at } = target;
 
-  const [prevResult, nextResult] = await Promise.all([
+  // batch で prev / next を 1 subrequest にまとめる。
+  // bind の placeholder はステートメントごとに独立しているため、両方 ?1/?2/?3 で記述できる。
+  const [prevResult, nextResult] = await db.batch<Article>([
     db
       .prepare(
         `SELECT ${ARTICLES_SELECT_FIELDS}
@@ -248,8 +253,7 @@ export async function getNeighbors(db: D1Database, guid: string): Promise<Neighb
          ORDER BY a.published_at DESC, a.guid DESC
          LIMIT 1`,
       )
-      .bind(feed_id, published_at, guid)
-      .first<Article>(),
+      .bind(feed_id, published_at, guid),
     db
       .prepare(
         `SELECT ${ARTICLES_SELECT_FIELDS}
@@ -259,13 +263,12 @@ export async function getNeighbors(db: D1Database, guid: string): Promise<Neighb
          ORDER BY a.published_at ASC, a.guid ASC
          LIMIT 1`,
       )
-      .bind(feed_id, published_at, guid)
-      .first<Article>(),
+      .bind(feed_id, published_at, guid),
   ]);
 
   return {
-    prev: prevResult ?? null,
-    next: nextResult ?? null,
+    prev: prevResult.results[0] ?? null,
+    next: nextResult.results[0] ?? null,
   };
 }
 
