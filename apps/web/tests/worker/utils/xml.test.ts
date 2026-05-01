@@ -142,8 +142,8 @@ describe("pickText", () => {
   });
 
   it("converts boolean to string", () => {
-    expect(pickText(true)).toBe("true");
-    expect(pickText(false)).toBe("false");
+    expect.soft(pickText(true)).toBe("true");
+    expect.soft(pickText(false)).toBe("false");
   });
 
   it("picks #text from object with #text property", () => {
@@ -216,8 +216,8 @@ describe("asArray", () => {
   });
 
   it("wraps number in an array", () => {
-    expect(asArray(0)).toEqual([0]);
-    expect(asArray(99)).toEqual([99]);
+    expect.soft(asArray(0)).toEqual([0]);
+    expect.soft(asArray(99)).toEqual([99]);
   });
 });
 
