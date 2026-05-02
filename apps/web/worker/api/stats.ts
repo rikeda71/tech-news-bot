@@ -7,6 +7,7 @@ import type {
   ByLang30d,
 } from "../db/articles";
 import { rowsAs } from "../db/_helpers";
+import { isCategory } from "../db/_guards";
 import type { Env } from "../types";
 import type { StatsResponse } from "./types";
 
@@ -129,8 +130,9 @@ app.get("/", async (c) => {
     for (const row of rowsAs<{ date: string; category: string; n: number }>(categoryTrendRaw)) {
       const point = trendMap.get(row.date);
       if (!point) continue;
-      const cat = row.category as keyof Omit<CategoryTrendPoint, "date">;
-      if (cat in point) (point[cat] as number) += row.n;
+      if (isCategory(row.category)) {
+        point[row.category] += row.n;
+      }
     }
 
     // getByLang30d と同等の集計
