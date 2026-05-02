@@ -42,6 +42,12 @@ export interface ReportDetailRow extends ReportRow {
 
 const ALL_SENTINEL = "__all__";
 
+// upsertReport の戻り値。overlap 検出時は throw せず ok: false を返すことで
+// 呼び出し側が網羅的に分岐でき、try/catch を境界 (HTTP handler) のみに限定できる。
+export type UpsertReportResult =
+  | { ok: true; id: number }
+  | { ok: false; reason: "overlap"; conflictingIds: number[] };
+
 // 半開区間 [period_start, period_end) が既存 row と overlap する row を返す。
 // 完全一致 (period_start == new.period_start AND period_end == new.period_end) は
 // 既存の UNIQUE 制約 + ON CONFLICT UPDATE で処理されるため overlap 扱いしない。
@@ -70,24 +76,17 @@ export async function findOverlappingReports(
   return result.results ?? [];
 }
 
-// overlap した既存レポートが存在するときに upsertReport が throw するエラー。
-export class OverlapError extends Error {
-  public readonly conflictingIds: number[];
-  constructor(conflictingIds: number[]) {
-    super(`report period overlaps with existing report(s): ids=[${conflictingIds.join(",")}]`);
-    this.name = "OverlapError";
-    this.conflictingIds = conflictingIds;
-  }
-}
-
 // (kind, period_start, period_end, category, lang) で upsert する。
 // UNIQUE index が COALESCE(category, '__all__') で張られているため、
 // ON CONFLICT の target にも同じ式を指定する必要がある (SQLite 3.24+ の挙動)。
-// 半開区間 overlap が検出された場合は OverlapError を throw する。
-export async function upsertReport(db: D1Database, input: ReportInput): Promise<{ id: number }> {
+// 半開区間 overlap が検出された場合は { ok: false, reason: "overlap" } を返す。
+export async function upsertReport(
+  db: D1Database,
+  input: ReportInput,
+): Promise<UpsertReportResult> {
   const overlapping = await findOverlappingReports(db, input);
   if (overlapping.length > 0) {
-    throw new OverlapError(overlapping.map((r) => r.id));
+    return { ok: false, reason: "overlap", conflictingIds: overlapping.map((r) => r.id) };
   }
 
   const result = await db
@@ -123,7 +122,7 @@ export async function upsertReport(db: D1Database, input: ReportInput): Promise<
   if (!result) {
     throw new Error("upsertReport returned no row");
   }
-  return { id: result.id };
+  return { ok: true, id: result.id };
 }
 
 export async function listReports(
