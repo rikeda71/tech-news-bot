@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { env } from "cloudflare:test";
-import {
-  OverlapError,
-  findOverlappingReports,
-  isReportKind,
-  upsertReport,
-} from "../../../worker/db/reports";
+import { findOverlappingReports, isReportKind, upsertReport } from "../../../worker/db/reports";
 import type { ReportInput } from "../../../worker/db/reports";
 
 function baseInput(overrides: Partial<ReportInput> = {}): ReportInput {
@@ -61,10 +56,12 @@ describe("findOverlappingReports", () => {
   });
 
   it("detects partial overlap (start shifted)", async () => {
-    const { id } = await upsertReport(
+    const inserted = await upsertReport(
       env.DB,
       baseInput({ generated_at: "2026-04-28T00:00:00.000Z" }),
     );
+    // inserted が ok: true であることは guard (id アクセスの前提)
+    expect(inserted.ok).toBe(true);
     // 既存: 04-21〜04-28 / 新規: 04-22〜04-29 → overlap
     const overlaps = await findOverlappingReports(
       env.DB,
@@ -75,7 +72,7 @@ describe("findOverlappingReports", () => {
     );
     // length は guard (overlaps[0] アクセスの前提)。id は独立した属性
     expect(overlaps).toHaveLength(1);
-    expect.soft(overlaps[0]?.id).toBe(id);
+    expect.soft(overlaps[0]?.id).toBe(inserted.ok ? inserted.id : undefined);
   });
 
   it("returns empty array for adjacent period (new start == existing end)", async () => {
@@ -110,40 +107,39 @@ describe("findOverlappingReports", () => {
 });
 
 describe("upsertReport overlap guard", () => {
-  it("throws OverlapError when overlapping row exists", async () => {
+  it("returns ok: false when overlapping row exists", async () => {
     await upsertReport(env.DB, baseInput({ generated_at: "2026-04-28T00:00:00.000Z" }));
-    await expect(
-      upsertReport(
-        env.DB,
-        baseInput({
-          period_start: "2026-04-22T00:00:00.000Z",
-          period_end: "2026-04-29T00:00:00.000Z",
-          generated_at: "2026-04-29T00:00:00.000Z",
-        }),
-      ),
-    ).rejects.toBeInstanceOf(OverlapError);
+    const result = await upsertReport(
+      env.DB,
+      baseInput({
+        period_start: "2026-04-22T00:00:00.000Z",
+        period_end: "2026-04-29T00:00:00.000Z",
+        generated_at: "2026-04-29T00:00:00.000Z",
+      }),
+    );
+    expect(result.ok).toBe(false);
   });
 
-  it("OverlapError contains conflicting ids", async () => {
-    const { id } = await upsertReport(
+  it("ok: false result contains conflicting ids", async () => {
+    const first = await upsertReport(
       env.DB,
       baseInput({ generated_at: "2026-04-28T00:00:00.000Z" }),
     );
-    let caught: OverlapError | null = null;
-    try {
-      await upsertReport(
-        env.DB,
-        baseInput({
-          period_start: "2026-04-22T00:00:00.000Z",
-          period_end: "2026-04-29T00:00:00.000Z",
-          generated_at: "2026-04-29T00:00:00.000Z",
-        }),
-      );
-    } catch (err) {
-      if (err instanceof OverlapError) caught = err;
+    // first が ok: true であることは guard (id アクセスの前提)
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    const result = await upsertReport(
+      env.DB,
+      baseInput({
+        period_start: "2026-04-22T00:00:00.000Z",
+        period_end: "2026-04-29T00:00:00.000Z",
+        generated_at: "2026-04-29T00:00:00.000Z",
+      }),
+    );
+    // result が ok: false であることは guard (conflictingIds アクセスの前提)
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect.soft(result.conflictingIds).toContain(first.id);
     }
-    // caught が null でないことは guard (conflictingIds アクセスの前提)。id の含有は独立
-    expect(caught).not.toBeNull();
-    expect.soft(caught!.conflictingIds).toContain(id);
   });
 });
