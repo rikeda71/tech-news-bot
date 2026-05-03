@@ -51,7 +51,7 @@ jobs:
           # 廃止モデル (claude-3-5-haiku-20241022) への自動 fallback で 404 が出るため
           # 現行 sonnet を `--model` で明示する。`timeout_minutes` 相当は job-level
           # `timeout-minutes: 60` でカバーされるため省略。
-          claude_args: "--model claude-sonnet-4-5-20250929 --allowedTools Bash,Read,Write,WebFetch,Skill"
+          claude_args: "--model claude-sonnet-4-6 --allowedTools Bash,Read,Write,WebFetch,Skill"
           # daily digest 生成プロンプト。詳細な手順 (出力ファイル / フォーマット / no-articles 挙動 /
           # URL grounding) は .claude/skills/tech-news-digest/SKILL.md の「自動 daily report
           # 生成モード」節を一次ソースとする。yaml 側は skill 起動パラメータのみを渡す。

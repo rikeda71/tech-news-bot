@@ -49,7 +49,7 @@ jobs:
           # 廃止モデル (claude-3-5-haiku-20241022) への自動 fallback で 404 が出るため
           # 現行 sonnet を `--model` で明示する。`timeout_minutes` 相当は job-level
           # `timeout-minutes: 60` でカバーされるため省略。
-          claude_args: "--model claude-sonnet-4-5-20250929 --allowedTools Bash,Read,Write,WebFetch,Skill"
+          claude_args: "--model claude-sonnet-4-6 --allowedTools Bash,Read,Write,WebFetch,Skill"
           # monthly digest 生成プロンプト。tech-news-weekly skill を since=month で起動する。
           prompt: |
             あなたは tech-news-bot の自動レポート生成エージェントです。
