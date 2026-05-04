@@ -400,7 +400,9 @@ describe("getFeedHealth", () => {
   });
 
   it("counts only articles published within 7 days in articles_last_7d", async () => {
-    vi.setSystemTime(new Date("2026-04-29T00:00:00Z"));
+    // SQL の datetime('now', '-7 days') は Workers ランタイム (SQLite) の実時間を見るため
+    // vi.setSystemTime で JS 側だけ固定すると境界がズレて flaky になる。
+    // ここでは固定せず recentAt() の実時間相対オフセットで境界を担保する。
     await syncFeeds(env.DB, [FEED_BIGTECH]);
     await insertArticles(env.DB, [
       {
