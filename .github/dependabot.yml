@@ -10,27 +10,31 @@ updates:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
     groups:
-      types:
-        # @types/* をまとめて 1 PR に
-        patterns:
-          - "@types/*"
-      vite-ecosystem:
-        # vite / vitest / vite-plus 関連をまとめて 1 PR に
-        patterns:
-          - "vite"
-          - "vite-*"
-          - "vitest"
-          - "@vitejs/*"
-          - "vite-plus"
-          - "@voidzero-dev/*"
-      cloudflare:
-        # Cloudflare 系をまとめて 1 PR に
-        patterns:
-          - "@cloudflare/*"
-          - "wrangler"
+      production-deps:
+        # production 依存の minor / patch をすべて 1 PR にまとめる
+        # major は互換性リスクが高いのでグループ外 (個別 PR) に残す
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      development-deps:
+        # devDependencies の minor / patch をすべて 1 PR にまとめる
+        # types / vite / cloudflare 等のサブグループは廃止してここに統合
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
 
   # GitHub Actions のバージョンを週次で自動 PR
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      gha-deps:
+        # GitHub Actions の minor / patch をすべて 1 PR にまとめる
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
