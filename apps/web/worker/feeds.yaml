@@ -85,6 +85,20 @@ feeds:
     lang: en
     enabled: true
 
+  - id: github-blog
+    name: The GitHub Blog
+    url: https://github.blog/feed/
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: github-ai-ml
+    name: GitHub AI & ML
+    url: https://github.blog/ai-and-ml.atom
+    category: bigtech
+    lang: en
+    enabled: true
+
   - id: apple-ml
     name: Apple Machine Learning Research
     url: https://machinelearning.apple.com/rss.xml
@@ -102,6 +116,69 @@ feeds:
   - id: discord-engineering
     name: Discord Blog
     url: https://discord.com/blog/rss.xml
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: slack-engineering
+    name: Slack Engineering
+    url: https://slack.engineering/feed/
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: pinterest-engineering
+    name: Pinterest Engineering
+    url: https://medium.com/feed/pinterest-engineering
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: reddit-engineering
+    name: Reddit Engineering (r/RedditEng)
+    url: https://www.reddit.com/r/RedditEng/.rss
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: snap-engineering
+    name: Snap Engineering
+    url: https://eng.snap.com/feed
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: atlassian-engineering
+    name: Inside Atlassian
+    url: https://www.atlassian.com/engineering/feed
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: hashicorp-blog
+    name: HashiCorp Blog
+    url: https://www.hashicorp.com/blog/feed.xml
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: vercel-blog
+    name: Vercel Blog
+    url: https://vercel.com/atom
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: lyft-engineering
+    name: Lyft Engineering
+    url: https://medium.com/feed/lyft-engineering
+    category: bigtech
+    lang: en
+    enabled: true
+
+  - id: instacart-engineering
+    name: tech-at-instacart
+    url: https://medium.com/feed/tech-at-instacart
     category: bigtech
     lang: en
     enabled: true
@@ -145,6 +222,13 @@ feeds:
   - id: huggingface-blog
     name: Hugging Face Blog
     url: https://huggingface.co/blog/feed.xml
+    category: ai
+    lang: en
+    enabled: true
+
+  - id: databricks-blog
+    name: Databricks Blog
+    url: https://databricks.com/feed
     category: ai
     lang: en
     enabled: true
