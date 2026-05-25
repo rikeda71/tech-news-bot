@@ -29,9 +29,9 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.37.1",
-    "@cloudflare/vitest-pool-workers": "^0.16.6",
-    "@cloudflare/workers-types": "^4.20260518.1",
+    "@cloudflare/vite-plugin": "^1.38.0",
+    "@cloudflare/vitest-pool-workers": "^0.16.9",
+    "@cloudflare/workers-types": "^4.20260525.1",
     "@modyfi/vite-plugin-yaml": "^1.1.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.3.0",
@@ -46,6 +46,6 @@
     "tailwindcss": "^4.3.0",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "^4.92.0"
+    "wrangler": "^4.94.0"
   }
 }
