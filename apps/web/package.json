@@ -31,7 +31,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.53.1",
     "@cloudflare/vitest-pool-workers": "^0.22.0",
-    "@cloudflare/workers-types": "^4.20260628.1",
+    "@cloudflare/workers-types": "^5.20260822.1",
     "@modyfi/vite-plugin-yaml": "^1.1.1",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
