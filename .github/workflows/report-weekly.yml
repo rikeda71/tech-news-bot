@@ -69,12 +69,14 @@ jobs:
             - `## 注目記事ピックアップ` (必須・省略禁止): 各記事にタイトル/URL/feed_name/category/YYYY-MM-DD/1〜2文要約を含む
             - `## カテゴリ別ハイライト` (必須): bigtech / ai の各サブセクション (###) でカテゴリごとの動向をサマる
 
-            合わせて以下の JSON を /tmp/report-meta.json に書き出してください:
+            合わせて以下の JSON を /tmp/report-meta.json に書き出してください
+            (period_start / period_end は workflow が POST 直前に JST 暦週の決定的な値に
+            上書きするため、ここでは仮値で構いません):
 
             {
               "kind": "weekly",
-              "period_start": "<実行時刻 -7 日 の ISO 8601>",
-              "period_end":   "<実行時刻の ISO 8601>",
+              "period_start": "<仮値。実行時刻 -7 日 の ISO 8601>",
+              "period_end":   "<仮値。実行時刻の ISO 8601>",
               "category": null,
               "lang": null,
               "included_categories": ["bigtech","ai"],
@@ -113,6 +115,29 @@ jobs:
             echo "Skill did not produce required output files; aborting."
             exit 1
           fi
+
+          # Weekly report の period を JST 暦週 (直近 7 日間、00:00 JST 境界) に正規化する。
+          # skill が出力する generated_at ベースの sliding-window だと前週の row と境界で
+          # 部分 overlap してしまう可能性があるため (daily の #390 と同種の問題)、POST 前に
+          # ここで JST 00:00 境界に丸めて report-meta.json の period_start / period_end を
+          # 上書きする。start / end は 1 回の python3 呼び出しで同時に取得する (2 回 spawn
+          # する間に日付が変わると 2 日分の period が生成されるため)。
+          read -r PERIOD_START_UTC PERIOD_END_UTC <<<"$(python3 -c "from datetime import datetime, timedelta, timezone
+          jst = timezone(timedelta(hours=9))
+          end = datetime.now(jst).replace(hour=0, minute=0, second=0, microsecond=0)
+          start = end - timedelta(days=7)
+          fmt = '%Y-%m-%dT%H:%M:%SZ'
+          print(start.astimezone(timezone.utc).strftime(fmt), end.astimezone(timezone.utc).strftime(fmt))")"
+          if ! jq \
+            --arg ps "$PERIOD_START_UTC" \
+            --arg pe "$PERIOD_END_UTC" \
+            '.period_start = $ps | .period_end = $pe' \
+            /tmp/report-meta.json > /tmp/report-meta.json.tmp; then
+            rm -f /tmp/report-meta.json.tmp
+            echo "Failed to override period in /tmp/report-meta.json" >&2
+            exit 1
+          fi
+          mv /tmp/report-meta.json.tmp /tmp/report-meta.json
 
           jq \
             --rawfile content /tmp/report.md \

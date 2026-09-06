@@ -282,7 +282,12 @@ node tools/d1-client/recent.mjs --since=today --category=bigtech,ai --target=rem
 | ai       | 0    |
 ```
 
-Stage 2〜4 は articles 0 件のためスキップする (`/tmp/report.md` のみ書き出して終了)。
+Stage 2〜4 (記事選定 / WebFetch 本文取得 / トレンド分析) は articles 0 件のためスキップするが、
+**出力ファイルの書き出しはここで終了しない**。`/tmp/report.md` を書き出したら、続けて必ず
+下記 #2 `/tmp/report-meta.json` と #3 `/tmp/slack-message.md` も書き出すこと。記事 0 件時でも
+`/tmp/report.md` / `/tmp/report-meta.json` / `/tmp/slack-message.md` の **3 ファイルすべて**を
+出力してから終了する (`/tmp/report.md` のみ書いて終了するのは禁止 — workflow の「Save report
+to D1」ステップがファイル存在チェックで失敗する)。
 
 #### 2. `/tmp/report-meta.json`
 

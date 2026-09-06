@@ -20,8 +20,8 @@
     "e2e:report": "playwright show-report"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.7.2",
-    "hono": "^4.12.18",
+    "fast-xml-parser": "^5.11.1",
+    "hono": "^4.13.7",
     "jose": "^6.2.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

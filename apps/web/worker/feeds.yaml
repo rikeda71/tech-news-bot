@@ -333,13 +333,6 @@ feeds:
     lang: ja
     enabled: true
 
-  - id: pfn-tech-blog
-    name: Preferred Networks Tech Blog
-    url: https://tech.preferred.jp/ja/feed/
-    category: jp
-    lang: ja
-    enabled: true
-
   - id: layerx-zenn
     name: LayerX Tech Blog (Zenn)
     url: https://zenn.dev/p/layerx/feed
