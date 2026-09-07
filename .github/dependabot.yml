@@ -9,6 +9,26 @@ updates:
       # Node.js LTS 24 を当面利用するため、@types/node の major bump は対象外にする
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # pnpm-workspace.yaml の catalog は vite-plus / @voidzero-dev/vite-plus-core (= vite) /
+      # @voidzero-dev/vite-plus-test (= vitest) の 3 つを同一バージョンで揃える必要がある。
+      # dependabot は vite-plus 単体しか上げられないうえ、vite-plus-test は 0.1.24 が最新で
+      # 0.2.x / 0.3.x が存在しない。vite-plus 0.3.0 は `./binding` の subpath export を廃止
+      # したため、0.1.x のままの vite-plus-core が rolldown の native binding を解決できず
+      # ERR_PACKAGE_PATH_NOT_EXPORTED で vp check / test / build が全滅する。
+      # vite-plus-test が追随したら 3 エントリを手動で揃えて上げ、この ignore を外すこと。
+      - dependency-name: "vite-plus"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+      # jose 6.2.12 は verifyCompact が protected header の parse を async verifySignature へ
+      # 移し、その promise を await せず return するようになった。promise adoption の余分な
+      # tick で rejection が一瞬 unhandled になり、workerd がそれを報告するため
+      # tests/worker/middleware/access-jwt.test.ts が全 pass でも exit 1 になる
+      # (Serialized Error: { code: 'ERR_JWS_INVALID' })。6.2.11 までは発生しない。
+      # jose は JWT 検証に使う security-critical な依存なので範囲では止めず、
+      # 壊れている 6.2.12 だけを外す。上流修正版が出たらこの ignore を削除すること。
+      - dependency-name: "jose"
+        versions: ["6.2.12"]
     groups:
       production-deps:
         # production 依存の minor / patch をすべて 1 PR にまとめる
