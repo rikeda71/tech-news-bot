@@ -29,23 +29,23 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.53.1",
+    "@cloudflare/vite-plugin": "^1.54.4",
     "@cloudflare/vitest-pool-workers": "^0.22.0",
-    "@cloudflare/workers-types": "^5.20260827.1",
+    "@cloudflare/workers-types": "^5.20260903.1",
     "@modyfi/vite-plugin-yaml": "^1.1.1",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.5",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.1.0",
-    "happy-dom": "^20.11.6",
+    "@vitejs/plugin-react": "^6.1.1",
+    "happy-dom": "^20.14.0",
     "tailwindcss": "^4.3.3",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "^4.125.0"
+    "wrangler": "^4.129.0"
   }
 }
