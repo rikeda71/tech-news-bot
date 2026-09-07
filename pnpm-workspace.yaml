@@ -8,6 +8,11 @@ catalog:
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
+  # Dependabot の npm_and_yarn updater は lockfile 更新時に minimumReleaseAge (3 日) を強制する。
+  # vite 経由で入る rollup はリリース頻度が高く、リリース直後だとこの制約に引っかかって
+  # ERR_PNPM_NO_MATURE_MATCHING_VERSION で Dependabot Updates が失敗するため、解決先を固定する。
+  # vite 側が要求する rollup の major が上がったらこの値も追従すること。
+  rollup: "4.63.1"
 peerDependencyRules:
   allowAny:
     - vite

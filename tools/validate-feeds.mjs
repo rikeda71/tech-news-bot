@@ -38,6 +38,11 @@ const USER_AGENT =
 const TIMEOUT_MS = 10_000;
 const CONCURRENCY = 4;
 
+// 429/5xx/timeout はホスト側の一時的なレート制限・過負荷が原因の false positive になりやすいため、
+// 指数バックオフでリトライする (1s -> 3s, 最大2回リトライ = 合計3回試行)。
+// 404 等の恒久エラーはリトライしても結果が変わらないため対象外。
+const RETRY_DELAYS_MS = [1_000, 3_000];
+
 /**
  * feeds.yaml を最低限パースして { feeds: FeedEntry[] } を返す。
  * yaml パッケージを使わず Node.js 組み込みのみで実装する。
@@ -103,22 +108,39 @@ async function fetchCheck(url, method) {
 }
 
 /**
+ * 429/5xx/タイムアウト/ネットワークエラーの場合のみ指数バックオフでリトライする。
+ * 404 等の恒久的な 4xx はリトライしても結果が変わらないため即座に返す。
+ * @param {string} url
+ * @param {"HEAD"|"GET"} method
+ */
+async function fetchCheckWithRetry(url, method) {
+  let result = await fetchCheck(url, method);
+  for (const delayMs of RETRY_DELAYS_MS) {
+    const retryable = result.error || result.status === 429 || result.status >= 500;
+    if (!retryable) break;
+    await new Promise((r) => setTimeout(r, delayMs));
+    result = await fetchCheck(url, method);
+  }
+  return result;
+}
+
+/**
  * HEAD を試みて 4xx またはネットワークエラーならば GET にフォールバックする。
  * Content-Type が text/plain でも GET ボディが XML なら valid とみなす
  * (raw.githubusercontent.com 等の静的ファイルホストへの対応)。
  * @param {string} url
  */
 async function checkUrl(url) {
-  const head = await fetchCheck(url, "HEAD");
+  const head = await fetchCheckWithRetry(url, "HEAD");
   // HEAD が 4xx (405 Method Not Allowed 等) またはネットワークエラーの場合 GET で再試行
   if (head.status >= 400 || head.error) {
-    const get = await fetchCheck(url, "GET");
+    const get = await fetchCheckWithRetry(url, "GET");
     const { contentType, bodyDetected } = resolveContentType(get.contentType, get.body);
     return { method: "GET (fallback)", ...get, contentType, bodyDetected };
   }
   // HEAD 成功でも Content-Type が不正の場合は GET でボディを確認
   if (!isValidContentType(head.contentType)) {
-    const get = await fetchCheck(url, "GET");
+    const get = await fetchCheckWithRetry(url, "GET");
     const { contentType, bodyDetected } = resolveContentType(get.contentType, get.body);
     return { method: "GET (ct-check)", ...get, contentType, bodyDetected };
   }
