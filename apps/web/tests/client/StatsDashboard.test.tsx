@@ -93,31 +93,31 @@ describe("StatsDashboard", () => {
   it("サマリカードに total_articles が表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("1,234");
+    expect(await screen.findByText("1,234")).toBeTruthy();
   });
 
   it("サマリカードに articles_24h が表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("42");
+    expect(await screen.findByText("42")).toBeTruthy();
   });
 
   it("サマリカードに articles_7d が表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("210");
+    expect(await screen.findByText("210")).toBeTruthy();
   });
 
   it("サマリカードに articles_30d が表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("800");
+    expect(await screen.findByText("800")).toBeTruthy();
   });
 
   it("top_authors_30d が上位 10 件表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("Alice");
+    expect(await screen.findByText("Alice")).toBeTruthy();
     expect.soft(screen.getByText("Bob")).toBeTruthy();
     expect.soft(screen.getByText("Judy")).toBeTruthy();
   });
@@ -125,7 +125,7 @@ describe("StatsDashboard", () => {
   it("top_authors のバーに aria-label が設定される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("Alice");
+    expect(await screen.findByText("Alice")).toBeTruthy();
     const bar = screen.getByRole("img", { name: /Alice.*30/ });
     expect(bar).toBeTruthy();
   });
@@ -133,7 +133,7 @@ describe("StatsDashboard", () => {
   it("top_publishers_30d が表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("Feed A");
+    expect(await screen.findByText("Feed A")).toBeTruthy();
     expect.soft(screen.getByText("Feed B")).toBeTruthy();
     expect.soft(screen.getByText("Feed C")).toBeTruthy();
   });
@@ -141,7 +141,7 @@ describe("StatsDashboard", () => {
   it("by_lang_30d の ja と en バーが表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("ja");
+    expect(await screen.findByText("ja")).toBeTruthy();
     expect.soft(screen.getByText("en")).toBeTruthy();
   });
 
@@ -158,7 +158,7 @@ describe("StatsDashboard", () => {
   it("by_category が表示される", async () => {
     mockFetchSuccess();
     render(<StatsDashboard />);
-    await screen.findByText("bigtech");
+    expect(await screen.findByText("bigtech")).toBeTruthy();
     expect.soft(screen.getByText("ai")).toBeTruthy();
     expect.soft(screen.getByText("jp")).toBeTruthy();
     expect.soft(screen.getByText("personal")).toBeTruthy();

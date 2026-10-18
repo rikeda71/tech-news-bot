@@ -83,10 +83,9 @@ describe("ReportsList", () => {
     // chip ボタン (all/daily/weekly/monthly) の後にリストアイテムボタンが来る
     const reportButton = buttons.find((b) => b.textContent?.includes("2026"));
     expect(reportButton).toBeTruthy();
-    if (reportButton) {
-      await userEvent.click(reportButton);
-      expect(onSelectReport).toHaveBeenCalledWith(42);
-    }
+    if (!reportButton) throw new Error("report button not found");
+    await userEvent.click(reportButton);
+    expect(onSelectReport).toHaveBeenCalledWith(42);
   });
 
   it("kind フィルタ chip は選択状態を aria-pressed で表す", async () => {

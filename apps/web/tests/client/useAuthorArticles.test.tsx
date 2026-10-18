@@ -62,7 +62,9 @@ describe("useAuthorArticles", () => {
   });
 
   it("author が変わると再 fetch が発火する", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(makeResponse([makeArticle(1)]));
+    const mockFetch = vi
+      .fn<(url: string) => Promise<unknown>>()
+      .mockResolvedValue(makeResponse([makeArticle(1)]));
     vi.stubGlobal("fetch", mockFetch);
 
     const { rerender } = renderHook(({ author }) => useAuthorArticles(author), {
@@ -90,7 +92,7 @@ describe("useAuthorArticles", () => {
     const page1 = [makeArticle(1), makeArticle(2)];
     const page2 = [makeArticle(3)];
     const mockFetch = vi
-      .fn()
+      .fn<(url: string) => Promise<unknown>>()
       .mockResolvedValueOnce(makeResponse(page1, "cursor-next"))
       .mockResolvedValueOnce(makeResponse(page2, null));
     vi.stubGlobal("fetch", mockFetch);
@@ -116,7 +118,7 @@ describe("useAuthorArticles", () => {
   });
 
   it("author が空文字の場合は fetch が発火しない", async () => {
-    const mockFetch = vi.fn();
+    const mockFetch = vi.fn<(url: string) => Promise<unknown>>();
     vi.stubGlobal("fetch", mockFetch);
 
     const { result } = renderHook(() => useAuthorArticles(""));

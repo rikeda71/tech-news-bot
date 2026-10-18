@@ -153,10 +153,15 @@ describe("fetchFeed retry behavior", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("Service Unavailable", { status: 503 }));
 
-    // rejects でラップしてから runAllTimersAsync で backoff を進める
-    const rejectPromise = expect(fetchFeed(DUMMY_URL, 10000, 2)).rejects.toThrow("HTTP 503");
+    // rejection を先に捕捉してから runAllTimersAsync で backoff を進める
+    const settled = fetchFeed(DUMMY_URL, 10000, 2).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
     await vi.runAllTimersAsync();
-    await rejectPromise;
+    const error = await settled;
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("HTTP 503");
 
     // 初回 + 2 回リトライ = 計 3 回
     expect.soft(spy).toHaveBeenCalledTimes(3);

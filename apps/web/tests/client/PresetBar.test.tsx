@@ -38,7 +38,7 @@ describe("PresetBar", () => {
         onRemove={vi.fn<(id: string) => void>()}
       />,
     );
-    screen.getByText("+ 現在のフィルタを保存");
+    expect(screen.getByText("+ 現在のフィルタを保存")).toBeTruthy();
   });
 
   it("renders preset names when presets are provided", () => {
@@ -51,8 +51,8 @@ describe("PresetBar", () => {
         onRemove={vi.fn<(id: string) => void>()}
       />,
     );
-    screen.getByText("AI English");
-    screen.getByText("JP Tech");
+    expect(screen.getByText("AI English")).toBeTruthy();
+    expect(screen.getByText("JP Tech")).toBeTruthy();
   });
 
   it("calls onApply with preset filters when preset button is clicked", async () => {

@@ -43,9 +43,9 @@ describe("ArticleList", () => {
       makeArticle(3, "Title C"),
     ];
     render(<ArticleList articles={articles} onFilterByCategory={noop} onFilterByFeedId={noop} />);
-    screen.getByText("Title A");
-    screen.getByText("Title B");
-    screen.getByText("Title C");
+    expect(screen.getByText("Title A")).toBeTruthy();
+    expect(screen.getByText("Title B")).toBeTruthy();
+    expect(screen.getByText("Title C")).toBeTruthy();
   });
 
   it("renders only the specified articles when selectedIndex is given", () => {
@@ -59,8 +59,8 @@ describe("ArticleList", () => {
       />,
     );
     // 両方のタイトルが描画されることを確認
-    screen.getByText("First");
-    screen.getByText("Second");
+    expect(screen.getByText("First")).toBeTruthy();
+    expect(screen.getByText("Second")).toBeTruthy();
   });
 
   it("calls onFilterByCategory when category badge is clicked", async () => {
@@ -90,6 +90,6 @@ describe("ArticleList", () => {
     );
     // q="React" が渡されると highlight が適用されるが
     // テキストは mark 要素などで分割されるため部分一致で確認する
-    screen.getByText(/React/);
+    expect(screen.getByText(/React/)).toBeTruthy();
   });
 });

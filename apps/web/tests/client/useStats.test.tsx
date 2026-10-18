@@ -72,7 +72,9 @@ describe("useStats", () => {
 
   it("refreshSignal が変わると再 fetch が発火する", async () => {
     const stats = makeStats();
-    const mockFetch = vi.fn().mockResolvedValue(makeResponse(stats));
+    const mockFetch = vi
+      .fn<(url: string) => Promise<unknown>>()
+      .mockResolvedValue(makeResponse(stats));
     vi.stubGlobal("fetch", mockFetch);
 
     const { result, rerender } = renderHook(({ signal }) => useStats(signal), {

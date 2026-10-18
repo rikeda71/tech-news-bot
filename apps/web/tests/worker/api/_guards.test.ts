@@ -47,13 +47,10 @@ describe("isCategory", () => {
 
   it("narrow 後の値を FeedCategory 型として代入できる", () => {
     const raw: unknown = "ai";
-    if (isCategory(raw)) {
-      // コンパイルエラーなく代入できれば型が正しく narrow されている
-      const cat: FeedCategory = raw;
-      expect(cat).toBe("ai");
-    } else {
-      expect.fail("isCategory('ai') should return true");
-    }
+    if (!isCategory(raw)) throw new Error("isCategory('ai') should return true");
+    // コンパイルエラーなく代入できれば型が正しく narrow されている
+    const cat: FeedCategory = raw;
+    expect(cat).toBe("ai");
   });
 });
 
@@ -80,12 +77,9 @@ describe("isLang", () => {
 
   it("narrow 後の値を FeedLang 型として代入できる", () => {
     const raw: unknown = "ja";
-    if (isLang(raw)) {
-      // コンパイルエラーなく代入できれば型が正しく narrow されている
-      const lang: FeedLang = raw;
-      expect(lang).toBe("ja");
-    } else {
-      expect.fail("isLang('ja') should return true");
-    }
+    if (!isLang(raw)) throw new Error("isLang('ja') should return true");
+    // コンパイルエラーなく代入できれば型が正しく narrow されている
+    const lang: FeedLang = raw;
+    expect(lang).toBe("ja");
   });
 });

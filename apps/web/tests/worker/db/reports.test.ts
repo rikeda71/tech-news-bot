@@ -138,8 +138,7 @@ describe("upsertReport overlap guard", () => {
     );
     // result が ok: false であることは guard (conflictingIds アクセスの前提)
     expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect.soft(result.conflictingIds).toContain(first.id);
-    }
+    if (result.ok) return;
+    expect.soft(result.conflictingIds).toContain(first.id);
   });
 });
