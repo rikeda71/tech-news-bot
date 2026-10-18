@@ -6,9 +6,7 @@ describe("checkUrlSafety", () => {
     it("allows https with a public hostname", () => {
       const result = checkUrlSafety("https://example.com/feed.xml");
       expect.soft(result.ok).toBe(true);
-      if (result.ok) {
-        expect.soft(result.url.hostname).toBe("example.com");
-      }
+      expect.soft(result.ok ? result.url.hostname : undefined).toBe("example.com");
     });
 
     it("allows http with a public hostname", () => {
@@ -26,9 +24,7 @@ describe("checkUrlSafety", () => {
     it("blocks file:// protocol", () => {
       const result = checkUrlSafety("file:///etc/passwd");
       expect.soft(result.ok).toBe(false);
-      if (!result.ok) {
-        expect.soft(result.reason).toContain("protocol not allowed");
-      }
+      expect.soft(result.ok ? undefined : result.reason).toContain("protocol not allowed");
     });
 
     it("blocks ftp:// protocol", () => {
@@ -44,9 +40,7 @@ describe("checkUrlSafety", () => {
     it("rejects invalid URL that cannot be parsed", () => {
       const result = checkUrlSafety("not-a-url");
       expect.soft(result.ok).toBe(false);
-      if (!result.ok) {
-        expect.soft(result.reason).toBe("invalid URL");
-      }
+      expect.soft(result.ok ? undefined : result.reason).toBe("invalid URL");
     });
   });
 
@@ -54,9 +48,7 @@ describe("checkUrlSafety", () => {
     it("blocks localhost", () => {
       const result = checkUrlSafety("https://localhost/x");
       expect.soft(result.ok).toBe(false);
-      if (!result.ok) {
-        expect.soft(result.reason).toContain("host blocked");
-      }
+      expect.soft(result.ok ? undefined : result.reason).toContain("host blocked");
     });
 
     it("blocks LOCALHOST (case-insensitive)", () => {
@@ -77,9 +69,7 @@ describe("checkUrlSafety", () => {
     it("blocks metadata.google.internal (GCP metadata)", () => {
       const result = checkUrlSafety("http://metadata.google.internal/computeMetadata/v1/");
       expect.soft(result.ok).toBe(false);
-      if (!result.ok) {
-        expect.soft(result.reason).toContain("host blocked");
-      }
+      expect.soft(result.ok ? undefined : result.reason).toContain("host blocked");
     });
 
     it("blocks localhost. with trailing dot (FQDN form)", () => {
@@ -103,9 +93,7 @@ describe("checkUrlSafety", () => {
     it("blocks 127.0.0.1 (loopback)", () => {
       const result = checkUrlSafety("https://127.0.0.1/x");
       expect.soft(result.ok).toBe(false);
-      if (!result.ok) {
-        expect.soft(result.reason).toContain("private IPv4");
-      }
+      expect.soft(result.ok ? undefined : result.reason).toContain("private IPv4");
     });
 
     it("blocks 127.0.0.2 (loopback range)", () => {
@@ -116,9 +104,7 @@ describe("checkUrlSafety", () => {
     it("blocks 169.254.169.254 (AWS metadata endpoint)", () => {
       const result = checkUrlSafety("https://169.254.169.254/latest/meta-data/");
       expect.soft(result.ok).toBe(false);
-      if (!result.ok) {
-        expect.soft(result.reason).toContain("private IPv4");
-      }
+      expect.soft(result.ok ? undefined : result.reason).toContain("private IPv4");
     });
 
     it("blocks 10.0.0.1 (RFC 1918 class A)", () => {
@@ -214,9 +200,7 @@ describe("checkUrlSafety", () => {
     it("blocks [::1] (IPv6 loopback)", () => {
       const result = checkUrlSafety("http://[::1]/x");
       expect.soft(result.ok).toBe(false);
-      if (!result.ok) {
-        expect.soft(result.reason).toContain("private IPv6");
-      }
+      expect.soft(result.ok ? undefined : result.reason).toContain("private IPv6");
     });
 
     it("blocks [fe80::1] (link-local)", () => {

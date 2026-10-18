@@ -20,13 +20,13 @@ function makeState(overrides: Partial<Parameters<typeof useFilterHandlers>[0]> =
 
 function makeSetters(overrides: Partial<Parameters<typeof useFilterHandlers>[1]> = {}) {
   return {
-    setFeedId: vi.fn(),
-    setDateFrom: vi.fn(),
-    setDateTo: vi.fn(),
-    setUnreadOnly: vi.fn(),
-    setStarredOnly: vi.fn(),
-    setUrlFilters: vi.fn(),
-    setView: vi.fn(),
+    setFeedId: vi.fn<(v: string) => void>(),
+    setDateFrom: vi.fn<(v: string) => void>(),
+    setDateTo: vi.fn<(v: string) => void>(),
+    setUnreadOnly: vi.fn<(v: boolean) => void>(),
+    setStarredOnly: vi.fn<(v: boolean) => void>(),
+    setUrlFilters: vi.fn<(patch: { q?: string; bookmarksOnly?: boolean }) => void>(),
+    setView: vi.fn<(v: "articles") => void>(),
     ...overrides,
   };
 }
@@ -37,7 +37,7 @@ describe("useFilterHandlers", () => {
     vi.stubGlobal(
       "history",
       Object.assign(Object.create(window.history), {
-        pushState: vi.fn(),
+        pushState: vi.fn<(...args: unknown[]) => void>(),
       }),
     );
   });

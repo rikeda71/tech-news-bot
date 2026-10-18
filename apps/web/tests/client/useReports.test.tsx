@@ -84,7 +84,7 @@ describe("useReportsList", () => {
   });
 
   it("kind が変わると再 fetch が発火する", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
+    const mockFetch = vi.fn<(url: string) => Promise<unknown>>().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ reports: [] }),
     });
@@ -146,7 +146,7 @@ describe("useReport", () => {
   });
 
   it("id が変わると再 fetch が発火する", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
+    const mockFetch = vi.fn<(url: string) => Promise<unknown>>().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ report: makeReportDetail(1) }),
     });

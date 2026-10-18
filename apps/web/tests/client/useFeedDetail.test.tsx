@@ -89,7 +89,7 @@ describe("useFeedDetail", () => {
   });
 
   it("feedId が変わると再 fetch が発火する", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
+    const mockFetch = vi.fn<(url: string) => Promise<unknown>>().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ feed: makeFeedDetail("feed-2"), recent_articles: [] }),
     });

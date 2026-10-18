@@ -60,7 +60,7 @@ describe("CalendarHeatmap", () => {
     mockFetch(days);
     const { container } = render(<CalendarHeatmap days={90} />);
     // セルが描画されるまで待つ
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
     const cells = container.querySelectorAll("[data-level]");
     // 90セル分 (range内) + 凡例の5セル = 95以上
     expect(cells.length).toBeGreaterThanOrEqual(90);
@@ -70,7 +70,7 @@ describe("CalendarHeatmap", () => {
     const days = makeCalendarDays(90, 3);
     mockFetch(days);
     const { container } = render(<CalendarHeatmap days={90} />);
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
     // count=3 → level=2 のセルが存在する
     const level2Cells = container.querySelectorAll('[data-level="2"]');
     expect(level2Cells.length).toBeGreaterThan(0);
@@ -80,7 +80,7 @@ describe("CalendarHeatmap", () => {
     const days = makeCalendarDays(90, 5);
     mockFetch(days);
     const { container } = render(<CalendarHeatmap days={90} />);
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
     // aria-label="M月D日: 5件" の形式のセルが存在する
     const cells = container.querySelectorAll("[data-level][aria-label]");
     expect(cells.length).toBeGreaterThan(0);
@@ -93,7 +93,7 @@ describe("CalendarHeatmap", () => {
     const days = makeCalendarDays(90, 0);
     mockFetch(days);
     const { container } = render(<CalendarHeatmap days={90} />);
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
     const level0Cells = container.querySelectorAll('[data-level="0"]');
     // 90セル (range内) + 凡例1セル
     expect(level0Cells.length).toBeGreaterThanOrEqual(90);
@@ -103,7 +103,7 @@ describe("CalendarHeatmap", () => {
     const days = makeCalendarDays(90, 15);
     mockFetch(days);
     const { container } = render(<CalendarHeatmap days={90} />);
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
     const level4Cells = container.querySelectorAll('[data-level="4"]');
     // 90セル (range内) + 凡例1セル
     expect(level4Cells.length).toBeGreaterThanOrEqual(90);
@@ -126,7 +126,7 @@ describe("CalendarHeatmap", () => {
     });
 
     render(<CalendarHeatmap days={90} />);
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
 
     const btn30 = screen.getByRole("button", { name: "30日" });
     fireEvent.click(btn30);
@@ -154,7 +154,7 @@ describe("CalendarHeatmap", () => {
     });
 
     render(<CalendarHeatmap days={90} />);
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
 
     const btn365 = screen.getByRole("button", { name: "365日" });
     fireEvent.click(btn365);
@@ -168,6 +168,6 @@ describe("CalendarHeatmap", () => {
   it("活動カレンダーの見出しが表示される", async () => {
     mockFetch(makeCalendarDays(90));
     render(<CalendarHeatmap days={90} />);
-    await screen.findByText("活動カレンダー");
+    expect(await screen.findByText("活動カレンダー")).toBeTruthy();
   });
 });

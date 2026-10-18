@@ -69,7 +69,9 @@ describe("useArticlesCalendar", () => {
   });
 
   it("days が変わると再 fetch が発火する", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(makeResponse([]));
+    const mockFetch = vi
+      .fn<(url: string) => Promise<unknown>>()
+      .mockResolvedValue(makeResponse([]));
     vi.stubGlobal("fetch", mockFetch);
 
     const { rerender } = renderHook(({ days }) => useArticlesCalendar(days), {

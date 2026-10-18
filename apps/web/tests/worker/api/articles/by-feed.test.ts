@@ -93,9 +93,8 @@ describe("GET /api/articles/by-feed/:feedId", () => {
     expect.soft(dates).toEqual(sorted);
     // 同一 published_at 内は id DESC
     const sameAt = body.articles.filter((a) => a.published_at === SAME_AT);
-    if (sameAt.length >= 2) {
-      expect.soft(sameAt[0].id).toBeGreaterThan(sameAt[1].id);
-    }
+    expect(sameAt.length).toBeGreaterThanOrEqual(2);
+    expect.soft(sameAt[0].id).toBeGreaterThan(sameAt[1].id);
   });
 
   it("paginates with cursor: first page + second page covers all articles", async () => {
